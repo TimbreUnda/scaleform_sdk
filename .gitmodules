@@ -1,0 +1,3 @@
+[submodule "GFxShaderMaker"]
+	path = GFxShaderMaker
+	url = git@github.com:TimbreUnda/GFxShaderMaker.git
