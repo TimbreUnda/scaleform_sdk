@@ -276,6 +276,10 @@ public:
     //  - Managed separately from RTs
     //  - May need extra flags to distinguish between matching buffers, such as MSAA.
     virtual DepthStencilBuffer* CreateDepthStencilBuffer(const ImageSize& size) = 0;
+
+    // Notify that a depth-stencil buffer is done for this frame (e.g. move from InUse to ThisFrame
+    // so EndFrame assert passes). Default no-op for managers that do not use InUse/ThisFrame lists.
+    virtual void NotifyDepthStencilFrameDone(DepthStencilBuffer* p) { SF_UNUSED(p); }
 };
 
 

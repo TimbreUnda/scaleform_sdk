@@ -44,3 +44,10 @@ Bin/Tools/GFxShaderMaker/GFxShaderMaker.pdb
 Bin/Tools/GFxShaderMaker/GFxShaderMaker.deps.json
 Bin/Tools/GFxShaderMaker/GFxShaderMaker.runtimeconfig.json
 
+# Root-level debug/capture session artifacts
+screenshot_*.ppm
+debug_cmds.txt
+debug_stderr.txt
+vk_stdout.txt
+vk_stderr.txt
+

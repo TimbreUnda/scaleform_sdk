@@ -1,0 +1,23 @@
+{
+  "renderers": {
+    "d3d11":  { "exe": "CaptureD3D11" },
+    "vulkan": { "exe": "CaptureVulkan" }
+  },
+  "comparisons": [
+    { "reference": "d3d11", "test": "vulkan" }
+  ],
+  "defaultResolution": { "width": 1024, "height": 768 },
+  "defaultFrames": [1, 10, 30, 60],
+  "tests": [
+    { "name": "Window_AS2",         "swf": "AS2/Samples/Window.swf" },
+    { "name": "ScaleformLogo_AS2",  "swf": "AS2/Samples/ScaleformLogo.swf" },
+    { "name": "FiltersExample",     "swf": "AS2/Samples/filters_example.swf" },
+    { "name": "TextFilterEffects",  "swf": "AS2/Samples/text_filter_effects.swf" },
+    { "name": "Mask_AS2",           "swf": "AS2/Samples/Mask.swf" },
+    { "name": "FishImage_AS2",      "swf": "AS2/Samples/FishImage.swf" },
+    { "name": "FishVector_AS2",     "swf": "AS2/Samples/FishVector.swf" },
+    { "name": "ScaleformLogo_AS3",  "swf": "AS3/Samples/ScaleformLogo.swf" },
+    { "name": "Mask_AS3",           "swf": "AS3/Samples/Mask.swf" },
+    { "name": "FishImage_AS3",      "swf": "AS3/Samples/FishImage.swf" }
+  ]
+}

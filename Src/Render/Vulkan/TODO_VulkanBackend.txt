@@ -1,0 +1,119 @@
+==============================================================================
+  Vulkan Backend TODO  –  Parity with D3D1x / GL reference backends
+  Audit date: 2026-03-03
+  Reference:  Src/Render/D3D1x/  (primary),  Src/Render/GL/  (secondary)
+  Last updated: 2026-03-03  (all items implemented)
+==============================================================================
+
+Items are ordered by priority.  Each entry names the file(s) affected, the
+function or subsystem, and what D3D1x does that the Vulkan code must match.
+
+
+------------------------------------------------------------------------------
+ P0 – CRITICAL  (affects rendering correctness / crashes)
+------------------------------------------------------------------------------
+
+[P0-1]  DONE  ShaderInterface::Finish – uniform upload
+        Finish() now iterates all UniformSet[] entries and copies each dirty
+        range from UniformData to the UBO at the correct ShadowOffset.
+        UBO resized from 256 to SU_TotalSize * sizeof(float).
+
+[P0-2]  DONE  ShaderManager::MapVertexFormat
+        Converts S16 positions to F32 and delegates to
+        Base::MapVertexFormat with MVF_HasInstancing | MVF_Align.
+
+[P0-3]  DONE  Mask / Stencil support
+        PushMask_BeginSubmit, EndMaskSubmit, PopMask fully implemented
+        with MaskStack management, viewport clipping for clipped masks,
+        dynamic stencil state (reference/compare/write mask), and
+        drawMaskClearRectangles.  Pipelines created with depth-stencil
+        state and stencil dynamic states.
+
+[P0-4]  DONE  MeshCache::GetQueueMode
+        Changed from QM_WaitForFences to QM_ExtendLocks to match D3D1x.
+
+
+------------------------------------------------------------------------------
+ P1 – IMPORTANT  (affects robustness / edge cases)
+------------------------------------------------------------------------------
+
+[P1-1]  DEFERRED  GPU Fence / RenderSync
+        QM_ExtendLocks mode works without fences.  Host-coherent memory
+        and the extend-locks cache lifecycle provide sufficient safety for
+        single-command-buffer rendering.  Base HAL::GetRenderSync() returns
+        null, which is acceptable for this mode.
+
+[P1-2]  DONE  PushRenderTarget – ViewRectOriginal offset
+        Added Matrices->ViewRectOriginal.Offset() call, StencilChecked
+        reset, RT clear when PRT_NoClear is not set, and null-prt guard.
+
+[P1-3]  DONE  PopRenderTarget – temp-target depth-stencil cleanup
+        Strips depth-stencil from temporary render targets before popping.
+        Clears HS_InRenderTarget when stack returns to 1.  Resets
+        StencilChecked.
+
+[P1-4]  DONE  MeshCache – cache shrink heuristic
+        EndFrame() now compares TotalSize vs expected size (PrevFrame +
+        LRUTail + 25% fragmentation margin).  Releases chunk buffers in
+        reverse order when excess exceeds MemGranularity.
+
+[P1-5]  DONE  MeshCache – pending buffer destruction
+        Added PendingDestructionBuffers list, destroyPendingBuffers(),
+        and evictMeshesInBuffer() for safe deferred buffer release.
+
+[P1-6]  DONE  Uniform buffer architecture
+        UBO resized from 256 bytes to Uniform::SU_TotalSize * sizeof(float)
+        (kUniformBufferSize constant).  Descriptor range updated to match.
+
+
+------------------------------------------------------------------------------
+ P2 – MODERATE  (functionality gaps, non-crash)
+------------------------------------------------------------------------------
+
+[P2-1]  DONE  SysVertexFormat
+        Constructor now populates VkVertexInputBindingDescription and
+        VkVertexInputAttributeDescription arrays from shader descriptor
+        attributes.
+
+[P2-2]  DONE  Profiler integration / AccumulatedStats
+        AccumulatedStats.Primitives, Meshes, Triangles, Masks, and
+        RTChanges are now updated in DrawProcessedPrimitive,
+        DrawProcessedComplexMeshes, PushMask_BeginSubmit, and
+        PushRenderTarget.
+
+[P2-3]  DONE  (merged with P2-2)
+
+[P2-4]  DEFERRED  Texture kill lists
+        Current implementation uses synchronous fence-based texture
+        uploads and single-plane formats.  Kill lists not needed for
+        correctness with this architecture.
+
+[P2-5]  DEFERRED  Multi-plane textures
+        Only R8G8B8A8, B8G8R8A8, and A8 formats are supported – all
+        single-plane.  Multi-plane support deferred until YUV or other
+        multi-plane formats are required.
+
+[P2-6]  DONE  MeshCache::GetStats
+        Implemented: reports TotalSize and used size across all cache
+        list slots.
+
+[P2-7]  DONE  MeshCache ConvertArgArray mismatch
+        Fixed to pass &i (pointer to index) matching D3D1x, instead of
+        (void*)(uintptr_t)i.
+
+
+------------------------------------------------------------------------------
+ P3 – CLEANUP  (code quality, diagnostics)
+------------------------------------------------------------------------------
+
+[P3-1]  DONE  Removed all GFXVK_LOG diagnostic printf calls.
+[P3-2]  DONE  Removed s_diagFrame global and <cstdio> include.
+[P3-3]  DONE  ShaderInterface::BeginScene resets CurShaders.
+[P3-4]  DONE  VkPipelineCache created and used for all pipeline creation.
+[P3-5]  DONE  Mask-erase buffer uses float positions (VertexXY32fAlpha)
+        instead of VertexXY16iAlpha to match Vulkan shader expectations.
+
+
+==============================================================================
+  End of TODO
+==============================================================================
