@@ -1,11 +1,15 @@
 /**************************************************************************
 
 Filename    :   Vulkan_HAL.h
-Content     :   Vulkan HAL and init params (scaffold).
-Created     :   2025
-Authors     :   Vulkan backend
+Content     :   Vulkan Hardware Abstraction Layer.
+Created     :   2026
+Authors     :   Scaleform Vulkan Backend
 
-Copyright   :   Copyright 2011 Autodesk, Inc. All Rights reserved.
+Copyright   :   Copyright 2026 Autodesk, Inc. All Rights reserved.
+
+Use of this software is subject to the terms of the Autodesk license
+agreement provided at the time of installation or download, or which
+otherwise accompanies this software in either electronic or hard copy form.
 
 **************************************************************************/
 
@@ -22,158 +26,361 @@ Copyright   :   Copyright 2011 Autodesk, Inc. All Rights reserved.
 
 namespace Scaleform { namespace Render { namespace Vulkan {
 
+enum HALConfigFlags
+{
+};
+
 struct HALInitParams : public Render::HALInitParams
 {
-    VkInstance        Instance;
-    VkPhysicalDevice  PhysicalDevice;
-    VkDevice          Device;
-    VkQueue           Queue;
-    unsigned          QueueFamilyIndex;
-    VkRenderPass      RenderPass;
-    VkFormat          ColorFormat;
+    VkDevice            pDevice;
+    VkPhysicalDevice    pPhysicalDevice;
+    VkQueue             pGraphicsQueue;
+    uint32_t            GraphicsQueueFamily;
+    VkCommandPool       pCommandPool;
+    VkCommandBuffer     pCommandBuffer;
+    VkRenderPass        pRenderPass;
+    VkFormat            SwapchainFormat;
+    VkInstance          pInstance;
 
-    HALInitParams(VkInstance instance, VkPhysicalDevice physicalDevice, VkDevice device,
-                  VkQueue queue, unsigned queueFamilyIndex,
-                  UInt32 halConfigFlags = 0, ThreadId renderThreadId = ThreadId())
-        : Render::HALInitParams(0, halConfigFlags, renderThreadId)
-        , Instance(instance), PhysicalDevice(physicalDevice), Device(device)
-        , Queue(queue), QueueFamilyIndex(queueFamilyIndex)
-        , RenderPass(VK_NULL_HANDLE), ColorFormat(VK_FORMAT_UNDEFINED)
-    { }
-    HALInitParams(VkInstance instance, VkPhysicalDevice physicalDevice, VkDevice device,
-                  VkQueue queue, unsigned queueFamilyIndex, VkRenderPass renderPass, VkFormat colorFormat,
-                  UInt32 halConfigFlags = 0, ThreadId renderThreadId = ThreadId())
-        : Render::HALInitParams(0, halConfigFlags, renderThreadId)
-        , Instance(instance), PhysicalDevice(physicalDevice), Device(device)
-        , Queue(queue), QueueFamilyIndex(queueFamilyIndex)
-        , RenderPass(renderPass), ColorFormat(colorFormat)
+    HALInitParams(VkDevice device, VkPhysicalDevice physDevice,
+                  VkQueue graphicsQueue, uint32_t queueFamily,
+                  VkCommandPool cmdPool, VkCommandBuffer cmdBuf,
+                  VkRenderPass renderPass, VkFormat swapFormat,
+                  VkInstance instance,
+                  UInt32 halConfigFlags = 0,
+                  ThreadId renderThreadId = ThreadId())
+    : Render::HALInitParams(0, halConfigFlags, renderThreadId),
+      pDevice(device), pPhysicalDevice(physDevice),
+      pGraphicsQueue(graphicsQueue), GraphicsQueueFamily(queueFamily),
+      pCommandPool(cmdPool), pCommandBuffer(cmdBuf),
+      pRenderPass(renderPass), SwapchainFormat(swapFormat),
+      pInstance(instance)
     { }
 
     void SetTextureManager(TextureManager* manager) { pTextureManager = manager; }
-    TextureManager* GetTextureManager() const     { return (TextureManager*)pTextureManager.GetPtr(); }
+    TextureManager* GetTextureManager() const       { return (TextureManager*)pTextureManager.GetPtr(); }
 };
+
+
+// Pipeline state key for the pipeline cache map.
+// pRenderPass is included so RGBA (offscreen) and BGRA (main) pipelines are kept separate.
+struct PipelineKey
+{
+    ShaderDesc::ShaderType  Shader;
+    ShaderDesc::ShaderType  FragShaderType;
+    unsigned                BlendType;
+    unsigned                StencilMode;
+    unsigned                RasterMode;
+    const SysVertexFormat*  pVFormat;
+    VkRenderPass            pRenderPass;
+
+    bool operator==(const PipelineKey& o) const
+    {
+        return Shader == o.Shader && FragShaderType == o.FragShaderType &&
+               BlendType == o.BlendType &&
+               StencilMode == o.StencilMode && RasterMode == o.RasterMode &&
+               pVFormat == o.pVFormat && pRenderPass == o.pRenderPass;
+    }
+};
+
+struct PipelineKeyHashF
+{
+    static UPInt RotateLeft(UPInt val, unsigned bits)
+    {
+        return (val << bits) | (val >> (sizeof(UPInt) * 8 - bits));
+    }
+    UPInt operator()(const PipelineKey& k) const
+    {
+        UPInt h = (UPInt)k.Shader * 2654435761u;
+        h ^= RotateLeft((UPInt)k.FragShaderType * 2246822519u, 5);
+        h ^= RotateLeft((UPInt)k.BlendType * 2246822519u, 7);
+        h ^= RotateLeft((UPInt)k.StencilMode * 3266489917u, 13);
+        h ^= RotateLeft((UPInt)k.RasterMode * 668265263u, 19);
+        h ^= RotateLeft((UPInt)k.pVFormat * 374761393u, 11);
+        h ^= RotateLeft((UPInt)k.pRenderPass * 2654435761u, 17);
+        return h;
+    }
+};
+
 
 class HAL : public Render::ShaderHAL<ShaderManager, ShaderInterface>
 {
 public:
-    VkDevice              pDevice;
-    VkPhysicalDevice      pPhysicalDevice;
-    VkQueue               pQueue;
-    unsigned              QueueFamilyIndex;
+    VkDevice                pDevice;
+    VkPhysicalDevice        pPhysicalDevice;
+    VkQueue                 pGraphicsQueue;
+    uint32_t                GraphicsQueueFamily;
+    VkCommandPool           pCommandPool;
+    VkCommandBuffer         pCommandBuffer;
+    VkRenderPass            pCurrentRenderPass;
+    VkInstance              pInstance;
 
-    MeshCache              Cache;
-    Ptr<TextureManager>    pTextureManager;
-
+    MeshCache               Cache;
+    Ptr<TextureManager>     pTextureManager;
     PrimitiveBatch::BatchType PrevBatchType;
 
-    bool StencilChecked;
-    bool StencilAvailable;
-    bool DepthBufferAvailable;
-
-    BlendMode CurrentBlendMode;
-    bool      CurrentSourceAc;
-
-    enum StencilMode
-    {
-        StencilMode_Disabled = 0,
-        StencilMode_WriteMask,
-        StencilMode_TestMask,
-        StencilMode_ClearMasksAbove,
-        StencilMode_Count
-    };
-    StencilMode     CurrentStencilMode;
-
-    struct MaskStackEntry
-    {
-        Ptr<MaskPrimitive> pPrimitive;
-        bool               OldViewportValid;
-        Rect<int>          OldViewRect;
-    };
-    ArrayLH<MaskStackEntry> MaskStack;
-    unsigned                MaskStackTop;
-    unsigned                DebugFrame;  // used by GFXVK_DIAG_LOG
-
-    HAL* getThis() { return this; }
+    HAL*    getThis() { return this; }
 
 public:
     HAL(ThreadCommandQueue* commandQueue = 0);
     virtual ~HAL();
 
-    virtual bool    InitHAL(const Vulkan::HALInitParams& params);
-    virtual bool    ShutdownHAL();
+    // *** Initialization
+    virtual bool        InitHAL(const Vulkan::HALInitParams& params);
+    virtual bool        ShutdownHAL();
+    void                PrepareForReset();
+    bool                RestoreAfterReset();
 
-    virtual bool    BeginScene() override;
-    virtual bool    EndScene() override;
-    virtual void    EndDisplay();
-    virtual void    beginDisplay(BeginDisplayData* data);
-    virtual void    updateViewport();
-    virtual void    clearSolidRectangle(const Rect<int>& r, Color color);
+    // *** Rendering
+    virtual bool        BeginScene();
+    virtual bool        EndScene();
+    virtual void        beginDisplay(BeginDisplayData* data);
+    virtual void        updateViewport();
 
-    virtual void    Draw(const RenderQueueItem& item);
+    virtual void        DrawProcessedPrimitive(Primitive* pprimitive,
+                                               PrimitiveBatch* pstart, PrimitiveBatch* pend);
+    virtual void        DrawProcessedComplexMeshes(ComplexMesh* complexMesh,
+                                                   const StrideArray<HMatrix>& matrices);
 
-    virtual void    DrawProcessedPrimitive(Primitive* pprimitive,
-                                            PrimitiveBatch* pstart, PrimitiveBatch* pend);
-    virtual void    DrawProcessedComplexMeshes(ComplexMesh* complexMesh,
-                                               const StrideArray<HMatrix>& matrices);
+    // *** Mask / Stencil
+    bool            StencilChecked;
+    bool            StencilAvailable;
+    bool            DepthBufferAvailable;
 
     virtual void    PushMask_BeginSubmit(MaskPrimitive* primitive);
     virtual void    EndMaskSubmit();
     virtual void    PopMask();
+    virtual void    beginMaskDisplay()
+    {
+        SF_ASSERT(MaskStackTop == 0);
+        StencilChecked  = 0;
+        StencilAvailable= 0;
+        DepthBufferAvailable = 0;
+        HALState &= ~HS_DrawingMask;
+    }
+    bool    checkMaskBufferCaps();
+    virtual void    clearSolidRectangle(const Rect<int>& r, Color color);
 
-    virtual void    applyBlendModeImpl(BlendMode mode, bool sourceAc = false, bool forceAc = false);
+    // *** Blend modes
+    void    applyBlendModeImpl(BlendMode mode, bool sourceAc = false, bool forceAc = false);
 
-    bool            checkMaskBufferCaps();
-    void            applyStencilMode(StencilMode mode, unsigned referenceValue);
-    void            drawMaskClearRectangles(const HMatrix* matrices, UPInt count);
+    enum ColorWriteMode
+    {
+        Write_All,
+        Write_None,
+        Write_Count
+    };
 
-    virtual Render::TextureManager* GetTextureManager() const;
-    virtual MeshCache&              GetMeshCache();
+    static const unsigned BlendTypeCount = Blend_Count * 2 + 1;
+    static unsigned GetBlendType(BlendMode blendMode, ColorWriteMode writeMode, bool sourceAc = false)
+    {
+        unsigned base = 0;
+        if (writeMode == Write_None)
+        {
+            base = Blend_Count * 2;
+            blendMode = (BlendMode)0;
+        }
+        else if (sourceAc)
+            base += Blend_Count;
+        return base + (unsigned)blendMode;
+    }
 
-    // Create a render target from external VkImageViews (e.g. swap chain image). Pass VK_NULL_HANDLE for depthView if no depth.
-    virtual RenderTarget* CreateRenderTarget(VkImageView colorView, VkImageView depthView, const ImageSize& size);
-    virtual RenderTarget* CreateRenderTarget(Render::Texture* texture, bool needsStencil);
-    virtual RenderTarget* CreateTempRenderTarget(const ImageSize& size, bool needsStencil);
-    virtual bool          SetRenderTarget(RenderTarget* target, bool setState = 1);
-    virtual void          PushRenderTarget(const RectF& frameRect, RenderTarget* prt, unsigned flags = 0);
-    virtual void          PopRenderTarget(unsigned flags = 0);
+    // *** Stencil modes
+    enum StencilModes
+    {
+        StencilMode_Disabled,
+        StencilMode_Available_ClearMasks,
+        StencilMode_Available_ClearMasksAbove,
+        StencilMode_Available_WriteMask,
+        StencilMode_DepthOnly_WriteMask,
+        StencilMode_Available_TestMask,
+        StencilMode_DepthOnly_TestMask,
+        StencilMode_Unavailable,
+        StencilMode_Count
+    };
 
-    virtual bool createDefaultRenderBuffer();
+    // *** Raster modes
+    enum RasterModes
+    {
+        RasterMode_Default,
+        RasterMode_Wireframe,
+        RasterMode_Count
+    };
+    RasterModes RasterMode;
+    void SetRasterMode(RasterModes mode) { RasterMode = mode; }
+
+    // *** Pipeline management
+    VkPipelineLayout    pPipelineLayout;
+    VkPipelineCache     pPipelineCache;
+    VkDescriptorSetLayout pDescriptorSetLayout;
+
+    VkPipeline  GetPipeline(ShaderDesc::ShaderType vsShader, ShaderDesc::ShaderType fsShader,
+                            unsigned blendType, unsigned stencilMode, const SysVertexFormat* pvf);
+    bool        createPipelineLayout();
+    void        destroyPipelineLayout();
+
+    // Per-frame descriptor pool
+    VkDescriptorPool    FrameDescriptorPools[SF_VK_MAX_FRAMES_IN_FLIGHT];
+    unsigned            CurrentFrame;
+
+    // UBO ring buffer
+    VkBuffer            UBORingBuffer;
+    VkDeviceMemory      UBORingMemory;
+    UByte*              pUBORingData;
+    UPInt               UBORingOffset;
+    bool                createUBORing();
+    void                destroyUBORing();
+    UPInt               allocUBOSpace(UPInt size);
+
+    VkRenderPass    pOffscreenRenderPass;
+    VkRenderPass    pOffscreenRenderPassDS;  // with depth/stencil attachment
+    bool            InRenderPass;
+    bool            createOffscreenRenderPass();
+    bool            createOffscreenRenderPassDS();
+    void            destroyOffscreenRenderPass();
+    VkFramebuffer   createFramebuffer(VkImageView colorView, VkImageView dsView,
+                                      unsigned width, unsigned height, VkRenderPass rp);
+
+    // Main render pass info, set each frame by the application so PopRenderTarget
+    // can resume the swapchain render pass after returning from an offscreen filter pass.
+    VkRenderPass    pMainRenderPass;        // original main pass (owns the pipeline compatibility key)
+    VkRenderPass    pMainResumeRenderPass;  // same format, LOAD_OP_LOAD – used for restart
+    VkFramebuffer   pMainFramebuffer;
+    VkExtent2D      MainRenderExtent;
+
+    // Call once per frame before Display(), providing the current swapchain framebuffer.
+    void SetMainRenderTarget(VkRenderPass mainPass, VkRenderPass resumePass,
+                             VkFramebuffer framebuffer, VkExtent2D extent)
+    {
+        pMainRenderPass       = mainPass;
+        pMainResumeRenderPass = resumePass;
+        pMainFramebuffer      = framebuffer;
+        MainRenderExtent      = extent;
+    }
+
+    VkDevice    GetDevice() const { return pDevice; }
+    VkCommandBuffer GetCommandBuffer() const { return pCommandBuffer; }
+    void        SetCommandBuffer(VkCommandBuffer cmd) { pCommandBuffer = cmd; }
+
+    virtual Render::TextureManager* GetTextureManager() const
+    {
+        return pTextureManager.GetPtr();
+    }
+
+    virtual RenderTarget*   CreateRenderTarget(Render::Texture* texture, bool needsStencil);
+    virtual RenderTarget*   CreateTempRenderTarget(const ImageSize& size, bool needsStencil);
+    virtual bool            SetRenderTarget(RenderTarget* target, bool setState = 1);
+    virtual void            PushRenderTarget(const RectF& frameRect, RenderTarget* prt, unsigned flags = 0);
+    virtual void            PopRenderTarget(unsigned flags = 0);
+    virtual bool            createDefaultRenderBuffer();
+
+    // *** Filters
+    virtual void          PushFilters(FilterPrimitive* primitive);
+    virtual void          drawUncachedFilter(const FilterStackEntry& e);
+    virtual void          drawCachedFilter(FilterPrimitive* primitive);
+
+    virtual class MeshCache& GetMeshCache() { return Cache; }
 
     virtual void    MapVertexFormat(PrimitiveFillType fill, const VertexFormat* sourceFormat,
                                     const VertexFormat** single,
-                                    const VertexFormat** batch, const VertexFormat** instanced, unsigned = 0);
-
-    VkDevice GetDevice() const { return pDevice; }
-    VkRenderPass GetRenderPass() const { return pRenderPass; }
-    VkFormat GetColorFormat() const { return pColorFormat; }
-
-    // Optional: set the current frame's command buffer for recording (when HAL implements drawing).
-    void BeginFrame(VkCommandBuffer cmd) { pCurrentCommandBuffer = cmd; }
-    VkCommandBuffer GetCurrentCommandBuffer() const { return pCurrentCommandBuffer; }
+                                    const VertexFormat** batch, const VertexFormat** instanced, unsigned = 0)
+    {
+        SManager.MapVertexFormat(fill, sourceFormat, single, batch, instanced);
+    }
 
 protected:
-    VkRenderPass     pRenderPass;
-    VkFormat         pColorFormat;
-    VkCommandBuffer  pCurrentCommandBuffer;
     virtual void setBatchUnitSquareVertexStream();
     virtual void drawPrimitive(unsigned indexCount, unsigned meshCount);
-    virtual void drawScreenQuad();
+    virtual void drawMaskClearRectangles(const HMatrix* matrices, UPInt count);
+    void         drawIndexedPrimitive(unsigned indexCount, unsigned meshCount, UPInt indexOffset, unsigned vertexBaseIndex);
+    void         drawIndexedInstanced(unsigned indexCount, unsigned meshCount, UPInt indexOffset, unsigned vertexBaseIndex);
+
+    bool         shouldRenderFilters(const FilterPrimitive* prim) const;
+    virtual Render::RenderEvent& GetEvent(EventType eventType);
+
+    void drawScreenQuad();
+
+private:
+    // Pipeline cache map
+    typedef Hash<PipelineKey, VkPipeline, PipelineKeyHashF> PipelineMap;
+    PipelineMap     Pipelines;
+    unsigned        CurrentStencilMode;
+    unsigned        CurrentBlendType;
+
+    // Blend state descriptions (reusable for pipeline creation)
+    VkPipelineColorBlendAttachmentState BlendDescs[BlendTypeCount];
+    VkPipelineDepthStencilStateCreateInfo DepthStencilDescs[StencilMode_Count];
+    void    initBlendDescriptions();
+    void    initDepthStencilDescriptions();
+
+    RenderEvent Events[Event_Count];
+
+    // Render targets used this frame that must not be recycled until the GPU
+    // finishes executing the command buffer.  Drained at the start of BeginScene,
+    // after the previous frame's fence has been waited on.
+    Array<Ptr<RenderTarget>> PendingRTReleases;
 };
 
-// RenderTargetData for Vulkan (VkImageView for color and optional depth/stencil).
+
 class RenderTargetData : public RenderBuffer::RenderTargetData
 {
 public:
     friend class HAL;
-    VkImageView  pRenderView;
-    VkImageView  pDepthView;
+    VkDevice        pDevice;
+    VkImageView     pRenderSurface;
+    VkImageView     pDSSurface;
+    VkFramebuffer   pFramebuffer;
+    UPInt           CacheID;
 
-    static void UpdateData(RenderBuffer* buffer, VkImageView colorView,
-                          DepthStencilBuffer* pdsb, VkImageView depthView);
-    virtual ~RenderTargetData();
+    // Deferred deletion queue: framebuffers queued here are destroyed at the
+    // start of BeginScene, after the previous frame's fence has been waited on.
+    // This prevents destroying framebuffers still referenced by an in-flight
+    // command buffer (Vulkan requires the framebuffer to live until the CB completes).
+    static Array<VkFramebuffer> PendingDeletes;
+    static VkDevice             PendingDeleteDevice;
+
+    static void DrainPendingDeletes()
+    {
+        if (PendingDeleteDevice == VK_NULL_HANDLE) return;
+        for (unsigned i = 0; i < PendingDeletes.GetSize(); ++i)
+            vkDestroyFramebuffer(PendingDeleteDevice, PendingDeletes[i], nullptr);
+        PendingDeletes.ClearAndRelease();
+    }
+
+    static void UpdateData(RenderBuffer* buffer, VkDevice device, VkImageView rtView,
+                           DepthStencilBuffer* pdsb, VkImageView dsView,
+                           VkFramebuffer fb)
+    {
+        if (!buffer) return;
+        PendingDeleteDevice = device;
+        RenderTargetData* poldHD = (Vulkan::RenderTargetData*)buffer->GetRenderTargetData();
+        if (!poldHD)
+        {
+            poldHD = SF_NEW RenderTargetData(buffer, device, rtView, pdsb, dsView, fb);
+            buffer->SetRenderTargetData(poldHD);
+            return;
+        }
+        poldHD->pDevice = device;
+        poldHD->pDepthStencilBuffer = pdsb;
+        poldHD->pDSSurface = dsView;
+        poldHD->pRenderSurface = rtView;
+        if (poldHD->pFramebuffer != fb && poldHD->pFramebuffer != VK_NULL_HANDLE)
+            PendingDeletes.PushBack(poldHD->pFramebuffer);
+        poldHD->pFramebuffer = fb;
+    }
+
+    virtual ~RenderTargetData()
+    {
+        if (pFramebuffer != VK_NULL_HANDLE)
+            PendingDeletes.PushBack(pFramebuffer);
+    }
+
 private:
-    RenderTargetData(RenderBuffer* buffer, DepthStencilBuffer* pdsb,
-                     VkImageView colorView, VkImageView depthView);
+    RenderTargetData(RenderBuffer* buffer, VkDevice device, VkImageView rtView,
+                     DepthStencilBuffer* pdsb, VkImageView dsView,
+                     VkFramebuffer fb)
+    : RenderBuffer::RenderTargetData(buffer, pdsb),
+      pDevice(device), pRenderSurface(rtView), pDSSurface(dsView), pFramebuffer(fb), CacheID(0) {}
 };
 
 }}} // Scaleform::Render::Vulkan

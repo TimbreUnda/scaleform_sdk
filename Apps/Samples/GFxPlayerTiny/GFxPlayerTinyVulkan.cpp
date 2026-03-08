@@ -1,11 +1,11 @@
 /**************************************************************************
 
 Filename    :   GFxPlayerTinyVulkan.cpp
-Content     :   Tiny GFxPlayer sample for Vulkan.
-Created     :   2025
-Authors     :   Vulkan sample
+Content     :   Tiny Scaleform player using the Vulkan rendering backend.
+Created     :   2026
+Authors     :   Scaleform Vulkan Backend
 
-Copyright   :   Copyright 2011 Autodesk, Inc. All Rights reserved.
+Copyright   :   Copyright 2026 Autodesk, Inc. All Rights reserved.
 
 Use of this software is subject to the terms of the Autodesk license
 agreement provided at the time of installation or download, or which
@@ -13,965 +13,278 @@ otherwise accompanies this software in either electronic or hard copy form.
 
 **************************************************************************/
 
-#define VK_USE_PLATFORM_WIN32_KHR 1
-
-// GFx Includes
-#include "GFx_Kernel.h"
-#include "GFx.h"
-#include "GFx_Renderer_Vulkan.h"
-
-#include "Render/ImageFiles/PNG_ImageFile.h"
-#include "Render/ImageFiles/DDS_ImageFile.h"
-
+#define VK_USE_PLATFORM_WIN32_KHR
+#include <vulkan/vulkan.h>
 #include <windows.h>
 #include <winuser.h>
 #ifndef WM_MOUSEWHEEL
-#define WM_MOUSEWHEEL                   0x020A
-#define WHEEL_DELTA                     120
+#define WM_MOUSEWHEEL   0x020A
+#define WHEEL_DELTA     120
+#endif
+#include <stdio.h>
+#include <dbghelp.h>
+#pragma comment(lib, "dbghelp.lib")
+
+#include "GFx_Kernel.h"
+#include "GFx.h"
+#include "GFx/GFx_AS3Support.h"
+#include "GFx/AS3/AS3_Global.h"
+#include "GFx/GFx_ImageCreator.h"
+#include "GFx_Renderer_Vulkan.h"
+#include "Render/Renderer2D.h"
+
+using namespace Scaleform;
+using namespace Scaleform::Render;
+using namespace Scaleform::GFx;
+
+// Globals
+static HWND                     hWnd = NULL;
+static bool                     Running = true;
+static bool                     NeedsResize = false;
+static bool                     ControlKeyDown = false;
+static unsigned                 WindowWidth  = 1024;
+static unsigned                 WindowHeight = 768;
+
+// Vulkan objects
+static VkInstance               vkInstance   = VK_NULL_HANDLE;
+static VkPhysicalDevice         vkPhysDevice = VK_NULL_HANDLE;
+static VkDevice                 vkDevice     = VK_NULL_HANDLE;
+static VkQueue                  vkQueue      = VK_NULL_HANDLE;
+static uint32_t                 vkQueueFamily = 0;
+static VkSurfaceKHR             vkSurface    = VK_NULL_HANDLE;
+static VkSwapchainKHR           vkSwapchain  = VK_NULL_HANDLE;
+static VkFormat                 vkSwapFormat = VK_FORMAT_B8G8R8A8_UNORM;
+static VkExtent2D               vkSwapExtent = { 0, 0 };
+static VkRenderPass             vkRenderPass       = VK_NULL_HANDLE;
+static VkRenderPass             vkResumeRenderPass = VK_NULL_HANDLE; // LOAD_OP_LOAD, for post-filter restart
+static VkCommandPool            vkCmdPool    = VK_NULL_HANDLE;
+
+static const unsigned           MaxFramesInFlight = 2;
+static VkCommandBuffer          vkCmdBuffers[MaxFramesInFlight] = {};
+static VkSemaphore              vkImageAvailable[MaxFramesInFlight] = {};
+static VkSemaphore              vkRenderFinished[MaxFramesInFlight] = {};
+static VkFence                  vkInFlightFences[MaxFramesInFlight] = {};
+
+static VkImage                  vkSwapImages[8] = {};
+static VkImageView              vkSwapViews[8]  = {};
+static VkFramebuffer            vkSwapFBs[8]    = {};
+static uint32_t                 vkSwapCount     = 0;
+
+static VkImage                  vkDepthImage  = VK_NULL_HANDLE;
+static VkImageView              vkDepthView   = VK_NULL_HANDLE;
+static VkDeviceMemory           vkDepthMemory = VK_NULL_HANDLE;
+static VkFormat                 vkDepthFormat = VK_FORMAT_D24_UNORM_S8_UINT;
+
+static uint32_t                 CurrentFrame  = 0;
+static uint32_t                 CurrentImage  = 0;
+
+static FILE* vkLogFile = nullptr;
+static int   MaxFrames = -1;   // -1 = run until window close; set via --frames N
+
+#if defined(SF_BUILD_DEBUG) || !defined(NDEBUG)
+static VkDebugUtilsMessengerEXT vkDebugMessenger = VK_NULL_HANDLE;
+
+static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+    VkDebugUtilsMessageTypeFlagsEXT type,
+    const VkDebugUtilsMessengerCallbackDataEXT* pData,
+    void* pUser)
+{
+    (void)pUser;
+    // Capture WARNING+ for standard validation; also capture INFO from
+    // BEST_PRACTICES and PERFORMANCE channels so no hints are missed.
+    bool isBestPractices = (type & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) != 0
+                        || (pData->messageIdNumber != 0 && strstr(pData->pMessageIdName ? pData->pMessageIdName : "", "BestPractices") != nullptr);
+    bool shouldLog = (severity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+                  || (isBestPractices && severity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT);
+    if (!shouldLog) return VK_FALSE;
+
+    const char* level =
+        (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)   ? "ERROR" :
+        (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) ? "WARN"  : "INFO";
+    const char* typeTag =
+        (type & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)  ? "BEST_PRACTICES" :
+        (type & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)   ? "VALIDATION"     : "GENERAL";
+
+    fprintf(stderr, "[VK %s/%s] %s\n", level, typeTag, pData->pMessage);
+    fflush(stderr);
+    OutputDebugStringA(pData->pMessage);
+    OutputDebugStringA("\n");
+    if (vkLogFile)
+    {
+        fprintf(vkLogFile, "[VK %s/%s] %s\n", level, typeTag, pData->pMessage);
+        fflush(vkLogFile);
+    }
+    return VK_FALSE;
+}
 #endif
 
-#include <vector>
-#include <stdio.h>
-
-#include <vulkan/vulkan.h>
-#include <vulkan/vulkan_win32.h>
-
-#include "GFx_FontProvider_Win32.h"
-
-#define FXPLAYER_APP_TITLE  "Scaleform GFxPlayerTinyVulkan" " v" GFX_VERSION_STRING
-#define FXPLAYER_FILENAME   "Window.swf"
-
-#define LOG(fmt, ...) do { printf("[GFxVk] " fmt "\n", ##__VA_ARGS__); fflush(stdout); } while(0)
-
-#include "Render/Renderer2D.h"
-#include "Render/Render_Buffer.h"
-#include "GFx/AS3/AS3_Global.h"
-
-namespace SF = Scaleform;
-using namespace Scaleform;
-using namespace Render;
-using namespace GFx;
-
-// ***** Helpers and command queue
-
-class FxPlayerFSCommandHandler : public FSCommandHandler
+// GFx log handler: forwards all messages (script errors, AS3 trace, action log) to vulkan_debug.log
+class GFxFileLog : public Scaleform::Log
 {
 public:
-    virtual void Callback(Movie* pmovie, const char* pcommand, const char* parg)
+    virtual void LogMessageVarg(Scaleform::LogMessageId messageType, const char* fmt, va_list argList)
     {
-        SF_UNUSED3(pmovie, pcommand, parg);
-    }
-};
-
-class FxPlayerThreadCommandQueue : public ThreadCommandQueue
-{
-public:
-    virtual void GetRenderInterfaces(Render::Interfaces* p)
-    {
-        p->pHAL = pHAL;
-        p->pRenderer2D = pR2D;
-        p->pTextureManager = pHAL ? pHAL->GetTextureManager() : 0;
-        p->RenderThreadID = 0;
-    }
-    virtual void PushThreadCommand(ThreadCommand* command)
-    {
-        if (command)
-            command->Execute();
-    }
-    Ptr<Render::Vulkan::HAL> pHAL;
-    Renderer2D* pR2D;
-};
-
-class GFxPlayerLog : public GFx::Log
-{
-public:
-    virtual void LogMessageVarg(SF::LogMessageId messageId, const char* pfmt, va_list argList)
-    {
-        SF_UNUSED(messageId);
-        vprintf(pfmt, argList);
-    }
-};
-
-// ***** FxPlayerTiny Vulkan Application Class
-
-class FxPlayerTiny
-{
-    const char*             pWndClassName;
-    HWND                    hWnd;
-    HINSTANCE               hInstance;
-
-    // Vulkan state
-    VkInstance              vkInstance;
-    VkSurfaceKHR            vkSurface;
-    VkPhysicalDevice        vkPhysicalDevice;
-    VkDevice                vkDevice;
-    VkQueue                 vkQueue;
-    unsigned                vkQueueFamilyIndex;
-    VkSwapchainKHR          vkSwapchain;
-    VkFormat                vkSwapchainFormat;
-    VkExtent2D              vkSwapchainExtent;
-    std::vector<VkImage>            swapchainImages;
-    std::vector<VkImageView>        swapchainImageViews;
-    VkCommandPool           vkCommandPool;
-    std::vector<VkCommandBuffer>    vkCommandBuffers;
-    VkRenderPass            vkRenderPass;
-    std::vector<VkFramebuffer>      vkFramebuffers;
-    VkImage                 vkDepthStencilImage;
-    VkDeviceMemory          vkDepthStencilMemory;
-    VkImageView             vkDepthStencilView;
-    VkSemaphore             vkImageAvailableSemaphore;
-    VkSemaphore             vkRenderFinishedSemaphore;
-    VkFence                 vkInFlightFence;
-
-    Ptr<MovieDef>           pMovieDef;
-    Ptr<Movie>              pMovie;
-    Ptr<Render::Vulkan::HAL> pRenderHAL;
-    Ptr<Render::Renderer2D> pRenderer;
-    ThreadCommandQueue*     pCommandQueue;
-    MovieDisplayHandle      hMovieDisplay;
-
-    RenderTarget*           pSwapChainRenderTarget;
-
-    UInt32                  MovieStartTime;
-    UInt32                  MovieLastTime;
-    float                   ExitTimeout;
-
-    bool                    ControlKeyDown;
-    bool                    Paused;
-
-    String                  FileName;
-    int                     Width;
-    int                     Height;
-    bool                    VerboseAction;
-
-public:
-    FxPlayerTiny(int argc, char* argv[]);
-    ~FxPlayerTiny();
-
-    int     Run();
-    void    AdvanceAndDisplay();
-    void    Display();
-
-    void    OnKey(unsigned keyCode, bool downFlag);
-    void    OnMouse(GFx::Event::EventType eventType, unsigned button, int x, int y);
-    void    OnMouseWheel(int zdelta, int x, int y);
-    void    HandleKeyEvent(unsigned keyCode, bool downFlag);
-
-    bool    SetupWindow(const String& name);
-    bool    CreateVulkanSwapChain();
-    bool    CreateVulkanRenderPassAndFramebuffers();
-    void    CleanupVulkanSwapChain();
-
-    LRESULT MemberWndProc(UINT msg, WPARAM wParam, LPARAM lParam);
-    static LRESULT CALLBACK StaticWindowProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam);
-};
-
-FxPlayerTiny::FxPlayerTiny(int argc, char* argv[])
-    : vkInstance(VK_NULL_HANDLE)
-    , vkSurface(VK_NULL_HANDLE)
-    , vkPhysicalDevice(VK_NULL_HANDLE)
-    , vkDevice(VK_NULL_HANDLE)
-    , vkQueue(VK_NULL_HANDLE)
-    , vkQueueFamilyIndex(0)
-    , vkSwapchain(VK_NULL_HANDLE)
-    , vkSwapchainFormat(VK_FORMAT_UNDEFINED)
-    , vkCommandPool(VK_NULL_HANDLE)
-    , vkRenderPass(VK_NULL_HANDLE)
-    , vkDepthStencilImage(VK_NULL_HANDLE)
-    , vkDepthStencilMemory(VK_NULL_HANDLE)
-    , vkDepthStencilView(VK_NULL_HANDLE)
-    , vkImageAvailableSemaphore(VK_NULL_HANDLE)
-    , vkRenderFinishedSemaphore(VK_NULL_HANDLE)
-    , vkInFlightFence(VK_NULL_HANDLE)
-    , pSwapChainRenderTarget(0)
-    , MovieStartTime(0)
-    , MovieLastTime(0)
-    , ExitTimeout(0)
-    , ControlKeyDown(false)
-    , Paused(false)
-    , Width(800)
-    , Height(600)
-    , VerboseAction(false)
-{
-    pWndClassName = "GFxPlayerTinyVulkan_WindowClass";
-    hWnd = 0;
-    hInstance = 0;
-    pCommandQueue = 0;
-
-    FileName = FXPLAYER_FILENAME;
-
-    for (int i = 1; i < argc; ++i)
-    {
-        if (argv[i][0] == '-')
+        if (!vkLogFile) return;
+        const char* prefix;
+        switch (messageType.GetChannel())
         {
-            const char* curArg = argv[i] + 1;
-            if (_stricmp(curArg, "test") == 0)
-                ExitTimeout = 5.f;
+        case Scaleform::LogChannel_Script: prefix = "[AS3 Script]"; break;
+        case Scaleform::LogChannel_Action: prefix = "[AS3 Action]"; break;
+        case Scaleform::LogChannel_Parse:  prefix = "[GFx Parse]";  break;
+        default:                           prefix = "[GFx]";        break;
         }
-        else
-            FileName = argv[i];
+        fprintf(vkLogFile, "%s ", prefix);
+        vfprintf(vkLogFile, fmt, argList);
+        size_t len = strlen(fmt);
+        if (len == 0 || fmt[len - 1] != '\n') fprintf(vkLogFile, "\n");
+        fflush(vkLogFile);
     }
-}
+};
 
-FxPlayerTiny::~FxPlayerTiny()
+// Scaleform objects
+static Ptr<Vulkan::HAL>        pHAL;
+static Ptr<Renderer2D>         pRenderer;
+static Loader*                 pLoader = nullptr;
+static Ptr<MovieDef>           pMovieDef;
+static Ptr<Movie>              pMovie;
+
+// Forward declarations
+bool    InitVulkan();
+void    CleanupVulkan();
+bool    CreateSwapchain();
+void    CleanupSwapchain();
+bool    CreateDepthResources();
+bool    CreateRenderPass();
+bool    CreateFramebuffers();
+
+// Capture the current swapchain image (after submit, before present) and write a PPM file to disk.
+// The swapchain image must be in PRESENT_SRC_KHR layout when called.
+// Stalls the GPU for one frame - use only for debugging.
+static void CaptureScreenshot(const char* filename, uint32_t imageIdx)
 {
-    if (pRenderHAL && pSwapChainRenderTarget)
-        pSwapChainRenderTarget = 0; // release ref if any
+    if (!vkDevice || !vkPhysDevice || !vkQueue || !vkCmdPool) return;
 
-    if (vkDevice != VK_NULL_HANDLE)
-    {
-        vkDeviceWaitIdle(vkDevice);
-        CleanupVulkanSwapChain();
-        if (vkImageAvailableSemaphore != VK_NULL_HANDLE)
-            vkDestroySemaphore(vkDevice, vkImageAvailableSemaphore, 0);
-        if (vkRenderFinishedSemaphore != VK_NULL_HANDLE)
-            vkDestroySemaphore(vkDevice, vkRenderFinishedSemaphore, 0);
-        if (vkInFlightFence != VK_NULL_HANDLE)
-            vkDestroyFence(vkDevice, vkInFlightFence, 0);
-        if (vkCommandPool != VK_NULL_HANDLE)
-            vkDestroyCommandPool(vkDevice, vkCommandPool, 0);
-        vkDestroyDevice(vkDevice, 0);
-        vkDevice = VK_NULL_HANDLE;
-    }
-    if (vkSurface != VK_NULL_HANDLE && vkInstance != VK_NULL_HANDLE)
-    {
-        vkDestroySurfaceKHR(vkInstance, vkSurface, 0);
-        vkSurface = VK_NULL_HANDLE;
-    }
-    if (vkInstance != VK_NULL_HANDLE)
-    {
-        vkDestroyInstance(vkInstance, 0);
-        vkInstance = VK_NULL_HANDLE;
-    }
-    delete pCommandQueue;
-    pCommandQueue = 0;
-    if (hInstance && pWndClassName)
-        UnregisterClass(pWndClassName, hInstance);
-}
+    vkDeviceWaitIdle(vkDevice);
 
-bool FxPlayerTiny::SetupWindow(const String& name)
-{
-    LOG("SetupWindow() start");
-    hInstance = GetModuleHandle(NULL);
-    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_OWNDC, StaticWindowProc, 0L, sizeof(FxPlayerTiny*),
-                      hInstance, NULL, NULL, NULL, NULL, pWndClassName, NULL };
-    if (!RegisterClassEx(&wc))
-        { LOG("SetupWindow: RegisterClassEx failed"); return false; }
+    uint32_t w = vkSwapExtent.width;
+    uint32_t h = vkSwapExtent.height;
+    VkDeviceSize bufSize = (VkDeviceSize)w * h * 4;
 
-    RECT r = { 100, 100, 100 + Width, 100 + Height };
-    AdjustWindowRect(&r, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, 0);
+    // Staging buffer (host-visible, host-coherent)
+    VkBuffer      stagingBuf = VK_NULL_HANDLE;
+    VkDeviceMemory stagingMem = VK_NULL_HANDLE;
 
-    hWnd = CreateWindow(pWndClassName, name.ToCStr(),
-        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
-        r.left, r.top, r.right - r.left, r.bottom - r.top,
-        GetDesktopWindow(), NULL, wc.hInstance, (LPVOID)this);
-    if (!hWnd)
-        { LOG("SetupWindow: CreateWindow failed"); return false; }
-    LOG("Window created %dx%d", Width, Height);
-
-    // Vulkan instance
-    const char* instanceExtensions[] = { VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME };
-    VkApplicationInfo appInfo = {};
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "GFxPlayerTinyVulkan";
-    appInfo.applicationVersion = 1;
-    appInfo.pEngineName = "Scaleform";
-    appInfo.engineVersion = 1;
-    appInfo.apiVersion = VK_API_VERSION_1_1;
-
-    VkInstanceCreateInfo instInfo = {};
-    instInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    instInfo.pApplicationInfo = &appInfo;
-    instInfo.enabledExtensionCount = 2;
-    instInfo.ppEnabledExtensionNames = instanceExtensions;
-
-    if (vkCreateInstance(&instInfo, 0, &vkInstance) != VK_SUCCESS)
-        { LOG("SetupWindow: vkCreateInstance failed"); return false; }
-    LOG("Vulkan instance created");
-
-    VkWin32SurfaceCreateInfoKHR surfInfo = {};
-    surfInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    surfInfo.hwnd = hWnd;
-    surfInfo.hinstance = hInstance;
-    if (vkCreateWin32SurfaceKHR(vkInstance, &surfInfo, 0, &vkSurface) != VK_SUCCESS)
-        { LOG("SetupWindow: vkCreateWin32SurfaceKHR failed"); return false; }
-    LOG("Vulkan surface created");
-
-    uint32_t devCount = 0;
-    vkEnumeratePhysicalDevices(vkInstance, &devCount, 0);
-    if (devCount == 0) return false;
-    std::vector<VkPhysicalDevice> devices(devCount);
-    vkEnumeratePhysicalDevices(vkInstance, &devCount, devices.data());
-    vkPhysicalDevice = devices[0];
-
-    uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice, &queueFamilyCount, 0);
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevice, &queueFamilyCount, queueFamilies.data());
-
-    vkQueueFamilyIndex = (unsigned)(-1);
-    for (uint32_t i = 0; i < queueFamilyCount; ++i)
-    {
-        if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-        {
-            VkBool32 presentSupport = VK_FALSE;
-            vkGetPhysicalDeviceSurfaceSupportKHR(vkPhysicalDevice, i, vkSurface, &presentSupport);
-            if (presentSupport) { vkQueueFamilyIndex = i; break; }
-        }
-    }
-    if (vkQueueFamilyIndex == (unsigned)(-1))
-        return false;
-
-    float queuePriority = 1.0f;
-    VkDeviceQueueCreateInfo queueInfo = {};
-    queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueInfo.queueFamilyIndex = vkQueueFamilyIndex;
-    queueInfo.queueCount = 1;
-    queueInfo.pQueuePriorities = &queuePriority;
-
-    const char* deviceExtensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-    VkDeviceCreateInfo deviceInfo = {};
-    deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    deviceInfo.queueCreateInfoCount = 1;
-    deviceInfo.pQueueCreateInfos = &queueInfo;
-    deviceInfo.enabledExtensionCount = 1;
-    deviceInfo.ppEnabledExtensionNames = deviceExtensions;
-
-    if (vkCreateDevice(vkPhysicalDevice, &deviceInfo, 0, &vkDevice) != VK_SUCCESS)
-        { LOG("SetupWindow: vkCreateDevice failed"); return false; }
-    LOG("Vulkan device created, queue family %u", vkQueueFamilyIndex);
-
-    vkGetDeviceQueue(vkDevice, vkQueueFamilyIndex, 0, &vkQueue);
-
-    if (!CreateVulkanSwapChain())
-        { LOG("SetupWindow: CreateVulkanSwapChain failed"); return false; }
-    LOG("Swapchain created, %u images", (unsigned)swapchainImages.size());
-    if (!CreateVulkanRenderPassAndFramebuffers())
-        { LOG("SetupWindow: CreateVulkanRenderPassAndFramebuffers failed"); return false; }
-    LOG("Render pass and framebuffers created");
-
-    VkCommandPoolCreateInfo poolInfo = {};
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.queueFamilyIndex = vkQueueFamilyIndex;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    if (vkCreateCommandPool(vkDevice, &poolInfo, 0, &vkCommandPool) != VK_SUCCESS)
-        { LOG("SetupWindow: vkCreateCommandPool failed"); return false; }
-
-    vkCommandBuffers.resize(swapchainImageViews.size());
-    if (!vkCommandBuffers.empty())
-    {
-        VkCommandBufferAllocateInfo allocInfo = {};
-        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.commandPool = vkCommandPool;
-        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandBufferCount = (uint32_t)vkCommandBuffers.size();
-        if (vkAllocateCommandBuffers(vkDevice, &allocInfo, vkCommandBuffers.data()) != VK_SUCCESS)
-            { LOG("SetupWindow: vkAllocateCommandBuffers failed"); return false; }
-    }
-    LOG("SetupWindow() OK");
-
-    VkSemaphoreCreateInfo semInfo = {};
-    semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    if (vkCreateSemaphore(vkDevice, &semInfo, 0, &vkImageAvailableSemaphore) != VK_SUCCESS) return false;
-    if (vkCreateSemaphore(vkDevice, &semInfo, 0, &vkRenderFinishedSemaphore) != VK_SUCCESS) return false;
-
-    VkFenceCreateInfo fenceInfo = {};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-    if (vkCreateFence(vkDevice, &fenceInfo, 0, &vkInFlightFence) != VK_SUCCESS) return false;
-
-    return true;
-}
-
-bool FxPlayerTiny::CreateVulkanSwapChain()
-{
-    VkSurfaceCapabilitiesKHR caps;
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vkPhysicalDevice, vkSurface, &caps);
-
-    uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(vkPhysicalDevice, vkSurface, &formatCount, 0);
-    std::vector<VkSurfaceFormatKHR> formats(formatCount);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(vkPhysicalDevice, vkSurface, &formatCount, formats.data());
-
-    vkSwapchainFormat = VK_FORMAT_B8G8R8A8_UNORM;
-    for (const auto& f : formats)
-    {
-        if (f.format == VK_FORMAT_B8G8R8A8_UNORM && f.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-            break;
-        if (f.format == VK_FORMAT_R8G8B8A8_UNORM && f.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-        { vkSwapchainFormat = VK_FORMAT_R8G8B8A8_UNORM; break; }
-    }
-
-    vkSwapchainExtent.width = Width;
-    vkSwapchainExtent.height = Height;
-    if (caps.currentExtent.width != (uint32_t)-1)
-    {
-        vkSwapchainExtent.width = caps.currentExtent.width;
-        vkSwapchainExtent.height = caps.currentExtent.height;
-    }
-    else
-    {
-        if (vkSwapchainExtent.width < caps.minImageExtent.width) vkSwapchainExtent.width = caps.minImageExtent.width;
-        if (vkSwapchainExtent.height < caps.minImageExtent.height) vkSwapchainExtent.height = caps.minImageExtent.height;
-        if (vkSwapchainExtent.width > caps.maxImageExtent.width) vkSwapchainExtent.width = caps.maxImageExtent.width;
-        if (vkSwapchainExtent.height > caps.maxImageExtent.height) vkSwapchainExtent.height = caps.maxImageExtent.height;
-    }
-
-    uint32_t imageCount = caps.minImageCount + 1;
-    if (caps.maxImageCount > 0 && imageCount > caps.maxImageCount)
-        imageCount = caps.maxImageCount;
-
-    VkSwapchainCreateInfoKHR swapInfo = {};
-    swapInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    swapInfo.surface = vkSurface;
-    swapInfo.minImageCount = imageCount;
-    swapInfo.imageFormat = vkSwapchainFormat;
-    swapInfo.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-    swapInfo.imageExtent = vkSwapchainExtent;
-    swapInfo.imageArrayLayers = 1;
-    swapInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    swapInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    swapInfo.preTransform = caps.currentTransform;
-    swapInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    swapInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
-    swapInfo.clipped = VK_TRUE;
-
-    if (vkCreateSwapchainKHR(vkDevice, &swapInfo, 0, &vkSwapchain) != VK_SUCCESS)
-        return false;
-
-    vkGetSwapchainImagesKHR(vkDevice, vkSwapchain, &imageCount, 0);
-    swapchainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(vkDevice, vkSwapchain, &imageCount, swapchainImages.data());
-
-    swapchainImageViews.resize(swapchainImages.size());
-    for (size_t i = 0; i < swapchainImages.size(); ++i)
-    {
-        VkImageViewCreateInfo viewInfo = {};
-        viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        viewInfo.image = swapchainImages[i];
-        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        viewInfo.format = vkSwapchainFormat;
-        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        viewInfo.subresourceRange.baseMipLevel = 0;
-        viewInfo.subresourceRange.levelCount = 1;
-        viewInfo.subresourceRange.baseArrayLayer = 0;
-        viewInfo.subresourceRange.layerCount = 1;
-        if (vkCreateImageView(vkDevice, &viewInfo, 0, &swapchainImageViews[i]) != VK_SUCCESS)
-        {
-            while (i > 0) vkDestroyImageView(vkDevice, swapchainImageViews[--i], 0);
-            return false;
-        }
-    }
-    return true;
-}
-
-static VkFormat pickDepthStencilFormat(VkPhysicalDevice pd)
-{
-    VkFormat candidates[] = { VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT };
-    for (VkFormat f : candidates)
-    {
-        VkFormatProperties p = {};
-        vkGetPhysicalDeviceFormatProperties(pd, f, &p);
-        if ((p.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0)
-            return f;
-    }
-    return VK_FORMAT_D32_SFLOAT_S8_UINT;
-}
-
-bool FxPlayerTiny::CreateVulkanRenderPassAndFramebuffers()
-{
-    const VkFormat depthStencilFormat = pickDepthStencilFormat(vkPhysicalDevice);
-
-    // --- Create depth/stencil image ---
-    VkImageCreateInfo dsImgInfo = {};
-    dsImgInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    dsImgInfo.imageType = VK_IMAGE_TYPE_2D;
-    dsImgInfo.format = depthStencilFormat;
-    dsImgInfo.extent.width = vkSwapchainExtent.width;
-    dsImgInfo.extent.height = vkSwapchainExtent.height;
-    dsImgInfo.extent.depth = 1;
-    dsImgInfo.mipLevels = 1;
-    dsImgInfo.arrayLayers = 1;
-    dsImgInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    dsImgInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    dsImgInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    dsImgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    dsImgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    if (vkCreateImage(vkDevice, &dsImgInfo, 0, &vkDepthStencilImage) != VK_SUCCESS)
-        { LOG("CreateDS: vkCreateImage failed"); return false; }
+    VkBufferCreateInfo bci = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    bci.size        = bufSize;
+    bci.usage       = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    if (vkCreateBuffer(vkDevice, &bci, nullptr, &stagingBuf) != VK_SUCCESS) return;
 
     VkMemoryRequirements memReq;
-    vkGetImageMemoryRequirements(vkDevice, vkDepthStencilImage, &memReq);
+    vkGetBufferMemoryRequirements(vkDevice, stagingBuf, &memReq);
 
     VkPhysicalDeviceMemoryProperties memProps;
-    vkGetPhysicalDeviceMemoryProperties(vkPhysicalDevice, &memProps);
-    uint32_t memTypeIndex = (uint32_t)-1;
-    for (uint32_t i = 0; i < memProps.memoryTypeCount; ++i)
+    vkGetPhysicalDeviceMemoryProperties(vkPhysDevice, &memProps);
+    uint32_t memTypeIdx = UINT32_MAX;
+    VkMemoryPropertyFlags needed = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    for (uint32_t i = 0; i < memProps.memoryTypeCount; i++)
     {
-        if ((memReq.memoryTypeBits & (1u << i)) &&
-            (memProps.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT))
-        { memTypeIndex = i; break; }
+        if ((memReq.memoryTypeBits & (1u << i)) && (memProps.memoryTypes[i].propertyFlags & needed) == needed)
+        { memTypeIdx = i; break; }
     }
-    if (memTypeIndex == (uint32_t)-1)
-        { LOG("CreateDS: no suitable memory type"); vkDestroyImage(vkDevice, vkDepthStencilImage, 0); vkDepthStencilImage = VK_NULL_HANDLE; return false; }
+    if (memTypeIdx == UINT32_MAX) { vkDestroyBuffer(vkDevice, stagingBuf, nullptr); return; }
 
-    VkMemoryAllocateInfo dsAllocInfo = {};
-    dsAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    dsAllocInfo.allocationSize = memReq.size;
-    dsAllocInfo.memoryTypeIndex = memTypeIndex;
-    if (vkAllocateMemory(vkDevice, &dsAllocInfo, 0, &vkDepthStencilMemory) != VK_SUCCESS)
-        { LOG("CreateDS: vkAllocateMemory failed"); vkDestroyImage(vkDevice, vkDepthStencilImage, 0); vkDepthStencilImage = VK_NULL_HANDLE; return false; }
-    vkBindImageMemory(vkDevice, vkDepthStencilImage, vkDepthStencilMemory, 0);
+    VkMemoryAllocateInfo mai = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+    mai.allocationSize  = memReq.size;
+    mai.memoryTypeIndex = memTypeIdx;
+    if (vkAllocateMemory(vkDevice, &mai, nullptr, &stagingMem) != VK_SUCCESS)
+    { vkDestroyBuffer(vkDevice, stagingBuf, nullptr); return; }
+    vkBindBufferMemory(vkDevice, stagingBuf, stagingMem, 0);
 
-    VkImageViewCreateInfo dsViewInfo = {};
-    dsViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    dsViewInfo.image = vkDepthStencilImage;
-    dsViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    dsViewInfo.format = depthStencilFormat;
-    dsViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-    dsViewInfo.subresourceRange.baseMipLevel = 0;
-    dsViewInfo.subresourceRange.levelCount = 1;
-    dsViewInfo.subresourceRange.baseArrayLayer = 0;
-    dsViewInfo.subresourceRange.layerCount = 1;
-    if (vkCreateImageView(vkDevice, &dsViewInfo, 0, &vkDepthStencilView) != VK_SUCCESS)
-    {
-        LOG("CreateDS: vkCreateImageView failed");
-        vkFreeMemory(vkDevice, vkDepthStencilMemory, 0); vkDepthStencilMemory = VK_NULL_HANDLE;
-        vkDestroyImage(vkDevice, vkDepthStencilImage, 0); vkDepthStencilImage = VK_NULL_HANDLE;
-        return false;
-    }
+    // One-shot command buffer
+    VkCommandBuffer cmd = VK_NULL_HANDLE;
+    VkCommandBufferAllocateInfo cbAI = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    cbAI.commandPool        = vkCmdPool;
+    cbAI.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cbAI.commandBufferCount = 1;
+    vkAllocateCommandBuffers(vkDevice, &cbAI, &cmd);
 
-    // --- Render pass: color + depth/stencil ---
-    VkAttachmentDescription attachments[2] = {};
-    attachments[0].format = vkSwapchainFormat;
-    attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
-    attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    attachments[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    VkCommandBufferBeginInfo cbBI = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    cbBI.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(cmd, &cbBI);
 
-    attachments[1].format = depthStencilFormat;
-    attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
-    attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    // PRESENT_SRC_KHR -> TRANSFER_SRC_OPTIMAL
+    VkImageMemoryBarrier bar = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+    bar.srcAccessMask       = VK_ACCESS_MEMORY_READ_BIT;
+    bar.dstAccessMask       = VK_ACCESS_TRANSFER_READ_BIT;
+    bar.oldLayout           = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    bar.newLayout           = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    bar.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    bar.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    bar.image               = vkSwapImages[imageIdx];
+    bar.subresourceRange    = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+    vkCmdPipelineBarrier(cmd,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+        0, 0, nullptr, 0, nullptr, 1, &bar);
 
-    VkAttachmentReference colorRef = {};
-    colorRef.attachment = 0;
-    colorRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    VkBufferImageCopy region = {};
+    region.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+    region.imageExtent      = { w, h, 1 };
+    vkCmdCopyImageToBuffer(cmd, vkSwapImages[imageIdx],
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, stagingBuf, 1, &region);
 
-    VkAttachmentReference depthRef = {};
-    depthRef.attachment = 1;
-    depthRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass = {};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorRef;
-    subpass.pDepthStencilAttachment = &depthRef;
-
-    VkRenderPassCreateInfo rpInfo = {};
-    rpInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    rpInfo.attachmentCount = 2;
-    rpInfo.pAttachments = attachments;
-    rpInfo.subpassCount = 1;
-    rpInfo.pSubpasses = &subpass;
-    if (vkCreateRenderPass(vkDevice, &rpInfo, 0, &vkRenderPass) != VK_SUCCESS)
-    {
-        vkDestroyImageView(vkDevice, vkDepthStencilView, 0);
-        vkFreeMemory(vkDevice, vkDepthStencilMemory, 0);
-        vkDestroyImage(vkDevice, vkDepthStencilImage, 0);
-        vkDepthStencilView = VK_NULL_HANDLE;
-        vkDepthStencilMemory = VK_NULL_HANDLE;
-        vkDepthStencilImage = VK_NULL_HANDLE;
-        return false;
-    }
-
-    // --- Framebuffers: color + depth/stencil ---
-    vkFramebuffers.resize(swapchainImageViews.size());
-    for (size_t i = 0; i < swapchainImageViews.size(); ++i)
-    {
-        VkImageView fbAttachments[2] = { swapchainImageViews[i], vkDepthStencilView };
-        VkFramebufferCreateInfo fbInfo = {};
-        fbInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        fbInfo.renderPass = vkRenderPass;
-        fbInfo.attachmentCount = 2;
-        fbInfo.pAttachments = fbAttachments;
-        fbInfo.width = vkSwapchainExtent.width;
-        fbInfo.height = vkSwapchainExtent.height;
-        fbInfo.layers = 1;
-        if (vkCreateFramebuffer(vkDevice, &fbInfo, 0, &vkFramebuffers[i]) != VK_SUCCESS)
-        {
-            while (i > 0) vkDestroyFramebuffer(vkDevice, vkFramebuffers[--i], 0);
-            vkDestroyRenderPass(vkDevice, vkRenderPass, 0);
-            vkRenderPass = VK_NULL_HANDLE;
-            vkDestroyImageView(vkDevice, vkDepthStencilView, 0);
-            vkFreeMemory(vkDevice, vkDepthStencilMemory, 0);
-            vkDestroyImage(vkDevice, vkDepthStencilImage, 0);
-            vkDepthStencilView = VK_NULL_HANDLE;
-            vkDepthStencilMemory = VK_NULL_HANDLE;
-            vkDepthStencilImage = VK_NULL_HANDLE;
-            return false;
-        }
-    }
-    return true;
-}
-
-void FxPlayerTiny::CleanupVulkanSwapChain()
-{
-    if (!vkDevice || vkSwapchain == VK_NULL_HANDLE) return;
-    vkDeviceWaitIdle(vkDevice);
-    if (!vkCommandBuffers.empty() && vkCommandPool != VK_NULL_HANDLE)
-        vkFreeCommandBuffers(vkDevice, vkCommandPool, (uint32_t)vkCommandBuffers.size(), vkCommandBuffers.data());
-    vkCommandBuffers.clear();
-    for (auto fb : vkFramebuffers)
-        vkDestroyFramebuffer(vkDevice, fb, 0);
-    vkFramebuffers.clear();
-    if (vkRenderPass != VK_NULL_HANDLE)
-    {
-        vkDestroyRenderPass(vkDevice, vkRenderPass, 0);
-        vkRenderPass = VK_NULL_HANDLE;
-    }
-    if (vkDepthStencilView != VK_NULL_HANDLE)
-    {
-        vkDestroyImageView(vkDevice, vkDepthStencilView, 0);
-        vkDepthStencilView = VK_NULL_HANDLE;
-    }
-    if (vkDepthStencilMemory != VK_NULL_HANDLE)
-    {
-        vkFreeMemory(vkDevice, vkDepthStencilMemory, 0);
-        vkDepthStencilMemory = VK_NULL_HANDLE;
-    }
-    if (vkDepthStencilImage != VK_NULL_HANDLE)
-    {
-        vkDestroyImage(vkDevice, vkDepthStencilImage, 0);
-        vkDepthStencilImage = VK_NULL_HANDLE;
-    }
-    for (auto v : swapchainImageViews)
-        vkDestroyImageView(vkDevice, v, 0);
-    swapchainImageViews.clear();
-    swapchainImages.clear();
-    vkDestroySwapchainKHR(vkDevice, vkSwapchain, 0);
-    vkSwapchain = VK_NULL_HANDLE;
-    pSwapChainRenderTarget = 0;
-}
-
-int FxPlayerTiny::Run()
-{
-    LOG("Run() start, loading '%s'", FileName.ToCStr());
-    if (!SetupWindow(String(FXPLAYER_APP_TITLE " ") + FileName))
-        { LOG("Run(): SetupWindow failed"); return 1; }
-
-    ShowWindow(hWnd, SW_SHOWDEFAULT);
-    UpdateWindow(hWnd);
-    LOG("Window shown");
-
-    Loader loader;
-    loader.SetLog(Ptr<GFx::Log>(*new GFxPlayerLog()));
-    Ptr<ActionControl> pactControl = *new ActionControl(ActionControl::Action_ErrorSuppress);
-    pactControl->SetVerboseAction(VerboseAction);
-    loader.SetActionControl(pactControl);
-    Ptr<FileOpener> pfileOpener = *new FileOpener;
-    loader.SetFileOpener(pfileOpener);
-    Ptr<FSCommandHandler> pcommandHandler = *new FxPlayerFSCommandHandler;
-    loader.SetFSCommandHandler(pcommandHandler);
-    Ptr<FontProviderWin32> fontProvider = *new FontProviderWin32(::GetDC(0));
-    loader.SetFontProvider(fontProvider);
-
-    SF::Ptr<GFx::ImageFileHandlerRegistry> pimgReg = *new GFx::ImageFileHandlerRegistry();
-#ifdef SF_ENABLE_LIBJPEG
-    pimgReg->AddHandler(&SF::Render::JPEG::FileReader::Instance);
-#endif
-#ifdef SF_ENABLE_LIBPNG
-    pimgReg->AddHandler(&SF::Render::PNG::FileReader::Instance);
-#endif
-    pimgReg->AddHandler(&SF::Render::TGA::FileReader::Instance);
-    pimgReg->AddHandler(&SF::Render::DDS::FileReader::Instance);
-    loader.SetImageFileHandlerRegistry(pimgReg);
-
-    Ptr<ASSupport> pASSupport = *new GFx::AS3Support();
-    loader.SetAS3Support(pASSupport);
-    Ptr<ASSupport> pAS2Support = *new GFx::AS2Support();
-    loader.SetAS2Support(pAS2Support);
-
-    FxPlayerThreadCommandQueue* queue = new FxPlayerThreadCommandQueue;
-    pCommandQueue = queue;
-
-    if (!(pMovieDef = *loader.CreateMovie(FileName)))
-    {
-        LOG("CreateMovie('%s') failed, trying AS2\\Samples\\...", FileName.ToCStr());
-        if (!(pMovieDef = *loader.CreateMovie("AS2\\Samples\\" + FileName)))
-        {
-            LOG("CreateMovie failed");
-            String errorString = "Unable to load file: ";
-            errorString += FileName;
-            MessageBox(NULL, errorString.ToCStr(), "Error", MB_OK | MB_ICONEXCLAMATION);
-            return 1;
-        }
-    }
-    LOG("MovieDef loaded");
-
-    if (!(pMovie = *pMovieDef->CreateInstance(false, 0, 0, pCommandQueue)))
-        { LOG("CreateInstance failed"); return 1; }
-
-    pMovie->SetMouseCursorCount(1);
-    hMovieDisplay = pMovie->GetDisplayHandle();
-
-    pRenderHAL = *new Render::Vulkan::HAL();
-    if (!(pRenderer = *new Render::Renderer2D(pRenderHAL.GetPtr())))
-        return 1;
-
-    queue->pHAL = pRenderHAL;
-    queue->pR2D = pRenderer;
-
-    Render::Vulkan::HALInitParams halParams(vkInstance, vkPhysicalDevice, vkDevice, vkQueue, vkQueueFamilyIndex, vkRenderPass, vkSwapchainFormat);
-    if (!pRenderHAL->InitHAL(halParams))
-        { LOG("InitHAL failed"); return 1; }
-    LOG("Vulkan HAL initialized");
-
-    ImageSize rtSize((int)vkSwapchainExtent.width, (int)vkSwapchainExtent.height);
-    pSwapChainRenderTarget = pRenderHAL->CreateRenderTarget(swapchainImageViews[0], vkDepthStencilView, rtSize);
-    if (!pSwapChainRenderTarget)
-        { LOG("CreateRenderTarget failed"); return 1; }
-    LOG("Render target created %dx%d", rtSize.Width, rtSize.Height);
-
-    pMovie->SetViewport((int)vkSwapchainExtent.width, (int)vkSwapchainExtent.height, 0, 0, (int)vkSwapchainExtent.width, (int)vkSwapchainExtent.height);
-
-    MovieStartTime = MovieLastTime = timeGetTime();
-
-    LOG("Entering main loop");
-    MSG msg;
-    ZeroMemory(&msg, sizeof(msg));
-    while (msg.message != WM_QUIT)
-    {
-        // Process all pending messages so the window stays responsive (avoids "Not Responding")
-        while (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
-        {
-            if (msg.message == WM_QUIT)
-                break;
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-        if (msg.message == WM_QUIT)
-            break;
-        AdvanceAndDisplay();
-        if ((ExitTimeout > 0) && (MovieLastTime - MovieStartTime > (UInt32)(ExitTimeout * 1000)))
-            break;
-        Sleep(1);
-    }
-    LOG("Main loop exit (msg=WM_QUIT or timeout)");
-    return 0;
-}
-
-void FxPlayerTiny::AdvanceAndDisplay()
-{
-    static int advFrame = 0;
-    advFrame++;
-    if (advFrame <= 20 || advFrame % 60 == 0)
-        LOG("AdvanceAndDisplay frame %d start", advFrame);
-
-    if (!pMovie || !pRenderer || !pRenderHAL || !pSwapChainRenderTarget || vkCommandBuffers.empty() || vkSwapchain == VK_NULL_HANDLE)
-        { static bool once = true; if (once) { LOG("AdvanceAndDisplay: early exit (missing init)"); once = false; } return; }
-
-    // Wait for previous frame's GPU work with timeout and pump messages so window doesn't go "Not Responding"
-    {
-        const uint64_t timeoutNs = 16000000; // 16 ms
-        MSG msg;
-        VkResult waitRes;
-        while ((waitRes = vkWaitForFences(vkDevice, 1, &vkInFlightFence, VK_TRUE, timeoutNs)) == VK_TIMEOUT)
-        {
-            while (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
-            {
-                if (msg.message == WM_QUIT)
-                    return;
-                TranslateMessage(&msg);
-                DispatchMessage(&msg);
-            }
-            Sleep(0);
-        }
-        if (waitRes != VK_SUCCESS)
-            return;
-    }
-    vkResetFences(vkDevice, 1, &vkInFlightFence);
-
-    uint32_t imageIndex;
-    VkResult res = vkAcquireNextImageKHR(vkDevice, vkSwapchain, UINT64_MAX, vkImageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
-    if (res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR)
-        { static int errCount = 0; if (errCount++ < 5) LOG("vkAcquireNextImageKHR failed: %d", (int)res); return; }
-    if (advFrame <= 20 || advFrame % 60 == 0)
-        LOG("Acquired image %u", (unsigned)imageIndex);
-
-    Vulkan::RenderTargetData::UpdateData(pSwapChainRenderTarget, swapchainImageViews[imageIndex], 0, vkDepthStencilView);
-    pRenderHAL->SetRenderTarget(pSwapChainRenderTarget);
-
-    UInt32 time = timeGetTime();
-    float delta = ((float)(time - MovieLastTime)) / 1000.0f;
-    if (!Paused)
-        pMovie->Advance(delta);
-    MovieLastTime = time;
-
-    VkCommandBuffer cmd = vkCommandBuffers[imageIndex];
-    vkResetCommandBuffer(cmd, 0);
-    VkCommandBufferBeginInfo beginInfo = {};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    if (vkBeginCommandBuffer(cmd, &beginInfo) != VK_SUCCESS)
-        { static int errCount = 0; if (errCount++ < 5) LOG("vkBeginCommandBuffer failed"); return; }
-
-    pRenderHAL->BeginFrame(cmd);
-
-    VkImageMemoryBarrier barrierToRender = {};
-    barrierToRender.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrierToRender.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    barrierToRender.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    barrierToRender.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrierToRender.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrierToRender.image = swapchainImages[imageIndex];
-    barrierToRender.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrierToRender.subresourceRange.baseMipLevel = 0;
-    barrierToRender.subresourceRange.levelCount = 1;
-    barrierToRender.subresourceRange.baseArrayLayer = 0;
-    barrierToRender.subresourceRange.layerCount = 1;
-    barrierToRender.srcAccessMask = 0;
-    barrierToRender.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrierToRender);
-
-    VkClearValue clearValues[2] = {};
-    clearValues[0].color.float32[0] = 0.2f;
-    clearValues[0].color.float32[1] = 0.2f;
-    clearValues[0].color.float32[2] = 0.2f;
-    clearValues[0].color.float32[3] = 1.0f;
-    clearValues[1].depthStencil.depth = 1.0f;
-    clearValues[1].depthStencil.stencil = 0;
-    VkRenderPassBeginInfo rpBegin = {};
-    rpBegin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    rpBegin.renderPass = vkRenderPass;
-    rpBegin.framebuffer = vkFramebuffers[imageIndex];
-    rpBegin.renderArea.offset = { 0, 0 };
-    rpBegin.renderArea.extent = vkSwapchainExtent;
-    rpBegin.clearValueCount = 2;
-    rpBegin.pClearValues = clearValues;
-    vkCmdBeginRenderPass(cmd, &rpBegin, VK_SUBPASS_CONTENTS_INLINE);
-
-    Display();
-
-    vkCmdEndRenderPass(cmd);
-
-    VkImageMemoryBarrier barrierToPresent = {};
-    barrierToPresent.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrierToPresent.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    barrierToPresent.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    barrierToPresent.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrierToPresent.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrierToPresent.image = swapchainImages[imageIndex];
-    barrierToPresent.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrierToPresent.subresourceRange.baseMipLevel = 0;
-    barrierToPresent.subresourceRange.levelCount = 1;
-    barrierToPresent.subresourceRange.baseArrayLayer = 0;
-    barrierToPresent.subresourceRange.layerCount = 1;
-    barrierToPresent.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    barrierToPresent.dstAccessMask = 0;
-    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrierToPresent);
+    // TRANSFER_SRC_OPTIMAL -> PRESENT_SRC_KHR
+    bar.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    bar.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    bar.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    bar.newLayout     = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    vkCmdPipelineBarrier(cmd,
+        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+        0, 0, nullptr, 0, nullptr, 1, &bar);
 
     vkEndCommandBuffer(cmd);
 
-    VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    VkSubmitInfo submitInfo = {};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = &vkImageAvailableSemaphore;
-    submitInfo.pWaitDstStageMask = &waitStage;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &cmd;
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = &vkRenderFinishedSemaphore;
+    VkSubmitInfo si = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+    si.commandBufferCount = 1;
+    si.pCommandBuffers    = &cmd;
+    vkQueueSubmit(vkQueue, 1, &si, VK_NULL_HANDLE);
+    vkQueueWaitIdle(vkQueue);
+    vkFreeCommandBuffers(vkDevice, vkCmdPool, 1, &cmd);
 
-    if (vkQueueSubmit(vkQueue, 1, &submitInfo, vkInFlightFence) != VK_SUCCESS)
-        { static int errCount = 0; if (errCount++ < 5) LOG("vkQueueSubmit failed"); return; }
-    { static int subFrame = 0; subFrame++; if (subFrame <= 20 || subFrame % 60 == 0) LOG("Frame submitted %d", subFrame); }
-
-    VkPresentInfoKHR presentInfo = {};
-    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = &vkRenderFinishedSemaphore;
-    presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = &vkSwapchain;
-    presentInfo.pImageIndices = &imageIndex;
-    VkResult presRes = vkQueuePresentKHR(vkQueue, &presentInfo);
-    if (presRes != VK_SUCCESS && presRes != VK_SUBOPTIMAL_KHR)
-        { static int errCount = 0; if (errCount++ < 5) LOG("vkQueuePresentKHR failed: %d", (int)presRes); }
+    // Map staging buffer and write binary PPM (P6)
+    void* mapped = nullptr;
+    vkMapMemory(vkDevice, stagingMem, 0, bufSize, 0, &mapped);
+    FILE* ppm = fopen(filename, "wb");
+    if (ppm)
+    {
+        fprintf(ppm, "P6\n%u %u\n255\n", w, h);
+        const uint8_t* px = (const uint8_t*)mapped;
+        for (uint32_t i = 0; i < w * h; i++, px += 4)
+        {
+            // Swapchain is B8G8R8A8 — swap R/B for PPM RGB
+            fputc(px[2], ppm);
+            fputc(px[1], ppm);
+            fputc(px[0], ppm);
+        }
+        fclose(ppm);
+        if (vkLogFile)
+        {
+            fprintf(vkLogFile, "Screenshot saved: %s (%ux%u)\n", filename, w, h);
+            fflush(vkLogFile);
+        }
+    }
+    vkUnmapMemory(vkDevice, stagingMem);
+    vkDestroyBuffer(vkDevice, stagingBuf, nullptr);
+    vkFreeMemory(vkDevice, stagingMem, nullptr);
 }
 
-void FxPlayerTiny::Display()
-{
-    if (!pRenderer) return;
-    pRenderer->BeginFrame();
-    bool captured = hMovieDisplay.NextCapture(pRenderer->GetContextNotify());
-    static int logFrame = 0;
-    logFrame++;
-    if (logFrame <= 20 || logFrame % 60 == 0)
-        LOG("Display() frame %d NextCapture=%d", logFrame, (int)captured);
-    if (captured)
-    {
-        LOG("Display() calling pRenderer->Display(hMovieDisplay)...");
-        pRenderer->Display(hMovieDisplay);
-        LOG("Display() pRenderer->Display() returned");
-    }
-    LOG("Display() calling EndFrame()");
-    pRenderer->EndFrame();
-    LOG("Display() EndFrame() returned");
-}
 
-void FxPlayerTiny::HandleKeyEvent(unsigned keyCode, bool downFlag)
-{
-    Key::Code key = Key::None;
-    if (keyCode >= 'A' && keyCode <= 'Z')
-        key = (Key::Code)((keyCode - 'A') + Key::A);
-    else if (keyCode >= VK_F1 && keyCode <= VK_F15)
-        key = (Key::Code)((keyCode - VK_F1) + Key::F1);
-    else if (keyCode >= '0' && keyCode <= '9')
-        key = (Key::Code)((keyCode - '0') + 48);
-    else if (keyCode >= VK_NUMPAD0 && keyCode <= VK_NUMPAD9)
-        key = (Key::Code)((keyCode - VK_NUMPAD0) + Key::KP_0);
-    else
-    {
-        static struct { int vk; Key::Code gs; } table[] = {
-            { VK_SHIFT, Key::Shift }, { VK_RSHIFT, Key::Shift }, { VK_CONTROL, Key::Control }, { VK_RCONTROL, Key::Control },
-            { VK_MENU, Key::Alt }, { VK_RMENU, Key::Alt }, { VK_RETURN, Key::Return }, { VK_ESCAPE, Key::Escape },
-            { VK_LEFT, Key::Left }, { VK_UP, Key::Up }, { VK_RIGHT, Key::Right }, { VK_DOWN, Key::Down },
-            { VK_SPACE, Key::Space }, { VK_BACK, Key::Backspace }, { VK_DELETE, Key::Delete }, { VK_INSERT, Key::Insert },
-            { 0, Key::None }
-        };
-        for (int i = 0; table[i].vk != 0; i++)
-            if (keyCode == (unsigned)table[i].vk) { key = table[i].gs; break; }
-    }
-    if (key != Key::None && pMovie)
-    {
-        KeyEvent event(downFlag ? GFx::Event::KeyDown : KeyEvent::KeyUp, key);
-        pMovie->HandleEvent(event);
-    }
-}
+// -------------------------------------------------------------------------
+// Input helpers – mirror the DX player's OnMouse / OnKey interface
+// -------------------------------------------------------------------------
 
-void FxPlayerTiny::OnKey(unsigned keyCode, bool downFlag)
-{
-    if (!pMovie) return;
-    if (keyCode == VK_CONTROL) { ControlKeyDown = downFlag; return; }
-    if (keyCode == VK_MENU && downFlag) return;
-    bool ctrl = ControlKeyDown;
-    if (ctrl && downFlag)
-    {
-        if (keyCode == 'P') Paused = !Paused;
-        return;
-    }
-    if (!ctrl)
-        HandleKeyEvent(keyCode, downFlag);
-}
-
-void FxPlayerTiny::OnMouse(GFx::Event::EventType eventType, unsigned button, int x, int y)
+static void OnMouse(GFx::Event::EventType eventType, unsigned button, int x, int y)
 {
     if (pMovie)
     {
@@ -980,122 +293,964 @@ void FxPlayerTiny::OnMouse(GFx::Event::EventType eventType, unsigned button, int
     }
 }
 
-void FxPlayerTiny::OnMouseWheel(int zdelta, int x, int y)
+static void OnMouseWheel(int zdelta, int x, int y)
 {
     if (pMovie)
     {
-        MouseEvent mevent(GFx::Event::MouseWheel, 0, (float)x, (float)y, (float)((zdelta / WHEEL_DELTA) * 3));
+        MouseEvent mevent(GFx::Event::MouseWheel, 0, (float)x, (float)y,
+                          (float)((zdelta / WHEEL_DELTA) * 3));
         pMovie->HandleEvent(mevent);
     }
 }
 
-LRESULT FxPlayerTiny::MemberWndProc(UINT msg, WPARAM wParam, LPARAM lParam)
+static void HandleKeyEvent(unsigned keyCode, bool downFlag)
+{
+    Key::Code key(Key::None);
+
+    if (keyCode >= 'A' && keyCode <= 'Z')
+    {
+        key = (Key::Code)((keyCode - 'A') + Key::A);
+    }
+    else if (keyCode >= VK_F1 && keyCode <= VK_F15)
+    {
+        key = (Key::Code)((keyCode - VK_F1) + Key::F1);
+    }
+    else if (keyCode >= '0' && keyCode <= '9')
+    {
+        key = (Key::Code)((keyCode - '0') + 48);
+    }
+    else if (keyCode >= VK_NUMPAD0 && keyCode <= VK_NUMPAD9)
+    {
+        key = (Key::Code)((keyCode - VK_NUMPAD0) + Key::KP_0);
+    }
+    else
+    {
+        static const struct { int vk; Key::Code gs; } table[] =
+        {
+            { VK_SHIFT,    Key::Shift    },
+            { VK_RSHIFT,   Key::Shift    },
+            { VK_CONTROL,  Key::Control  },
+            { VK_RCONTROL, Key::Control  },
+            { VK_MENU,     Key::Alt      },
+            { VK_RMENU,    Key::Alt      },
+            { VK_RETURN,   Key::Return   },
+            { VK_ESCAPE,   Key::Escape   },
+            { VK_LEFT,     Key::Left     },
+            { VK_UP,       Key::Up       },
+            { VK_RIGHT,    Key::Right    },
+            { VK_DOWN,     Key::Down     },
+            { VK_SPACE,    Key::Space    },
+            { VK_BACK,     Key::Backspace},
+            { VK_DELETE,   Key::Delete   },
+            { VK_INSERT,   Key::Insert   },
+            { VK_HOME,     Key::Home     },
+            { VK_END,      Key::End      },
+            { VK_PRIOR,    Key::PageUp   },
+            { VK_NEXT,     Key::PageDown },
+            { VK_TAB,      Key::Tab      },
+            { 0, Key::None }
+        };
+        for (int i = 0; table[i].vk != 0; i++)
+        {
+            if (keyCode == (unsigned)table[i].vk)
+            { key = table[i].gs; break; }
+        }
+    }
+
+    if (key != Key::None && pMovie)
+    {
+        KeyEvent event(downFlag ? GFx::Event::KeyDown : GFx::Event::KeyUp, key);
+        pMovie->HandleEvent(event);
+    }
+}
+
+static void OnKey(unsigned keyCode, bool downFlag)
+{
+    if (!pMovie) return;
+
+    if (keyCode == VK_CONTROL)
+    {
+        ControlKeyDown = downFlag;
+        return;
+    }
+    if (keyCode == VK_MENU && downFlag)
+        ControlKeyDown = false;
+
+    if (!ControlKeyDown)
+        HandleKeyEvent(keyCode, downFlag);
+}
+
+// -------------------------------------------------------------------------
+
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch (msg)
     {
     case WM_DESTROY:
+    case WM_CLOSE:
+        Running = false;
         PostQuitMessage(0);
         return 0;
-    case WM_SETCURSOR:
-        if (LOWORD(lParam) == HTCLIENT) { SetCursor(LoadCursor(0, IDC_ARROW)); return 0; }
-        break;
-    case WM_MOUSEMOVE:
-        OnMouse(GFx::Event::MouseMove, 0, LOWORD(lParam), HIWORD(lParam));
-        return 0;
-    case WM_MOUSEWHEEL:
+
+    case WM_SIZE:
+        if (wParam != SIZE_MINIMIZED)
         {
-            POINT wcl = { 0, 0 };
-            ClientToScreen(hWnd, &wcl);
-            int x = (int)(short)LOWORD(lParam) - wcl.x;
-            int y = (int)(short)HIWORD(lParam) - wcl.y;
-            OnMouseWheel((int)(short)HIWORD(wParam) * 128 / WHEEL_DELTA, x, y);
+            WindowWidth  = LOWORD(lParam);
+            WindowHeight = HIWORD(lParam);
+            NeedsResize  = true;
+        }
+        return 0;
+
+    case WM_SETCURSOR:
+        if (LOWORD(lParam) == HTCLIENT)
+        {
+            ::SetCursor(::LoadCursor(NULL, IDC_ARROW));
             return 0;
         }
+        break;
+
+    case WM_MOUSEMOVE:
+        OnMouse(GFx::Event::MouseMove, 0, (int)(short)LOWORD(lParam), (int)(short)HIWORD(lParam));
+        return 0;
+
     case WM_LBUTTONDOWN:
-        SetCapture(hWnd);
-        OnMouse(GFx::Event::MouseDown, 0, LOWORD(lParam), HIWORD(lParam));
+        ::SetCapture(hwnd);
+        OnMouse(GFx::Event::MouseDown, 0, (int)(short)LOWORD(lParam), (int)(short)HIWORD(lParam));
         return 0;
     case WM_LBUTTONUP:
-        ReleaseCapture();
-        OnMouse(GFx::Event::MouseUp, 0, LOWORD(lParam), HIWORD(lParam));
+        ::ReleaseCapture();
+        OnMouse(GFx::Event::MouseUp, 0, (int)(short)LOWORD(lParam), (int)(short)HIWORD(lParam));
         return 0;
+
+    case WM_RBUTTONDOWN:
+        OnMouse(GFx::Event::MouseDown, 1, (int)(short)LOWORD(lParam), (int)(short)HIWORD(lParam));
+        return 0;
+    case WM_RBUTTONUP:
+        OnMouse(GFx::Event::MouseUp, 1, (int)(short)LOWORD(lParam), (int)(short)HIWORD(lParam));
+        return 0;
+
+    case WM_MBUTTONDOWN:
+        OnMouse(GFx::Event::MouseDown, 2, (int)(short)LOWORD(lParam), (int)(short)HIWORD(lParam));
+        return 0;
+    case WM_MBUTTONUP:
+        OnMouse(GFx::Event::MouseUp, 2, (int)(short)LOWORD(lParam), (int)(short)HIWORD(lParam));
+        return 0;
+
+    case WM_MOUSEWHEEL:
+        {
+            // lParam carries screen-space position; convert to client coords
+            POINT wcl = { 0, 0 };
+            ::ClientToScreen(hwnd, &wcl);
+            int mx = (int)(short)LOWORD(lParam) - wcl.x;
+            int my = (int)(short)HIWORD(lParam) - wcl.y;
+            OnMouseWheel((int)(short)HIWORD(wParam), mx, my);
+            return 0;
+        }
+
     case WM_KEYDOWN:
-        OnKey((unsigned)wParam, 1);
+        OnKey((unsigned)wParam, true);
         return 0;
     case WM_KEYUP:
-        OnKey((unsigned)wParam, 0);
+        OnKey((unsigned)wParam, false);
         return 0;
+
     case WM_CHAR:
-        if (pMovie && (UInt32)wParam) { CharEvent event((UInt32)wParam); pMovie->HandleEvent(event); }
-        break;
-    case WM_SIZE:
-        if (wParam != SIZE_MINIMIZED && vkDevice && vkSwapchain && pRenderHAL)
         {
-            Width = LOWORD(lParam);
-            Height = HIWORD(lParam);
-            if (Width > 0 && Height > 0)
+            UInt32 wcharCode = (UInt32)wParam;
+            if (pMovie && wcharCode)
             {
-                CleanupVulkanSwapChain();
-                if (CreateVulkanSwapChain() && CreateVulkanRenderPassAndFramebuffers() && vkCommandPool != VK_NULL_HANDLE && !swapchainImageViews.empty())
-                {
-                    vkCommandBuffers.resize(swapchainImageViews.size());
-                    VkCommandBufferAllocateInfo allocInfo = {};
-                    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-                    allocInfo.commandPool = vkCommandPool;
-                    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-                    allocInfo.commandBufferCount = (uint32_t)vkCommandBuffers.size();
-                    if (vkAllocateCommandBuffers(vkDevice, &allocInfo, vkCommandBuffers.data()) == VK_SUCCESS)
-                    {
-    ImageSize rtSize((int)vkSwapchainExtent.width, (int)vkSwapchainExtent.height);
-    pSwapChainRenderTarget = pRenderHAL->CreateRenderTarget(swapchainImageViews[0], vkDepthStencilView, rtSize);
-                        if (pMovie)
-                            pMovie->SetViewport((int)vkSwapchainExtent.width, (int)vkSwapchainExtent.height, 0, 0, (int)vkSwapchainExtent.width, (int)vkSwapchainExtent.height);
-                    }
-                }
+                CharEvent event(wcharCode);
+                pMovie->HandleEvent(event);
             }
         }
         return 0;
     }
-    return DefWindowProc(hWnd, msg, wParam, lParam);
+    return DefWindowProcA(hwnd, msg, wParam, lParam);
 }
 
-LRESULT CALLBACK FxPlayerTiny::StaticWindowProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
+
+bool InitWindow()
 {
-    FxPlayerTiny* papp = 0;
-    if (iMsg == WM_NCCREATE)
-    {
-        papp = (FxPlayerTiny*)((LPCREATESTRUCT)lParam)->lpCreateParams;
-        if (!papp) return DefWindowProc(hwnd, iMsg, wParam, lParam);
-        SetWindowLongPtr(hwnd, 0, (LONG_PTR)papp);
-        papp->hWnd = hwnd;
-    }
-    papp = (FxPlayerTiny*)(size_t)GetWindowLongPtr(hwnd, 0);
-    if (!papp) return DefWindowProc(hwnd, iMsg, wParam, lParam);
-    return papp->MemberWndProc(iMsg, wParam, lParam);
+    WNDCLASSEXA wc = {};
+    wc.cbSize        = sizeof(wc);
+    wc.style         = CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc   = WndProc;
+    wc.hInstance     = GetModuleHandle(NULL);
+    wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
+    wc.lpszClassName = "ScaleformVulkanDemo";
+    RegisterClassExA(&wc);
+
+    RECT rc = { 0, 0, (LONG)WindowWidth, (LONG)WindowHeight };
+    AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
+
+    hWnd = CreateWindowExA(0, "ScaleformVulkanDemo", "Scaleform Vulkan Demo",
+        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+        CW_USEDEFAULT, CW_USEDEFAULT,
+        rc.right - rc.left, rc.bottom - rc.top,
+        NULL, NULL, GetModuleHandle(NULL), NULL);
+
+    return hWnd != NULL;
 }
 
-int SF_CDECL main(int argc, char* argv[])
+
+bool InitVulkan()
 {
-    if (AllocConsole())
-    {
-        FILE* f = 0;
-        if (freopen_s(&f, "CONOUT$", "w", stdout)) { }
-        if (freopen_s(&f, "CONOUT$", "w", stderr)) { }
-        SetConsoleTitleA("GFxPlayerTinyVulkan - Console");
-    }
-    LOG("main() start");
+    // Instance
+    VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
+    appInfo.pApplicationName = "ScaleformVulkanDemo";
+    appInfo.apiVersion       = VK_API_VERSION_1_0;
 
-    SF::SysAllocMalloc a;
-    SF::GFx::System gfxInit(&a);
-    LOG("GFx system initialized");
+    const char* exts[] = {
+        VK_KHR_SURFACE_EXTENSION_NAME,
+        VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+#if defined(SF_BUILD_DEBUG) || !defined(NDEBUG)
+        VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+        VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME,
+#endif
+    };
+    VkInstanceCreateInfo instCI = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
+    instCI.pApplicationInfo        = &appInfo;
+    instCI.ppEnabledExtensionNames = exts;
+#if defined(SF_BUILD_DEBUG) || !defined(NDEBUG)
+    instCI.enabledExtensionCount   = 4;
 
-    int result = 1;
+    const char* layers[] = { "VK_LAYER_KHRONOS_validation" };
+    bool validationAvailable = false;
     {
-        FxPlayerTiny player(argc, argv);
-        LOG("FxPlayerTiny created, calling Run()");
-        result = player.Run();
-        LOG("Run() returned %d", result);
+        uint32_t layerCount = 0;
+        vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+        if (layerCount > 0)
+        {
+            VkLayerProperties* availLayers = (VkLayerProperties*)_alloca(sizeof(VkLayerProperties) * layerCount);
+            vkEnumerateInstanceLayerProperties(&layerCount, availLayers);
+            for (uint32_t i = 0; i < layerCount; i++)
+            {
+                if (strcmp(availLayers[i].layerName, "VK_LAYER_KHRONOS_validation") == 0)
+                { validationAvailable = true; break; }
+            }
+        }
     }
-    LOG("main() exit %d", result);
-    return result;
+    VkValidationFeatureEnableEXT bestPracticesFeatures[] = {
+        VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
+    };
+    VkValidationFeaturesEXT validationFeatures = { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
+    validationFeatures.enabledValidationFeatureCount = 1;
+    validationFeatures.pEnabledValidationFeatures    = bestPracticesFeatures;
+
+    if (validationAvailable)
+    {
+        instCI.enabledLayerCount   = 1;
+        instCI.ppEnabledLayerNames = layers;
+        instCI.pNext               = &validationFeatures;
+        if (vkLogFile) { fprintf(vkLogFile, "Vulkan validation layers: ENABLED (+ BEST_PRACTICES)\n"); fflush(vkLogFile); }
+    }
+    else
+    {
+        if (vkLogFile) { fprintf(vkLogFile, "Vulkan validation layers: NOT AVAILABLE\n"); fflush(vkLogFile); }
+    }
+#else
+    instCI.enabledExtensionCount   = 2;
+#endif
+    if (vkCreateInstance(&instCI, nullptr, &vkInstance) != VK_SUCCESS)
+        return false;
+
+#if defined(SF_BUILD_DEBUG) || !defined(NDEBUG)
+    auto pfnCreate = (PFN_vkCreateDebugUtilsMessengerEXT)
+        vkGetInstanceProcAddr(vkInstance, "vkCreateDebugUtilsMessengerEXT");
+    if (pfnCreate)
+    {
+        VkDebugUtilsMessengerCreateInfoEXT dbgCI = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
+        dbgCI.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+                                VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                                VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+        dbgCI.messageType     = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                                VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                                VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+        dbgCI.pfnUserCallback = vkDebugCallback;
+        pfnCreate(vkInstance, &dbgCI, nullptr, &vkDebugMessenger);
+    }
+#endif
+
+    // Physical device
+    uint32_t devCount = 0;
+    vkEnumeratePhysicalDevices(vkInstance, &devCount, nullptr);
+    if (!devCount) return false;
+    VkPhysicalDevice devs[16];
+    devCount = (devCount > 16) ? 16 : devCount;
+    vkEnumeratePhysicalDevices(vkInstance, &devCount, devs);
+    vkPhysDevice = devs[0];
+    for (uint32_t i = 0; i < devCount; i++)
+    {
+        VkPhysicalDeviceProperties p;
+        vkGetPhysicalDeviceProperties(devs[i], &p);
+        if (p.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+        { vkPhysDevice = devs[i]; break; }
+    }
+
+    // Queue family
+    uint32_t qfCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(vkPhysDevice, &qfCount, nullptr);
+    VkQueueFamilyProperties qfProps[32];
+    qfCount = (qfCount > 32) ? 32 : qfCount;
+    vkGetPhysicalDeviceQueueFamilyProperties(vkPhysDevice, &qfCount, qfProps);
+    for (uint32_t i = 0; i < qfCount; i++)
+    {
+        if (qfProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        { vkQueueFamily = i; break; }
+    }
+
+    // Logical device
+    float prio = 1.0f;
+    VkDeviceQueueCreateInfo qCI = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
+    qCI.queueFamilyIndex = vkQueueFamily;
+    qCI.queueCount = 1;
+    qCI.pQueuePriorities = &prio;
+
+    const char* devExts[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+    VkPhysicalDeviceFeatures features = {};
+    features.fillModeNonSolid = VK_TRUE;
+
+    VkDeviceCreateInfo dCI = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
+    dCI.queueCreateInfoCount    = 1;
+    dCI.pQueueCreateInfos       = &qCI;
+    dCI.enabledExtensionCount   = 1;
+    dCI.ppEnabledExtensionNames = devExts;
+    dCI.pEnabledFeatures        = &features;
+    if (vkCreateDevice(vkPhysDevice, &dCI, nullptr, &vkDevice) != VK_SUCCESS)
+        return false;
+    vkGetDeviceQueue(vkDevice, vkQueueFamily, 0, &vkQueue);
+
+    // Surface
+    VkWin32SurfaceCreateInfoKHR surfCI = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
+    surfCI.hinstance = GetModuleHandle(NULL);
+    surfCI.hwnd      = hWnd;
+    if (vkCreateWin32SurfaceKHR(vkInstance, &surfCI, nullptr, &vkSurface) != VK_SUCCESS)
+        return false;
+
+    // Verify present support on chosen queue family
+    VkBool32 presentSupport = VK_FALSE;
+    vkGetPhysicalDeviceSurfaceSupportKHR(vkPhysDevice, vkQueueFamily, vkSurface, &presentSupport);
+    if (!presentSupport)
+    {
+        OutputDebugStringA("Vulkan: Chosen queue family does not support present\n");
+        return false;
+    }
+
+    // Pick a supported surface format
+    {
+        uint32_t fmtCount = 0;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(vkPhysDevice, vkSurface, &fmtCount, nullptr);
+        if (fmtCount > 0)
+        {
+            VkSurfaceFormatKHR fmts[64];
+            fmtCount = (fmtCount > 64) ? 64 : fmtCount;
+            vkGetPhysicalDeviceSurfaceFormatsKHR(vkPhysDevice, vkSurface, &fmtCount, fmts);
+            vkSwapFormat = fmts[0].format;
+            for (uint32_t i = 0; i < fmtCount; i++)
+            {
+                if (fmts[i].format == VK_FORMAT_B8G8R8A8_UNORM)
+                { vkSwapFormat = fmts[i].format; break; }
+            }
+        }
+    }
+
+    // Command pool
+    VkCommandPoolCreateInfo cpCI = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+    cpCI.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    cpCI.queueFamilyIndex = vkQueueFamily;
+    if (vkCreateCommandPool(vkDevice, &cpCI, nullptr, &vkCmdPool) != VK_SUCCESS)
+        return false;
+
+    // Command buffers
+    VkCommandBufferAllocateInfo cbAI = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    cbAI.commandPool        = vkCmdPool;
+    cbAI.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cbAI.commandBufferCount = MaxFramesInFlight;
+    vkAllocateCommandBuffers(vkDevice, &cbAI, vkCmdBuffers);
+
+    // Sync objects
+    VkSemaphoreCreateInfo semCI = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+    VkFenceCreateInfo fenCI = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    fenCI.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    for (unsigned i = 0; i < MaxFramesInFlight; i++)
+    {
+        vkCreateSemaphore(vkDevice, &semCI, nullptr, &vkImageAvailable[i]);
+        vkCreateSemaphore(vkDevice, &semCI, nullptr, &vkRenderFinished[i]);
+        vkCreateFence(vkDevice, &fenCI, nullptr, &vkInFlightFences[i]);
+    }
+
+    if (!CreateSwapchain()) return false;
+    if (!CreateDepthResources()) return false;
+    if (!CreateRenderPass()) return false;
+    if (!CreateFramebuffers()) return false;
+
+    return true;
+}
+
+
+bool CreateSwapchain()
+{
+    VkSurfaceCapabilitiesKHR caps;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vkPhysDevice, vkSurface, &caps);
+    vkSwapExtent.width  = Alg::Clamp(WindowWidth,  caps.minImageExtent.width,  caps.maxImageExtent.width);
+    vkSwapExtent.height = Alg::Clamp(WindowHeight, caps.minImageExtent.height, caps.maxImageExtent.height);
+
+    // Surface caps can report (0,0) when the window is minimised or not yet shown.
+    // Creating a swapchain with zero extent is a spec violation
+    // (VUID-VkSwapchainCreateInfoKHR-imageExtent-01689).
+    if (vkSwapExtent.width == 0 || vkSwapExtent.height == 0)
+    {
+        if (vkLogFile) { fprintf(vkLogFile, "CreateSwapchain: extent is 0x0, deferring\n"); fflush(vkLogFile); }
+        return false;
+    }
+
+    uint32_t imgCount = caps.minImageCount + 1;
+    if (caps.maxImageCount > 0 && imgCount > caps.maxImageCount) imgCount = caps.maxImageCount;
+
+    VkSwapchainCreateInfoKHR ci = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
+    ci.surface          = vkSurface;
+    ci.minImageCount    = imgCount;
+    ci.imageFormat      = vkSwapFormat;
+    ci.imageColorSpace  = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+    ci.imageExtent      = vkSwapExtent;
+    ci.imageArrayLayers = 1;
+    ci.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    ci.preTransform     = caps.currentTransform;
+    ci.compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    ci.presentMode      = VK_PRESENT_MODE_FIFO_KHR;
+    ci.clipped          = VK_TRUE;
+    if (vkCreateSwapchainKHR(vkDevice, &ci, nullptr, &vkSwapchain) != VK_SUCCESS)
+        return false;
+
+    vkGetSwapchainImagesKHR(vkDevice, vkSwapchain, &vkSwapCount, nullptr);
+    if (vkSwapCount > 8) vkSwapCount = 8;
+    vkGetSwapchainImagesKHR(vkDevice, vkSwapchain, &vkSwapCount, vkSwapImages);
+
+    for (uint32_t i = 0; i < vkSwapCount; i++)
+    {
+        VkImageViewCreateInfo vCI = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+        vCI.image = vkSwapImages[i]; vCI.viewType = VK_IMAGE_VIEW_TYPE_2D; vCI.format = vkSwapFormat;
+        vCI.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+        vkCreateImageView(vkDevice, &vCI, nullptr, &vkSwapViews[i]);
+    }
+    return true;
+}
+
+bool CreateDepthResources()
+{
+    VkFormat candidates[] = { VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT };
+    vkDepthFormat = VK_FORMAT_UNDEFINED;
+    for (auto f : candidates)
+    {
+        VkFormatProperties p; vkGetPhysicalDeviceFormatProperties(vkPhysDevice, f, &p);
+        if (p.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+        { vkDepthFormat = f; break; }
+    }
+    if (vkDepthFormat == VK_FORMAT_UNDEFINED) return false;
+
+    VkImageCreateInfo iCI = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+    iCI.imageType = VK_IMAGE_TYPE_2D; iCI.format = vkDepthFormat;
+    iCI.extent = { vkSwapExtent.width, vkSwapExtent.height, 1 };
+    iCI.mipLevels = 1; iCI.arrayLayers = 1; iCI.samples = VK_SAMPLE_COUNT_1_BIT;
+    iCI.tiling = VK_IMAGE_TILING_OPTIMAL; iCI.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    vkCreateImage(vkDevice, &iCI, nullptr, &vkDepthImage);
+
+    VkMemoryRequirements mr; vkGetImageMemoryRequirements(vkDevice, vkDepthImage, &mr);
+    VkMemoryAllocateInfo aI = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+    aI.allocationSize = mr.size;
+    aI.memoryTypeIndex = Vulkan::FindMemoryType(vkPhysDevice, mr.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    vkAllocateMemory(vkDevice, &aI, nullptr, &vkDepthMemory);
+    vkBindImageMemory(vkDevice, vkDepthImage, vkDepthMemory, 0);
+
+    VkImageViewCreateInfo vCI = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+    vCI.image = vkDepthImage; vCI.viewType = VK_IMAGE_VIEW_TYPE_2D; vCI.format = vkDepthFormat;
+    vCI.subresourceRange = { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 };
+    return vkCreateImageView(vkDevice, &vCI, nullptr, &vkDepthView) == VK_SUCCESS;
+}
+
+bool CreateRenderPass()
+{
+    VkAttachmentDescription atts[2] = {};
+    atts[0].format = vkSwapFormat; atts[0].samples = VK_SAMPLE_COUNT_1_BIT;
+    atts[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR; atts[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    atts[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; atts[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    atts[1].format = vkDepthFormat; atts[1].samples = VK_SAMPLE_COUNT_1_BIT;
+    atts[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR; atts[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    atts[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR; atts[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    atts[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; atts[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference cRef = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+    VkAttachmentReference dRef = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+    VkSubpassDescription sp = {}; sp.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    sp.colorAttachmentCount = 1; sp.pColorAttachments = &cRef; sp.pDepthStencilAttachment = &dRef;
+
+    VkSubpassDependency dep = {};
+    dep.srcSubpass = VK_SUBPASS_EXTERNAL; dep.dstSubpass = 0;
+    dep.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dep.dstStageMask = dep.srcStageMask;
+    dep.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+    VkRenderPassCreateInfo rpCI = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
+    rpCI.attachmentCount = 2; rpCI.pAttachments = atts;
+    rpCI.subpassCount = 1; rpCI.pSubpasses = &sp;
+    rpCI.dependencyCount = 1; rpCI.pDependencies = &dep;
+    if (vkCreateRenderPass(vkDevice, &rpCI, nullptr, &vkRenderPass) != VK_SUCCESS) return false;
+
+    // Resume render pass: identical but uses LOAD_OP_LOAD on both attachments.
+    // Used by PopRenderTarget to restart the main pass after returning from an
+    // offscreen filter render target, without discarding already-drawn content.
+    atts[0].loadOp        = VK_ATTACHMENT_LOAD_OP_LOAD;
+    atts[0].initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    atts[1].loadOp        = VK_ATTACHMENT_LOAD_OP_LOAD;
+    atts[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    atts[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    return vkCreateRenderPass(vkDevice, &rpCI, nullptr, &vkResumeRenderPass) == VK_SUCCESS;
+}
+
+bool CreateFramebuffers()
+{
+    for (uint32_t i = 0; i < vkSwapCount; i++)
+    {
+        VkImageView att[] = { vkSwapViews[i], vkDepthView };
+        VkFramebufferCreateInfo fbCI = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
+        fbCI.renderPass = vkRenderPass; fbCI.attachmentCount = 2; fbCI.pAttachments = att;
+        fbCI.width = vkSwapExtent.width; fbCI.height = vkSwapExtent.height; fbCI.layers = 1;
+        if (vkCreateFramebuffer(vkDevice, &fbCI, nullptr, &vkSwapFBs[i]) != VK_SUCCESS)
+            return false;
+    }
+    return true;
+}
+
+void CleanupSwapchain()
+{
+    if (vkDepthView)   { vkDestroyImageView(vkDevice, vkDepthView, nullptr); vkDepthView = VK_NULL_HANDLE; }
+    if (vkDepthImage)  { vkDestroyImage(vkDevice, vkDepthImage, nullptr); vkDepthImage = VK_NULL_HANDLE; }
+    if (vkDepthMemory) { vkFreeMemory(vkDevice, vkDepthMemory, nullptr); vkDepthMemory = VK_NULL_HANDLE; }
+    for (uint32_t i = 0; i < vkSwapCount; i++)
+    {
+        if (vkSwapFBs[i])   { vkDestroyFramebuffer(vkDevice, vkSwapFBs[i], nullptr); vkSwapFBs[i] = VK_NULL_HANDLE; }
+        if (vkSwapViews[i]) { vkDestroyImageView(vkDevice, vkSwapViews[i], nullptr); vkSwapViews[i] = VK_NULL_HANDLE; }
+    }
+    if (vkSwapchain) { vkDestroySwapchainKHR(vkDevice, vkSwapchain, nullptr); vkSwapchain = VK_NULL_HANDLE; }
+}
+
+void CleanupVulkan()
+{
+    if (vkDevice) vkDeviceWaitIdle(vkDevice);
+    for (unsigned i = 0; i < MaxFramesInFlight; i++)
+    {
+        if (vkImageAvailable[i]) vkDestroySemaphore(vkDevice, vkImageAvailable[i], nullptr);
+        if (vkRenderFinished[i]) vkDestroySemaphore(vkDevice, vkRenderFinished[i], nullptr);
+        if (vkInFlightFences[i]) vkDestroyFence(vkDevice, vkInFlightFences[i], nullptr);
+    }
+    if (vkCmdPool)   vkDestroyCommandPool(vkDevice, vkCmdPool, nullptr);
+    if (vkResumeRenderPass) { vkDestroyRenderPass(vkDevice, vkResumeRenderPass, nullptr); vkResumeRenderPass = VK_NULL_HANDLE; }
+    if (vkRenderPass) vkDestroyRenderPass(vkDevice, vkRenderPass, nullptr);
+    CleanupSwapchain();
+    if (vkSurface)   vkDestroySurfaceKHR(vkInstance, vkSurface, nullptr);
+#if defined(SF_BUILD_DEBUG) || !defined(NDEBUG)
+    if (vkDebugMessenger) {
+        auto fn = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vkInstance, "vkDestroyDebugUtilsMessengerEXT");
+        if (fn) fn(vkInstance, vkDebugMessenger, nullptr);
+    }
+#endif
+    if (vkDevice)    vkDestroyDevice(vkDevice, nullptr);
+    if (vkInstance)  vkDestroyInstance(vkInstance, nullptr);
+}
+
+
+static int AppMain(LPSTR lpCmdLine);
+
+static void WriteStackTrace(FILE* f, CONTEXT* ctx)
+{
+    HANDLE process = GetCurrentProcess();
+    HANDLE thread  = GetCurrentThread();
+    SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME);
+    SymInitialize(process, NULL, TRUE);
+
+    STACKFRAME64 frame = {};
+    frame.AddrPC.Mode    = AddrModeFlat;
+    frame.AddrFrame.Mode = AddrModeFlat;
+    frame.AddrStack.Mode = AddrModeFlat;
+#ifdef _M_X64
+    DWORD machineType       = IMAGE_FILE_MACHINE_AMD64;
+    frame.AddrPC.Offset     = ctx->Rip;
+    frame.AddrFrame.Offset  = ctx->Rbp;
+    frame.AddrStack.Offset  = ctx->Rsp;
+#else
+    DWORD machineType       = IMAGE_FILE_MACHINE_I386;
+    frame.AddrPC.Offset     = ctx->Eip;
+    frame.AddrFrame.Offset  = ctx->Ebp;
+    frame.AddrStack.Offset  = ctx->Esp;
+#endif
+
+    char symbolBuf[sizeof(SYMBOL_INFO) + 256];
+    SYMBOL_INFO* sym = (SYMBOL_INFO*)symbolBuf;
+    sym->SizeOfStruct = sizeof(SYMBOL_INFO);
+    sym->MaxNameLen   = 255;
+
+    for (int i = 0; i < 64; i++)
+    {
+        if (!StackWalk64(machineType, process, thread, &frame, ctx,
+                         NULL, SymFunctionTableAccess64, SymGetModuleBase64, NULL))
+            break;
+        if (frame.AddrPC.Offset == 0)
+            break;
+
+        DWORD64 displacement64 = 0;
+        DWORD   displacement32 = 0;
+        IMAGEHLP_LINE64 line = {};
+        line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+
+        if (SymFromAddr(process, frame.AddrPC.Offset, &displacement64, sym))
+        {
+            if (SymGetLineFromAddr64(process, frame.AddrPC.Offset, &displacement32, &line))
+                fprintf(f, "  [%02d] %s +0x%llx  (%s:%lu)\n", i, sym->Name, displacement64, line.FileName, line.LineNumber);
+            else
+                fprintf(f, "  [%02d] %s +0x%llx\n", i, sym->Name, displacement64);
+        }
+        else
+        {
+            fprintf(f, "  [%02d] 0x%016llx (no symbol)\n", i, frame.AddrPC.Offset);
+        }
+    }
+    SymCleanup(process);
+}
+
+static LONG WINAPI CrashFilter(EXCEPTION_POINTERS* ep)
+{
+    FILE* f = vkLogFile;
+    if (!f) f = fopen("vulkan_crash.log", "w");
+    if (f)
+    {
+        fprintf(f, "=== CRASH ===\nException 0x%08lX at address 0x%p\n\nStack trace:\n",
+                ep->ExceptionRecord->ExceptionCode, ep->ExceptionRecord->ExceptionAddress);
+        fflush(f);
+        WriteStackTrace(f, ep->ContextRecord);
+        fprintf(f, "=== END ===\n");
+        fflush(f);
+        fclose(f);
+    }
+    vkLogFile = nullptr;
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+
+int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR lpCmdLine, int)
+{
+#if defined(SF_BUILD_DEBUG) || !defined(NDEBUG)
+    AllocConsole();
+    FILE* conOut = nullptr;
+    freopen_s(&conOut, "CONOUT$", "w", stdout);
+    freopen_s(&conOut, "CONOUT$", "w", stderr);
+    printf("=== Scaleform Vulkan Demo (Debug Console) ===\n");
+    vkLogFile = fopen("vulkan_debug.log", "w");
+#endif
+    SetUnhandledExceptionFilter(CrashFilter);
+    return AppMain(lpCmdLine);
+}
+
+static int AppMain(LPSTR lpCmdLine)
+{
+    GFx::System gfxInit;
+
+    // Parse SWF path from command line, stripping quotes that Windows adds
+    // when files are dragged onto the exe or passed via Explorer shell.
+    static char swfBuf[MAX_PATH] = {};
+    const char* swfPath = nullptr;
+    if (lpCmdLine && lpCmdLine[0])
+    {
+        const char* src = lpCmdLine;
+        while (*src == ' ' || *src == '"') src++;
+        char* dst = swfBuf;
+        while (*src && *src != '"' && (dst - swfBuf) < MAX_PATH - 1)
+        {
+            if (*src == ' ' && *(src + 1) == '-' && *(src + 2) == '-')
+                break;
+            *dst++ = *src++;
+        }
+        while (dst > swfBuf && *(dst-1) == ' ') dst--;
+        *dst = '\0';
+        if (swfBuf[0])
+            swfPath = swfBuf;
+    }
+    if (!swfPath)
+    {
+        char exeDir[MAX_PATH];
+        GetModuleFileNameA(NULL, exeDir, MAX_PATH);
+        char* lastSlash = strrchr(exeDir, '\\');
+        if (lastSlash) *(lastSlash + 1) = '\0';
+        _snprintf_s(swfBuf, MAX_PATH, _TRUNCATE, "%s..\\..\\..\\..\\Data\\AS2\\Samples\\Window.swf", exeDir);
+        swfPath = swfBuf;
+    }
+
+    // Parse --frames N: auto-exit after N rendered frames (for automated batch testing)
+    if (lpCmdLine)
+    {
+        const char* framesOpt = strstr(lpCmdLine, "--frames ");
+        if (framesOpt) MaxFrames = atoi(framesOpt + 9);
+    }
+
+    if (!InitWindow())
+    {
+        MessageBoxA(NULL, "Failed to create window", "Error", MB_OK);
+        return 1;
+    }
+
+    if (!InitVulkan())
+    {
+        MessageBoxA(NULL, "Failed to initialize Vulkan", "Error", MB_OK);
+        CleanupVulkan();
+        return 1;
+    }
+
+    if (vkLogFile) { fprintf(vkLogFile, "Vulkan init succeeded. Initializing Scaleform HAL...\n"); fflush(vkLogFile); }
+
+    // Initialize Scaleform
+    pHAL = *SF_NEW Vulkan::HAL();
+    if (vkLogFile) { fprintf(vkLogFile, "HAL object created.\n"); fflush(vkLogFile); }
+
+    Vulkan::HALInitParams halParams(
+        vkDevice, vkPhysDevice, vkQueue, vkQueueFamily,
+        vkCmdPool, vkCmdBuffers[0], vkRenderPass, vkSwapFormat, vkInstance);
+
+    if (!pHAL->InitHAL(halParams))
+    {
+        if (vkLogFile) { fprintf(vkLogFile, "HAL init FAILED\n"); fflush(vkLogFile); }
+        pHAL.Clear();
+        CleanupVulkan();
+        return 1;
+    }
+
+    if (vkLogFile) { fprintf(vkLogFile, "HAL init succeeded. Creating renderer...\n"); fflush(vkLogFile); }
+
+    Renderer2D* pRendererRaw = SF_NEW Renderer2D(pHAL.GetPtr());
+    if (vkLogFile) { fprintf(vkLogFile, "Renderer2D constructed at %p\n", pRendererRaw); fflush(vkLogFile); }
+    pRenderer = *pRendererRaw;
+    if (vkLogFile) { fprintf(vkLogFile, "Renderer2D assigned.\n"); fflush(vkLogFile); }
+
+    // Load SWF
+    if (vkLogFile) { fprintf(vkLogFile, "Creating Loader...\n"); fflush(vkLogFile); }
+    pLoader = new Loader();
+    Ptr<ASSupport> pAS2Support = *new GFx::AS2Support();
+    pLoader->SetAS2Support(pAS2Support);
+    Ptr<ASSupport> pAS3Support = *new GFx::AS3Support();
+    pLoader->SetAS3Support(pAS3Support);
+
+    // Provide the GPU TextureManager so embedded SWF bitmaps are uploaded as GPU textures.
+    Ptr<GFx::ImageCreator> pImageCreator = *SF_NEW GFx::ImageCreator(pHAL->GetTextureManager());
+    pLoader->SetImageCreator(pImageCreator);
+
+    // Route all GFx/AS3 messages to the log file
+    Ptr<GFxFileLog> pGFxLog = *SF_NEW GFxFileLog();
+    pLoader->SetLog(pGFxLog);
+    // Enable verbose ActionScript execution log (requires GFX_AS3_VERBOSE compile define)
+    Ptr<GFx::ActionControl> pActionCtrl = *SF_NEW GFx::ActionControl(
+        GFx::ActionControl::Action_Verbose | GFx::ActionControl::Action_LogAllFilenames);
+    pLoader->SetActionControl(pActionCtrl);
+
+    if (vkLogFile) { fprintf(vkLogFile, "Loader created (AS2+AS3 support, verbose logging ON), loading SWF: %s\n", swfPath); fflush(vkLogFile); }
+    pMovieDef = *pLoader->CreateMovie(swfPath, Loader::LoadAll);
+    if (!pMovieDef)
+    {
+        if (vkLogFile) { fprintf(vkLogFile, "FAILED to load SWF: %s\n", swfPath); fflush(vkLogFile); }
+    }
+    else
+    {
+        if (vkLogFile) { fprintf(vkLogFile, "MovieDef loaded OK: %s\n", swfPath); fflush(vkLogFile); }
+        pMovie = *pMovieDef->CreateInstance();
+        if (pMovie)
+        {
+            if (vkLogFile) { fprintf(vkLogFile, "Movie instance created, setting viewport %ux%u\n", WindowWidth, WindowHeight); fflush(vkLogFile); }
+            pMovie->SetViewport(WindowWidth, WindowHeight, 0, 0, WindowWidth, WindowHeight);
+            pMovie->SetBackgroundAlpha(0.0f);
+            pMovie->SetMouseCursorCount(1);
+        }
+        else
+        {
+            if (vkLogFile) { fprintf(vkLogFile, "FAILED to create movie instance\n"); fflush(vkLogFile); }
+        }
+    }
+
+    if (vkLogFile)
+    {
+        fprintf(vkLogFile, "========================================\n");
+        fprintf(vkLogFile, "SWF: %s\n", swfPath);
+        if (MaxFrames > 0)
+            fprintf(vkLogFile, "Auto-exit after %d frames\n", MaxFrames);
+        fprintf(vkLogFile, "Entering main loop...\n");
+        fprintf(vkLogFile, "========================================\n");
+        fflush(vkLogFile);
+    }
+    // Main loop
+    MSG msg;
+    unsigned loopCount = 0;
+    while (Running)
+    {
+        while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE))
+        {
+            if (msg.message == WM_QUIT) Running = false;
+            TranslateMessage(&msg);
+            DispatchMessageA(&msg);
+        }
+        if (!Running) break;
+
+        if (MaxFrames > 0 && (int)loopCount >= MaxFrames)
+        {
+            if (vkLogFile) { fprintf(vkLogFile, "Auto-exit: reached %d frames\n", MaxFrames); fflush(vkLogFile); }
+            Running = false;
+            break;
+        }
+
+        if (NeedsResize && WindowWidth > 0 && WindowHeight > 0)
+        {
+            vkDeviceWaitIdle(vkDevice);
+            if (pHAL) pHAL->PrepareForReset();
+            CleanupSwapchain();
+            if (!CreateSwapchain() || !CreateDepthResources() || !CreateFramebuffers())
+            {
+                OutputDebugStringA("Vulkan: Swapchain resize failed, retrying next frame\n");
+                if (pHAL) pHAL->RestoreAfterReset();
+                NeedsResize = true;
+                continue;
+            }
+            if (pHAL) pHAL->RestoreAfterReset();
+            if (pMovie) pMovie->SetViewport(WindowWidth, WindowHeight, 0, 0, WindowWidth, WindowHeight);
+            NeedsResize = false;
+        }
+
+        unsigned frameIdx = CurrentFrame % MaxFramesInFlight;
+        vkWaitForFences(vkDevice, 1, &vkInFlightFences[frameIdx], VK_TRUE, UINT64_MAX);
+
+        VkResult acquireResult = vkAcquireNextImageKHR(vkDevice, vkSwapchain, UINT64_MAX,
+            vkImageAvailable[frameIdx], VK_NULL_HANDLE, &CurrentImage);
+        if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR || acquireResult == VK_SUBOPTIMAL_KHR)
+        {
+            NeedsResize = true;
+            if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR)
+                continue;
+        }
+        vkResetFences(vkDevice, 1, &vkInFlightFences[frameIdx]);
+
+        VkCommandBuffer cmd = vkCmdBuffers[frameIdx];
+        vkResetCommandBuffer(cmd, 0);
+        VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+        vkBeginCommandBuffer(cmd, &beginInfo);
+
+        VkClearValue clears[2] = {};
+        clears[0].color = { { 0.2f, 0.2f, 0.3f, 1.0f } };
+        clears[1].depthStencil = { 0.0f, 0 };
+
+        VkRenderPassBeginInfo rpBI = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+        rpBI.renderPass = vkRenderPass;
+        rpBI.framebuffer = vkSwapFBs[CurrentImage];
+        rpBI.renderArea.extent = vkSwapExtent;
+        rpBI.clearValueCount = 2;
+        rpBI.pClearValues = clears;
+        vkCmdBeginRenderPass(cmd, &rpBI, VK_SUBPASS_CONTENTS_INLINE);
+
+        // Render Scaleform
+        if (pHAL && pMovie)
+        {
+            pHAL->SetCommandBuffer(cmd);
+            pHAL->InRenderPass = true;
+            // Provide the current swapchain framebuffer so PopRenderTarget can
+            // resume the main render pass after an offscreen filter pass ends.
+            pHAL->SetMainRenderTarget(vkRenderPass, vkResumeRenderPass,
+                                      vkSwapFBs[CurrentImage], vkSwapExtent);
+            Vulkan::RenderEvent::UpdateCommandBuffer(cmd);
+
+            pMovie->Advance(1.0f / 30.0f, 0);
+
+            pRenderer->BeginFrame();
+
+            // Grab the RenderSync fence now (before EndFrame clears it)
+            VkFence rsyncFence = VK_NULL_HANDLE;
+
+            MovieDisplayHandle hmd = pMovie->GetDisplayHandle();
+            if (hmd.NextCapture(pRenderer->GetContextNotify()))
+            {
+                pRenderer->Display(hmd);
+                if (vkLogFile && loopCount < 3) { fprintf(vkLogFile, "  Display done (frame %u)\n", loopCount); fflush(vkLogFile); }
+            }
+
+            rsyncFence = pHAL->GetMeshCache().GetRenderSync()->GetNextEndFrameFence();
+            pRenderer->EndFrame();
+
+            if (!pHAL->InRenderPass)
+            {
+                vkCmdBeginRenderPass(cmd, &rpBI, VK_SUBPASS_CONTENTS_INLINE);
+                pHAL->InRenderPass = true;
+            }
+
+            vkCmdEndRenderPass(cmd);
+            vkEndCommandBuffer(cmd);
+
+            VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+            submitInfo.waitSemaphoreCount = 1;
+            submitInfo.pWaitSemaphores    = &vkImageAvailable[frameIdx];
+            submitInfo.pWaitDstStageMask  = &waitStage;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers    = &cmd;
+            submitInfo.signalSemaphoreCount = 1;
+            submitInfo.pSignalSemaphores  = &vkRenderFinished[frameIdx];
+            vkQueueSubmit(vkQueue, 1, &submitInfo, vkInFlightFences[frameIdx]);
+
+            if (rsyncFence != VK_NULL_HANDLE)
+            {
+                VkSubmitInfo emptySubmit = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+                vkQueueSubmit(vkQueue, 1, &emptySubmit, rsyncFence);
+            }
+        }
+        else
+        {
+            vkCmdEndRenderPass(cmd);
+            vkEndCommandBuffer(cmd);
+
+            VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+            submitInfo.waitSemaphoreCount = 1;
+            submitInfo.pWaitSemaphores    = &vkImageAvailable[frameIdx];
+            submitInfo.pWaitDstStageMask  = &waitStage;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers    = &cmd;
+            submitInfo.signalSemaphoreCount = 1;
+            submitInfo.pSignalSemaphores  = &vkRenderFinished[frameIdx];
+            vkQueueSubmit(vkQueue, 1, &submitInfo, vkInFlightFences[frameIdx]);
+        }
+
+        // Capture frames 10 and 60 to disk for automated analysis (after all submits, before present)
+        if (loopCount == 10)
+            CaptureScreenshot("screenshot_f10.ppm", CurrentImage);
+        if (loopCount == 60)
+            CaptureScreenshot("screenshot_f60.ppm", CurrentImage);
+
+        VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores = &vkRenderFinished[frameIdx];
+        presentInfo.swapchainCount = 1;
+        presentInfo.pSwapchains = &vkSwapchain;
+        presentInfo.pImageIndices = &CurrentImage;
+        VkResult presentResult = vkQueuePresentKHR(vkQueue, &presentInfo);
+        if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR)
+            NeedsResize = true;
+
+        CurrentFrame++;
+        loopCount++;
+    }
+
+    // Cleanup
+    if (vkDevice) vkDeviceWaitIdle(vkDevice);
+    pMovie.Clear();
+    pMovieDef.Clear();
+    delete pLoader;
+    pLoader = nullptr;
+    pRenderer.Clear();
+    if (pHAL) { pHAL->ShutdownHAL(); pHAL.Clear(); }
+    CleanupVulkan();
+#if defined(SF_BUILD_DEBUG) || !defined(NDEBUG)
+    if (vkLogFile) { fclose(vkLogFile); vkLogFile = nullptr; }
+#endif
+    return 0;
 }

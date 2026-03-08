@@ -93,7 +93,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Vulkan_Debug|Win32'">
     <Link>
-      <AdditionalDependencies>libgfxrender_vulkan.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libgfxrender_vulkan.lib;legacy_stdio_definitions.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ClCompile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -101,7 +101,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Vulkan_Debug|x64'">
     <Link>
-      <AdditionalDependencies>libgfxrender_vulkan.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libgfxrender_vulkan.lib;legacy_stdio_definitions.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>/WHOLEARCHIVE:libgfxrender_vulkan.lib %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <ClCompile>
@@ -110,7 +110,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Vulkan_Release|Win32'">
     <Link>
-      <AdditionalDependencies>libgfxrender_vulkan.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libgfxrender_vulkan.lib;legacy_stdio_definitions.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ClCompile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -118,7 +118,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Vulkan_Release|x64'">
     <Link>
-      <AdditionalDependencies>libgfxrender_vulkan.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libgfxrender_vulkan.lib;legacy_stdio_definitions.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>/WHOLEARCHIVE:libgfxrender_vulkan.lib %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <ClCompile>

@@ -1,600 +1,664 @@
 /**************************************************************************
 
 Filename    :   Vulkan_Texture.cpp
-Content     :   Vulkan texture and texture manager (scaffold).
-Created     :   2025
-Authors     :   Vulkan backend
-
-Copyright   :   Copyright 2011 Autodesk, Inc. All Rights reserved.
+Content     :   Vulkan texture implementation.
+Created     :   2026
+Authors     :   Scaleform Vulkan Backend
 
 **************************************************************************/
 
 #include "Render/Vulkan/Vulkan_Texture.h"
+#include "Render/Vulkan/Vulkan_HAL.h"
 #include "Kernel/SF_Debug.h"
 #include "Kernel/SF_HeapNew.h"
-#include "Render/Render_ResizeImage.h"
+#include "Render/Render_TextureCacheGeneric.h"
 #include "Render/Render_TextureUtil.h"
 
 namespace Scaleform { namespace Render { namespace Vulkan {
 
-static VkFormat GetVkFormat(ImageFormat format)
+// *** Format mapping table
+static const TextureFormat::Mapping TextureFormatMapping[] =
 {
-    switch (format)
-    {
-    case Image_R8G8B8A8: return VK_FORMAT_R8G8B8A8_UNORM;
-    case Image_B8G8R8A8: return VK_FORMAT_B8G8R8A8_UNORM;
-    case Image_A8:       return VK_FORMAT_R8_UNORM;
-    default:             return VK_FORMAT_UNDEFINED;
-    }
+    { Image_R8G8B8A8,   VK_FORMAT_R8G8B8A8_UNORM,          4, &Image::CopyScanlineDefault,             &Image::CopyScanlineDefault },
+    { Image_B8G8R8A8,   VK_FORMAT_B8G8R8A8_UNORM,          4, &Image::CopyScanlineDefault,             &Image::CopyScanlineDefault },
+    { Image_R8G8B8,     VK_FORMAT_R8G8B8A8_UNORM,          4, &Image_CopyScanline24_Extend_RGB_RGBA,   &Image_CopyScanline32_Retract_RGBA_RGB },
+    { Image_B8G8R8,     VK_FORMAT_B8G8R8A8_UNORM,          4, &Image_CopyScanline24_Extend_RGB_RGBA,   &Image_CopyScanline32_Retract_RGBA_RGB },
+    { Image_A8,         VK_FORMAT_R8_UNORM,                 1, &Image::CopyScanlineDefault,             &Image::CopyScanlineDefault },
+    { Image_DXT1,       VK_FORMAT_BC1_RGBA_UNORM_BLOCK,     0, &Image::CopyScanlineDefault,             &Image::CopyScanlineDefault },
+    { Image_DXT3,       VK_FORMAT_BC2_UNORM_BLOCK,          0, &Image::CopyScanlineDefault,             &Image::CopyScanlineDefault },
+    { Image_DXT5,       VK_FORMAT_BC3_UNORM_BLOCK,          0, &Image::CopyScanlineDefault,             &Image::CopyScanlineDefault },
+    { Image_None,       VK_FORMAT_UNDEFINED,                0, 0, 0 }
+};
+
+
+// *** Texture
+
+Texture::Texture(TextureManagerLocks* pmanagerLocks, const TextureFormat* pformat,
+                 unsigned mipLevels, const ImageSize& size, unsigned use, ImageBase* pimage)
+: Render::Texture(pmanagerLocks, size, (UByte)mipLevels, (UInt16)use, pimage, pformat)
+, pShadowData(0), ShadowSize(0)
+{
+    TextureCount = (UByte)ImageData::GetFormatPlaneCount(GetImageFormat());
+    if (TextureCount > 1)
+        pTextures = (HWTextureDesc*)SF_HEAP_AUTO_ALLOC(this, sizeof(HWTextureDesc)*TextureCount);
+    else
+        pTextures = &Texture0;
+    memset(pTextures, 0, sizeof(HWTextureDesc) * TextureCount);
 }
 
-static uint32_t GetMemoryTypeIndex(VkPhysicalDevice physicalDevice, uint32_t typeBits, VkMemoryPropertyFlags properties)
+Texture::Texture(TextureManagerLocks* pmanagerLocks, VkImage image, VkImageView view,
+                 ImageSize imgSize, ImageBase* pimage)
+: Render::Texture(pmanagerLocks, imgSize, 0, 0, pimage, 0)
+, pShadowData(0), ShadowSize(0)
 {
-    VkPhysicalDeviceMemoryProperties memProps;
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProps);
-    for (uint32_t i = 0; i < memProps.memoryTypeCount; i++)
-    {
-        if ((typeBits & (1u << i)) && (memProps.memoryTypes[i].propertyFlags & properties) == properties)
-            return i;
-    }
-    return (uint32_t)-1;
-}
-
-static VkFormat pickDepthStencilFormat(VkPhysicalDevice pd)
-{
-    VkFormat candidates[] = { VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT };
-    for (VkFormat f : candidates)
-    {
-        VkFormatProperties p = {};
-        vkGetPhysicalDeviceFormatProperties(pd, f, &p);
-        if ((p.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0)
-            return f;
-    }
-    return VK_FORMAT_D32_SFLOAT_S8_UINT;
-}
-
-Texture::Texture(TextureManagerLocks* pmanagerLocks, const TextureFormat* pformat, unsigned mipLevels,
-                 const ImageSize& size, unsigned use, ImageBase* pimage)
-    : Render::Texture(pmanagerLocks, size, (UByte)mipLevels, (UInt16)use, pimage, pformat)
-{
-    Texture0.Size = size;
-    Texture0.Image = VK_NULL_HANDLE;
-    Texture0.View = VK_NULL_HANDLE;
-    Texture0.Memory = VK_NULL_HANDLE;
-    LayoutShaderReadReady = false;
+    TextureFlags |= TF_UserAlloc;
+    pTextures = &Texture0;
+    memset(pTextures, 0, sizeof(HWTextureDesc));
+    pTextures[0].Image = image;
+    pTextures[0].View  = view;
+    pTextures[0].Size  = imgSize;
 }
 
 Texture::~Texture()
 {
-    ReleaseHWTextures(true);
+    if ((State == State_Valid) || (State == State_Lost))
+        ReleaseHWTextures();
+    if (pTextures && pTextures != &Texture0)
+        SF_FREE(pTextures);
+    if (pShadowData)
+        SF_FREE(pShadowData);
 }
 
-ImageSize Texture::GetTextureSize(unsigned plane) const
+void Texture::ReleaseHWTextures(bool)
 {
-    (void)plane;
-    return Texture0.Size;
-}
+    TextureManager* pmgr = GetManager();
+    bool userAlloc = (TextureFlags & TF_UserAlloc) != 0;
 
-Render::TextureManager* Texture::GetManager() const
-{
-    return pManagerLocks ? pManagerLocks->pManager : 0;
-}
-
-bool Texture::IsValid() const
-{
-    return State != State_InitFailed && State != State_Dead;
+    for (unsigned i = 0; i < TextureCount; i++)
+    {
+        if (!userAlloc)
+        {
+            if (pTextures[i].View != VK_NULL_HANDLE)
+            {
+                pmgr->ViewKills.PushBack(pTextures[i].View);
+                pTextures[i].View = VK_NULL_HANDLE;
+            }
+            if (pTextures[i].Image != VK_NULL_HANDLE)
+            {
+                pmgr->ImageKills.PushBack(pTextures[i].Image);
+                pTextures[i].Image = VK_NULL_HANDLE;
+            }
+            if (pTextures[i].Memory != VK_NULL_HANDLE)
+            {
+                pmgr->MemoryKills.PushBack(pTextures[i].Memory);
+                pTextures[i].Memory = VK_NULL_HANDLE;
+            }
+        }
+        else
+        {
+            pTextures[i].View   = VK_NULL_HANDLE;
+            pTextures[i].Image  = VK_NULL_HANDLE;
+            pTextures[i].Memory = VK_NULL_HANDLE;
+        }
+    }
 }
 
 bool Texture::Initialize()
 {
-    TextureManager* pmgr = (TextureManager*)GetManager();
-    if (!pmgr || !Texture0.Size.Width || !Texture0.Size.Height)
+    TextureManager* pmgr = GetManager();
+    VkDevice device = pmgr->GetDevice();
+    VkPhysicalDevice physDevice = pmgr->GetPhysicalDevice();
+
+    if (TextureFlags & TF_UserAlloc)
     {
         State = State_Valid;
         return true;
     }
-    VkDevice device = pmgr->GetDevice();
-    VkPhysicalDevice physicalDevice = pmgr->GetPhysicalDevice();
-    VkFormat vkFormat = GetVkFormat(GetFormat());
-    if (vkFormat == VK_FORMAT_UNDEFINED)
-    {
-        State = State_InitFailed;
+
+    const TextureFormat::Mapping* mapping = GetTextureFormatMapping();
+    if (!mapping)
         return false;
+
+    for (unsigned itex = 0; itex < TextureCount; itex++)
+    {
+        ImageSize sz = ImageData::GetFormatPlaneSize(GetImageFormat(), ImgSize, itex);
+        pTextures[itex].Size = sz;
+
+        VkImageCreateInfo imageCI = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+        imageCI.imageType   = VK_IMAGE_TYPE_2D;
+        imageCI.format      = mapping->VkFmt;
+        imageCI.extent      = { (uint32_t)sz.Width, (uint32_t)sz.Height, 1 };
+        imageCI.mipLevels   = MipLevels > 0 ? MipLevels : 1;
+        imageCI.arrayLayers = 1;
+        imageCI.samples     = VK_SAMPLE_COUNT_1_BIT;
+        imageCI.tiling      = VK_IMAGE_TILING_OPTIMAL;
+        imageCI.usage       = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        if (Use & ImageUse_RenderTarget)
+            imageCI.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        imageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        imageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+        SF_VK_CHECK_RETURN(vkCreateImage(device, &imageCI, nullptr, &pTextures[itex].Image), false);
+
+        VkMemoryRequirements memReqs;
+        vkGetImageMemoryRequirements(device, pTextures[itex].Image, &memReqs);
+
+        VkMemoryAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+        allocInfo.allocationSize = memReqs.size;
+        allocInfo.memoryTypeIndex = FindMemoryType(physDevice, memReqs.memoryTypeBits,
+                                                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        if (allocInfo.memoryTypeIndex == UINT32_MAX)
+        {
+            SF_DEBUG_WARNING(1, "Vulkan: No suitable memory type for texture");
+            return false;
+        }
+        SF_VK_CHECK_RETURN(vkAllocateMemory(device, &allocInfo, nullptr, &pTextures[itex].Memory), false);
+        SF_VK_CHECK_RETURN(vkBindImageMemory(device, pTextures[itex].Image, pTextures[itex].Memory, 0), false);
+
+        VkImageViewCreateInfo viewCI = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+        viewCI.image    = pTextures[itex].Image;
+        viewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        viewCI.format   = mapping->VkFmt;
+        viewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        viewCI.subresourceRange.levelCount = imageCI.mipLevels;
+        viewCI.subresourceRange.layerCount = 1;
+
+        SF_VK_CHECK_RETURN(vkCreateImageView(device, &viewCI, nullptr, &pTextures[itex].View), false);
     }
 
-    VkImageCreateInfo imgInfo = {};
-    imgInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imgInfo.imageType = VK_IMAGE_TYPE_2D;
-    imgInfo.format = vkFormat;
-    imgInfo.extent.width = Texture0.Size.Width;
-    imgInfo.extent.height = Texture0.Size.Height;
-    imgInfo.extent.depth = 1;
-    imgInfo.mipLevels = MipLevels;
-    imgInfo.arrayLayers = 1;
-    imgInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    imgInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    imgInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    if (vkCreateImage(device, &imgInfo, 0, &Texture0.Image) != VK_SUCCESS)
+    if (pImage && !Render::Texture::Update())
     {
-        State = State_InitFailed;
-        return false;
-    }
-
-    VkMemoryRequirements memReq;
-    vkGetImageMemoryRequirements(device, Texture0.Image, &memReq);
-    uint32_t memTypeIndex = GetMemoryTypeIndex(physicalDevice, memReq.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    if (memTypeIndex == (uint32_t)-1)
-    {
-        vkDestroyImage(device, Texture0.Image, 0);
-        Texture0.Image = VK_NULL_HANDLE;
-        State = State_InitFailed;
-        return false;
-    }
-
-    VkMemoryAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memReq.size;
-    allocInfo.memoryTypeIndex = memTypeIndex;
-
-    if (vkAllocateMemory(device, &allocInfo, 0, &Texture0.Memory) != VK_SUCCESS)
-    {
-        vkDestroyImage(device, Texture0.Image, 0);
-        Texture0.Image = VK_NULL_HANDLE;
-        State = State_InitFailed;
-        return false;
-    }
-    vkBindImageMemory(device, Texture0.Image, Texture0.Memory, 0);
-
-    VkImageViewCreateInfo viewInfo = {};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = Texture0.Image;
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = vkFormat;
-    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = MipLevels;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
-
-    if (vkCreateImageView(device, &viewInfo, 0, &Texture0.View) != VK_SUCCESS)
-    {
-        vkFreeMemory(device, Texture0.Memory, 0);
-        vkDestroyImage(device, Texture0.Image, 0);
-        Texture0.Image = VK_NULL_HANDLE;
-        Texture0.Memory = VK_NULL_HANDLE;
+        SF_DEBUG_ERROR(1, "Vulkan::Texture::Initialize - initial data upload failed");
+        ReleaseHWTextures();
         State = State_InitFailed;
         return false;
     }
 
     State = State_Valid;
-    return Render::Texture::Initialize();
+    return true;
 }
 
-void Texture::ReleaseHWTextures(bool staging)
+bool Texture::Initialize(VkImage image, VkImageView view)
 {
-    (void)staging;
-    TextureManager* pmgr = (TextureManager*)GetManager();
-    if (pmgr)
-    {
-        VkDevice device = pmgr->GetDevice();
-        if (Texture0.View != VK_NULL_HANDLE)
-        {
-            vkDestroyImageView(device, Texture0.View, 0);
-            Texture0.View = VK_NULL_HANDLE;
-        }
-        if (Texture0.Image != VK_NULL_HANDLE)
-        {
-            vkDestroyImage(device, Texture0.Image, 0);
-            Texture0.Image = VK_NULL_HANDLE;
-        }
-        if (Texture0.Memory != VK_NULL_HANDLE)
-        {
-            vkFreeMemory(device, Texture0.Memory, 0);
-            Texture0.Memory = VK_NULL_HANDLE;
-        }
-        LayoutShaderReadReady = false;
-    }
+    pTextures[0].Image = image;
+    pTextures[0].View  = view;
+    State = State_Valid;
+    return true;
 }
 
 void Texture::ApplyTexture(unsigned stageIndex, const ImageFillMode& fm)
 {
-    Render::Texture::ApplyTexture(stageIndex, fm);
-    TextureManager* pmgr = (TextureManager*)GetManager();
-    if (pmgr && stageIndex < TextureManager::MaxTextureStages && Texture0.View != VK_NULL_HANDLE)
-        pmgr->SetTextureView(stageIndex, Texture0.View, fm);
+    TextureManager* pmgr = GetManager();
+    VkSampler sampler = pmgr->GetSampler(fm);
+    for (unsigned i = 0; i < TextureCount; i++)
+    {
+        pmgr->SetSamplerState(stageIndex + i, 1, &pTextures[i].View, sampler);
+    }
 }
 
-Image* Texture::GetImage() const
+void Texture::GetUVGenMatrix(Matrix2F* mat) const
 {
-    return pImage && pImage->GetImageType() != Image::Type_ImageBase ? (Image*)pImage : 0;
-}
-
-ImageFormat Texture::GetFormat() const
-{
-    return pFormat ? ((const TextureFormat*)pFormat)->GetImageFormat() : Image_None;
+    ImageSize sz = GetTextureSize(0);
+    *mat = Matrix2F::Scaling(1.0f / (float)ImgSize.Width, 1.0f / (float)ImgSize.Height);
 }
 
 bool Texture::Update(const UpdateDesc* updates, unsigned count, unsigned mipLevel)
 {
-    if (!updates || count == 0 || Texture0.Image == VK_NULL_HANDLE)
-        return true;
-    TextureManager* pmgr = (TextureManager*)GetManager();
-    if (!pmgr)
+    if (!updates || !count)
         return false;
+
+    TextureManager* pmgr = GetManager();
     VkDevice device = pmgr->GetDevice();
-    VkQueue queue = pmgr->GetQueue();
+    VkPhysicalDevice physDevice = pmgr->GetPhysicalDevice();
     VkCommandPool cmdPool = pmgr->GetCommandPool();
-    if (queue == VK_NULL_HANDLE || cmdPool == VK_NULL_HANDLE)
+    VkQueue queue = pmgr->GetQueue();
+
+    const TextureFormat::Mapping* mapping = GetTextureFormatMapping();
+    if (!mapping || mapping->BytesPerPixel == 0)
         return false;
-    const unsigned bpp = (GetFormat() == Image_A8) ? 1 : 4;
-    VkDeviceSize maxStagingSize = 0;
+
+    // Collect staging resources so we can batch all copies into a single
+    // command buffer and wait only once instead of once per update.
+    struct StagingEntry { VkBuffer buf; VkDeviceMemory mem; };
+    StagingEntry* stagingEntries = (StagingEntry*)SF_ALLOC(count * sizeof(StagingEntry), StatRender_TextureManager_Mem);
+    if (!stagingEntries)
+        return false;
+    memset(stagingEntries, 0, count * sizeof(StagingEntry));
+
     for (unsigned i = 0; i < count; i++)
     {
-        const UpdateDesc& d = updates[i];
-        unsigned w = d.DestRect.Width(), h = d.DestRect.Height();
-        VkDeviceSize size = (VkDeviceSize)w * h * bpp;
-        if (size > maxStagingSize)
-            maxStagingSize = size;
-    }
-    if (maxStagingSize == 0)
-        return true;
-    VkBuffer stagingBuffer = VK_NULL_HANDLE;
-    VkDeviceMemory stagingMemory = VK_NULL_HANDLE;
-    VkBufferCreateInfo bufInfo = {};
-    bufInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufInfo.size = maxStagingSize;
-    bufInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    bufInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    if (vkCreateBuffer(device, &bufInfo, 0, &stagingBuffer) != VK_SUCCESS)
-        return false;
-    VkMemoryRequirements memReq;
-    vkGetBufferMemoryRequirements(device, stagingBuffer, &memReq);
-    uint32_t memTypeIndex = GetMemoryTypeIndex(pmgr->GetPhysicalDevice(), memReq.memoryTypeBits,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    if (memTypeIndex == (uint32_t)-1)
-    {
-        vkDestroyBuffer(device, stagingBuffer, 0);
-        return false;
-    }
-    VkMemoryAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memReq.size;
-    allocInfo.memoryTypeIndex = memTypeIndex;
-    if (vkAllocateMemory(device, &allocInfo, 0, &stagingMemory) != VK_SUCCESS)
-    {
-        vkDestroyBuffer(device, stagingBuffer, 0);
-        return false;
-    }
-    vkBindBufferMemory(device, stagingBuffer, stagingMemory, 0);
-    void* mapped = 0;
-    if (vkMapMemory(device, stagingMemory, 0, maxStagingSize, 0, &mapped) != VK_SUCCESS)
-    {
-        vkFreeMemory(device, stagingMemory, 0);
-        vkDestroyBuffer(device, stagingBuffer, 0);
-        return false;
-    }
-    VkCommandBufferAllocateInfo cmdAlloc = {};
-    cmdAlloc.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    cmdAlloc.commandPool = cmdPool;
-    cmdAlloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    cmdAlloc.commandBufferCount = 1;
-    VkCommandBuffer cmd = VK_NULL_HANDLE;
-    if (vkAllocateCommandBuffers(device, &cmdAlloc, &cmd) != VK_SUCCESS)
-    {
-        vkUnmapMemory(device, stagingMemory);
-        vkFreeMemory(device, stagingMemory, 0);
-        vkDestroyBuffer(device, stagingBuffer, 0);
-        return false;
-    }
-    VkCommandBufferBeginInfo beginInfo = {};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    vkBeginCommandBuffer(cmd, &beginInfo);
-    const bool wasReady = LayoutShaderReadReady;
-    VkImageMemoryBarrier barrier = {};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = wasReady ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
-    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = Texture0.Image;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseMipLevel = mipLevel;
-    barrier.subresourceRange.levelCount = 1;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-    barrier.srcAccessMask = wasReady ? VK_ACCESS_SHADER_READ_BIT : 0;
-    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    VkPipelineStageFlags srcStage = wasReady ? VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    vkCmdPipelineBarrier(cmd, srcStage, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, 0, 0, 0, 1, &barrier);
-    const TextureFormat* pfmt = (const TextureFormat*)pFormat;
-    Image::CopyScanlineFunc copyFn = pfmt ? pfmt->GetScanlineCopyFn() : 0;
-    if (!copyFn)
-        copyFn = &Image::CopyScanlineDefault;
-    for (unsigned i = 0; i < count; i++)
-    {
-        const UpdateDesc& d = updates[i];
-        unsigned w = d.DestRect.Width(), h = d.DestRect.Height();
-        ImagePlane srcPlane(d.SourcePlane);
-        srcPlane.SetSize(w, h);
-        UByte* dstRow = (UByte*)mapped;
-        const unsigned dstPitch = w * bpp;
-        for (unsigned y = 0; y < h; y++)
+        const UpdateDesc& ud = updates[i];
+        unsigned plane = 0;
+        ImageSize sz = pTextures[plane].Size;
+        unsigned mipW = Alg::Max<unsigned>(1u, sz.Width >> mipLevel);
+        unsigned mipH = Alg::Max<unsigned>(1u, sz.Height >> mipLevel);
+
+        UPInt rowBytes = (UPInt)mipW * mapping->BytesPerPixel;
+        UPInt totalSize = rowBytes * mipH;
+
+        VkBufferCreateInfo bufCI = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+        bufCI.size = totalSize;
+        bufCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        bufCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        if (vkCreateBuffer(device, &bufCI, nullptr, &stagingEntries[i].buf) != VK_SUCCESS)
+            goto cleanup_fail;
+
+        VkMemoryRequirements memReqs;
+        vkGetBufferMemoryRequirements(device, stagingEntries[i].buf, &memReqs);
+
+        VkMemoryAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+        allocInfo.allocationSize = memReqs.size;
+        allocInfo.memoryTypeIndex = FindMemoryType(physDevice, memReqs.memoryTypeBits,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        if (allocInfo.memoryTypeIndex == UINT32_MAX)
+            goto cleanup_fail;
+        if (vkAllocateMemory(device, &allocInfo, nullptr, &stagingEntries[i].mem) != VK_SUCCESS)
+            goto cleanup_fail;
+        vkBindBufferMemory(device, stagingEntries[i].buf, stagingEntries[i].mem, 0);
+
+        void* mapped;
+        vkMapMemory(device, stagingEntries[i].mem, 0, totalSize, 0, &mapped);
+        const UByte* src = ud.SourcePlane.pData;
+        UByte* dst = (UByte*)mapped;
+        for (unsigned row = 0; row < mipH; row++)
         {
-            const UByte* srcRow = srcPlane.GetScanline(y);
-            copyFn(dstRow, srcRow, (UPInt)(w * bpp), 0, 0);
-            dstRow += dstPitch;
+            memcpy(dst, src, rowBytes);
+            dst += rowBytes;
+            src += ud.SourcePlane.Pitch;
         }
-        VkBufferImageCopy region = {};
-        region.bufferOffset = 0;
-        region.bufferRowLength = w;
-        region.bufferImageHeight = h;
-        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.imageSubresource.mipLevel = mipLevel;
-        region.imageSubresource.baseArrayLayer = 0;
-        region.imageSubresource.layerCount = 1;
-        region.imageOffset.x = (int32_t)d.DestRect.x1;
-        region.imageOffset.y = (int32_t)d.DestRect.y1;
-        region.imageOffset.z = 0;
-        region.imageExtent.width = w;
-        region.imageExtent.height = h;
-        region.imageExtent.depth = 1;
-        vkCmdCopyBufferToImage(cmd, stagingBuffer, Texture0.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+        vkUnmapMemory(device, stagingEntries[i].mem);
     }
-    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, 0, 0, 0, 1, &barrier);
-    vkEndCommandBuffer(cmd);
-    VkFence fence = VK_NULL_HANDLE;
-    VkFenceCreateInfo fenceInfo = {};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    if (vkCreateFence(device, &fenceInfo, 0, &fence) != VK_SUCCESS)
+
+    // Single command buffer for all copies
     {
+        VkCommandBufferAllocateInfo cbAI = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+        cbAI.commandPool = cmdPool;
+        cbAI.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        cbAI.commandBufferCount = 1;
+        VkCommandBuffer cmd;
+        vkAllocateCommandBuffers(device, &cbAI, &cmd);
+
+        VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vkBeginCommandBuffer(cmd, &beginInfo);
+
+        for (unsigned i = 0; i < count; i++)
+        {
+            unsigned plane = 0;
+            ImageSize sz = pTextures[plane].Size;
+            unsigned mipW = Alg::Max<unsigned>(1u, sz.Width >> mipLevel);
+            unsigned mipH = Alg::Max<unsigned>(1u, sz.Height >> mipLevel);
+
+            pmgr->TransitionImageLayout(cmd, pTextures[plane].Image,
+                VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+            VkBufferImageCopy region = {};
+            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.mipLevel = mipLevel;
+            region.imageSubresource.layerCount = 1;
+            region.imageExtent = { mipW, mipH, 1 };
+            vkCmdCopyBufferToImage(cmd, stagingEntries[i].buf, pTextures[plane].Image,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+            pmgr->TransitionImageLayout(cmd, pTextures[plane].Image,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        }
+
+        vkEndCommandBuffer(cmd);
+
+        VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &cmd;
+        vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle(queue);
         vkFreeCommandBuffers(device, cmdPool, 1, &cmd);
-        vkUnmapMemory(device, stagingMemory);
-        vkFreeMemory(device, stagingMemory, 0);
-        vkDestroyBuffer(device, stagingBuffer, 0);
-        return false;
     }
-    VkSubmitInfo submit = {};
-    submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit.commandBufferCount = 1;
-    submit.pCommandBuffers = &cmd;
-    vkQueueSubmit(queue, 1, &submit, fence);
-    vkWaitForFences(device, 1, &fence, VK_TRUE, (uint64_t)-1);
-    vkDestroyFence(device, fence, 0);
-    vkFreeCommandBuffers(device, cmdPool, 1, &cmd);
-    vkUnmapMemory(device, stagingMemory);
-    vkFreeMemory(device, stagingMemory, 0);
-    vkDestroyBuffer(device, stagingBuffer, 0);
-    LayoutShaderReadReady = true;
+
+    for (unsigned i = 0; i < count; i++)
+    {
+        if (stagingEntries[i].buf != VK_NULL_HANDLE) vkDestroyBuffer(device, stagingEntries[i].buf, nullptr);
+        if (stagingEntries[i].mem != VK_NULL_HANDLE) vkFreeMemory(device, stagingEntries[i].mem, nullptr);
+    }
+    SF_FREE(stagingEntries);
     return true;
-}
 
-void Texture::uploadImage(ImageData* psource)
-{
-    if (!psource || Texture0.Image == VK_NULL_HANDLE)
-        return;
-    TextureManager* pmgr = (TextureManager*)GetManager();
-    if (!pmgr)
-        return;
-    VkDevice device = pmgr->GetDevice();
-    VkPhysicalDevice physicalDevice = pmgr->GetPhysicalDevice();
-    VkQueue queue = pmgr->GetQueue();
-    VkCommandPool cmdPool = pmgr->GetCommandPool();
-    if (queue == VK_NULL_HANDLE || cmdPool == VK_NULL_HANDLE)
-        return;
-
-    ImagePlane plane;
-    psource->GetPlane(0, &plane);
-    if (!plane.pData || plane.Width == 0 || plane.Height == 0)
-        return;
-
-    const unsigned bytesPerPixel = (GetFormat() == Image_A8) ? 1 : 4;
-    const unsigned rowBytes = Texture0.Size.Width * bytesPerPixel;
-    VkDeviceSize bufferSize = (VkDeviceSize)rowBytes * Texture0.Size.Height;
-
-    VkBuffer stagingBuffer = VK_NULL_HANDLE;
-    VkDeviceMemory stagingMemory = VK_NULL_HANDLE;
-
-    VkBufferCreateInfo bufInfo = {};
-    bufInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufInfo.size = bufferSize;
-    bufInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    bufInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    if (vkCreateBuffer(device, &bufInfo, 0, &stagingBuffer) != VK_SUCCESS)
-        return;
-
-    VkMemoryRequirements memReq;
-    vkGetBufferMemoryRequirements(device, stagingBuffer, &memReq);
-    uint32_t memTypeIndex = GetMemoryTypeIndex(physicalDevice, memReq.memoryTypeBits,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    if (memTypeIndex == (uint32_t)-1)
+cleanup_fail:
+    for (unsigned i = 0; i < count; i++)
     {
-        vkDestroyBuffer(device, stagingBuffer, 0);
-        return;
+        if (stagingEntries[i].buf != VK_NULL_HANDLE) vkDestroyBuffer(device, stagingEntries[i].buf, nullptr);
+        if (stagingEntries[i].mem != VK_NULL_HANDLE) vkFreeMemory(device, stagingEntries[i].mem, nullptr);
     }
-
-    VkMemoryAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memReq.size;
-    allocInfo.memoryTypeIndex = memTypeIndex;
-    if (vkAllocateMemory(device, &allocInfo, 0, &stagingMemory) != VK_SUCCESS)
-    {
-        vkDestroyBuffer(device, stagingBuffer, 0);
-        return;
-    }
-    vkBindBufferMemory(device, stagingBuffer, stagingMemory, 0);
-
-    void* mapped = 0;
-    if (vkMapMemory(device, stagingMemory, 0, bufferSize, 0, &mapped) != VK_SUCCESS)
-    {
-        vkFreeMemory(device, stagingMemory, 0);
-        vkDestroyBuffer(device, stagingBuffer, 0);
-        return;
-    }
-    for (unsigned y = 0; y < plane.Height; y++)
-        memcpy((UByte*)mapped + y * rowBytes, plane.GetScanline(y), rowBytes);
-    vkUnmapMemory(device, stagingMemory);
-
-    VkCommandBufferAllocateInfo cmdAlloc = {};
-    cmdAlloc.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    cmdAlloc.commandPool = cmdPool;
-    cmdAlloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    cmdAlloc.commandBufferCount = 1;
-    VkCommandBuffer cmd = VK_NULL_HANDLE;
-    if (vkAllocateCommandBuffers(device, &cmdAlloc, &cmd) != VK_SUCCESS)
-    {
-        vkFreeMemory(device, stagingMemory, 0);
-        vkDestroyBuffer(device, stagingBuffer, 0);
-        return;
-    }
-
-    VkCommandBufferBeginInfo beginInfo = {};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    vkBeginCommandBuffer(cmd, &beginInfo);
-
-    VkImageMemoryBarrier barrier = {};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = Texture0.Image;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = MipLevels;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, 0, 0, 0, 1, &barrier);
-
-    VkBufferImageCopy region = {};
-    region.bufferOffset = 0;
-    region.bufferRowLength = 0;
-    region.bufferImageHeight = 0;
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
-    region.imageOffset = { 0, 0, 0 };
-    region.imageExtent = { Texture0.Size.Width, Texture0.Size.Height, 1 };
-    vkCmdCopyBufferToImage(cmd, stagingBuffer, Texture0.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-
-    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, 0, 0, 0, 1, &barrier);
-
-    vkEndCommandBuffer(cmd);
-
-    VkFence fence = VK_NULL_HANDLE;
-    VkFenceCreateInfo fenceInfo = {};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    if (vkCreateFence(device, &fenceInfo, 0, &fence) != VK_SUCCESS)
-    {
-        vkFreeCommandBuffers(device, cmdPool, 1, &cmd);
-        vkFreeMemory(device, stagingMemory, 0);
-        vkDestroyBuffer(device, stagingBuffer, 0);
-        return;
-    }
-    VkSubmitInfo submit = {};
-    submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit.commandBufferCount = 1;
-    submit.pCommandBuffers = &cmd;
-    vkQueueSubmit(queue, 1, &submit, fence);
-    vkWaitForFences(device, 1, &fence, VK_TRUE, (uint64_t)-1);
-    vkDestroyFence(device, fence, 0);
-    vkFreeCommandBuffers(device, cmdPool, 1, &cmd);
-    vkFreeMemory(device, stagingMemory, 0);
-    vkDestroyBuffer(device, stagingBuffer, 0);
-    // The image is now in SHADER_READ_ONLY_OPTIMAL; record this so that any
-    // subsequent MappedTexture::Unmap() uses the correct oldLayout in its barrier.
-    LayoutShaderReadReady = true;
+    SF_FREE(stagingEntries);
+    return false;
 }
 
 void Texture::computeUpdateConvertRescaleFlags(bool rescale, bool swMipGen, ImageFormat inputFormat,
-                                                ImageRescaleType& rescaleType, ImageFormat& rescaleBuffFormat, bool& convert)
+                                                ImageRescaleType& rescaleType, ImageFormat& rescaleBuffFromat, bool& convert)
 {
-    rescaleBuffFormat = inputFormat;
+    SF_UNUSED2(rescale, swMipGen);
     rescaleType = ResizeNone;
+    rescaleBuffFromat = inputFormat;
     convert = false;
-    const TextureFormat* pfmt = (const TextureFormat*)pFormat;
-    if (!pfmt)
+}
+
+
+// *** DepthStencilSurface
+
+DepthStencilSurface::DepthStencilSurface(TextureManagerLocks* pmanagerLocks, const ImageSize& size)
+: Render::DepthStencilSurface(pmanagerLocks, size),
+  pDepthStencilImage(VK_NULL_HANDLE), pDepthStencilView(VK_NULL_HANDLE),
+  pDepthStencilMemory(VK_NULL_HANDLE), DepthStencilFormat(VK_FORMAT_D24_UNORM_S8_UINT)
+{
+}
+
+DepthStencilSurface::~DepthStencilSurface()
+{
+    TextureManager* pmgr = (TextureManager*)pManagerLocks->pManager;
+    VkDevice device = pmgr->GetDevice();
+    if (pDepthStencilView != VK_NULL_HANDLE)
+        vkDestroyImageView(device, pDepthStencilView, nullptr);
+    if (pDepthStencilImage != VK_NULL_HANDLE)
+        vkDestroyImage(device, pDepthStencilImage, nullptr);
+    if (pDepthStencilMemory != VK_NULL_HANDLE)
+        vkFreeMemory(device, pDepthStencilMemory, nullptr);
+}
+
+bool DepthStencilSurface::Initialize()
+{
+    TextureManager* pmgr = (TextureManager*)pManagerLocks->pManager;
+    VkDevice device = pmgr->GetDevice();
+    VkPhysicalDevice physDevice = pmgr->GetPhysicalDevice();
+
+    // Try D24_UNORM_S8_UINT first, then D32_SFLOAT_S8_UINT
+    VkFormat formats[] = { VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT };
+    VkFormat selectedFormat = VK_FORMAT_UNDEFINED;
+    for (auto fmt : formats)
+    {
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(physDevice, fmt, &props);
+        if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+        {
+            selectedFormat = fmt;
+            break;
+        }
+    }
+    if (selectedFormat == VK_FORMAT_UNDEFINED)
+        return false;
+
+    DepthStencilFormat = selectedFormat;
+
+    VkImageCreateInfo imageCI = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+    imageCI.imageType   = VK_IMAGE_TYPE_2D;
+    imageCI.format      = selectedFormat;
+    imageCI.extent      = { (uint32_t)Size.Width, (uint32_t)Size.Height, 1 };
+    imageCI.mipLevels   = 1;
+    imageCI.arrayLayers = 1;
+    imageCI.samples     = VK_SAMPLE_COUNT_1_BIT;
+    imageCI.tiling      = VK_IMAGE_TILING_OPTIMAL;
+    imageCI.usage       = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    imageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    SF_VK_CHECK_RETURN(vkCreateImage(device, &imageCI, nullptr, &pDepthStencilImage), false);
+
+    VkMemoryRequirements memReqs;
+    vkGetImageMemoryRequirements(device, pDepthStencilImage, &memReqs);
+
+    VkMemoryAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+    allocInfo.allocationSize = memReqs.size;
+    allocInfo.memoryTypeIndex = FindMemoryType(physDevice, memReqs.memoryTypeBits,
+                                               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if (allocInfo.memoryTypeIndex == UINT32_MAX)
+    {
+        SF_DEBUG_WARNING(1, "Vulkan: No suitable memory type for depth/stencil surface");
+        return false;
+    }
+    SF_VK_CHECK_RETURN(vkAllocateMemory(device, &allocInfo, nullptr, &pDepthStencilMemory), false);
+    SF_VK_CHECK_RETURN(vkBindImageMemory(device, pDepthStencilImage, pDepthStencilMemory, 0), false);
+
+    VkImageViewCreateInfo viewCI = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+    viewCI.image    = pDepthStencilImage;
+    viewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewCI.format   = selectedFormat;
+    viewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+    viewCI.subresourceRange.levelCount = 1;
+    viewCI.subresourceRange.layerCount = 1;
+
+    SF_VK_CHECK_RETURN(vkCreateImageView(device, &viewCI, nullptr, &pDepthStencilView), false);
+
+    State = Render::Texture::State_Valid;
+    return true;
+}
+
+
+// *** MappedTexture
+
+bool MappedTexture::Map(Render::Texture* ptexture, unsigned mipLevel, unsigned levelCount)
+{
+    SF_ASSERT(!IsMapped());
+    SF_ASSERT((mipLevel + levelCount) <= ptexture->MipLevels);
+
+    Texture* vktex = (Texture*)ptexture;
+    TextureManager* pmgr = vktex->GetManager();
+    VkDevice device = pmgr->GetDevice();
+    VkPhysicalDevice physDevice = pmgr->GetPhysicalDevice();
+
+    if (levelCount == 0)
+        levelCount = 1;
+
+    const TextureFormat::Mapping* mapping = vktex->GetTextureFormatMapping();
+    if (!mapping || mapping->BytesPerPixel == 0)
+        return false;
+
+    unsigned texPlaneCount = vktex->TextureCount;
+    if (texPlaneCount > PlaneReserveSize)
+        return false;
+
+    UPInt totalSize = 0;
+    for (unsigned itex = 0; itex < texPlaneCount; itex++)
+    {
+        ImageSize sz = vktex->pTextures[itex].Size;
+        for (unsigned level = mipLevel; level < mipLevel + levelCount; level++)
+        {
+            unsigned mipW = Alg::Max<unsigned>(1u, sz.Width >> level);
+            unsigned mipH = Alg::Max<unsigned>(1u, sz.Height >> level);
+            totalSize += (UPInt)mipW * mipH * mapping->BytesPerPixel;
+        }
+    }
+
+    VkBufferCreateInfo bufCI = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    bufCI.size = totalSize;
+    bufCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    bufCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    if (vkCreateBuffer(device, &bufCI, nullptr, &pStagingBuffer) != VK_SUCCESS)
+        return false;
+
+    VkMemoryRequirements memReqs;
+    vkGetBufferMemoryRequirements(device, pStagingBuffer, &memReqs);
+
+    VkMemoryAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+    allocInfo.allocationSize = memReqs.size;
+    allocInfo.memoryTypeIndex = FindMemoryType(physDevice, memReqs.memoryTypeBits,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    if (allocInfo.memoryTypeIndex == UINT32_MAX)
+    {
+        vkDestroyBuffer(device, pStagingBuffer, nullptr);
+        pStagingBuffer = VK_NULL_HANDLE;
+        return false;
+    }
+
+    if (vkAllocateMemory(device, &allocInfo, nullptr, &pStagingMemory) != VK_SUCCESS)
+    {
+        vkDestroyBuffer(device, pStagingBuffer, nullptr);
+        pStagingBuffer = VK_NULL_HANDLE;
+        return false;
+    }
+    vkBindBufferMemory(device, pStagingBuffer, pStagingMemory, 0);
+
+    void* mapped = nullptr;
+    vkMapMemory(device, pStagingMemory, 0, totalSize, 0, &mapped);
+
+    if (vktex->pShadowData && vktex->ShadowSize == totalSize)
+        memcpy(mapped, vktex->pShadowData, totalSize);
+    else
+        memset(mapped, 0, totalSize);
+
+    pTexture    = ptexture;
+    StartMipLevel = mipLevel;
+    LevelCount    = levelCount;
+
+    UByte* pdata = (UByte*)mapped;
+    unsigned planeIdx = 0;
+    for (unsigned itex = 0; itex < texPlaneCount; itex++)
+    {
+        ImageSize sz = vktex->pTextures[itex].Size;
+        for (unsigned level = mipLevel; level < mipLevel + levelCount; level++)
+        {
+            unsigned mipW = Alg::Max<unsigned>(1u, sz.Width >> level);
+            unsigned mipH = Alg::Max<unsigned>(1u, sz.Height >> level);
+            UPInt pitch = (UPInt)mipW * mapping->BytesPerPixel;
+            UPInt planeSize = pitch * mipH;
+
+            Data.Initialize(vktex->GetImageFormat(), level);
+            Data.SetPlane(planeIdx, ImageSize(mipW, mipH), pitch, planeSize, pdata);
+            pdata += planeSize;
+            planeIdx++;
+        }
+    }
+
+    pTexture->pMap = this;
+    return true;
+}
+
+void MappedTexture::Unmap(bool applyUpdate)
+{
+    if (!IsMapped())
         return;
-    ImageFormat texFormat = pfmt->GetImageFormat();
-    if (rescale)
+
+    Texture* vktex = (Texture*)pTexture;
+    TextureManager* pmgr = vktex->GetManager();
+    VkDevice device = pmgr->GetDevice();
+    VkCommandPool cmdPool = pmgr->GetCommandPool();
+    VkQueue queue = pmgr->GetQueue();
+
+    if (applyUpdate)
     {
-        if (texFormat != Image_R8G8B8A8 && texFormat != Image_A8)
-            convert = true;
-        else if (rescaleType == ResizeNone)
-            rescaleType = GetImageFormatRescaleType(inputFormat);
+        const TextureFormat::Mapping* mapping = vktex->GetTextureFormatMapping();
+        UPInt totalSize = 0;
+        for (unsigned itex = 0; itex < vktex->TextureCount; itex++)
+        {
+            ImageSize sz = vktex->pTextures[itex].Size;
+            for (unsigned level = StartMipLevel; level < StartMipLevel + LevelCount; level++)
+            {
+                unsigned mipW = Alg::Max<unsigned>(1u, sz.Width >> level);
+                unsigned mipH = Alg::Max<unsigned>(1u, sz.Height >> level);
+                totalSize += (UPInt)mipW * mipH * mapping->BytesPerPixel;
+            }
+        }
+
+        if (!vktex->pShadowData || vktex->ShadowSize != totalSize)
+        {
+            if (vktex->pShadowData)
+                SF_FREE(vktex->pShadowData);
+            vktex->pShadowData = (UByte*)SF_ALLOC(totalSize, StatRender_TextureManager_Mem);
+            vktex->ShadowSize = totalSize;
+        }
+        if (vktex->pShadowData)
+        {
+            void* base = Data.GetPlaneRef(0).pData;
+            memcpy(vktex->pShadowData, base, totalSize);
+        }
     }
-    if (swMipGen)
+
+    vkUnmapMemory(device, pStagingMemory);
+
+    if (applyUpdate)
     {
-        if (texFormat != Image_R8G8B8A8 && texFormat != Image_A8)
-            convert = true;
+        const TextureFormat::Mapping* mapping = vktex->GetTextureFormatMapping();
+
+        VkCommandBufferAllocateInfo cbAI = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+        cbAI.commandPool = cmdPool;
+        cbAI.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        cbAI.commandBufferCount = 1;
+
+        VkCommandBuffer cmd;
+        VkResult vr = vkAllocateCommandBuffers(device, &cbAI, &cmd);
+
+        VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vkBeginCommandBuffer(cmd, &beginInfo);
+
+        VkDeviceSize bufferOffset = 0;
+        for (unsigned itex = 0; itex < vktex->TextureCount; itex++)
+        {
+            ImageSize sz = vktex->pTextures[itex].Size;
+            VkImage image = vktex->pTextures[itex].Image;
+
+            pmgr->TransitionImageLayout(cmd, image,
+                VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+            for (unsigned level = StartMipLevel; level < StartMipLevel + LevelCount; level++)
+            {
+                unsigned mipW = Alg::Max<unsigned>(1u, sz.Width >> level);
+                unsigned mipH = Alg::Max<unsigned>(1u, sz.Height >> level);
+
+                VkBufferImageCopy region = {};
+                region.bufferOffset = bufferOffset;
+                region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                region.imageSubresource.mipLevel = level;
+                region.imageSubresource.layerCount = 1;
+                region.imageExtent = { mipW, mipH, 1 };
+
+                vkCmdCopyBufferToImage(cmd, pStagingBuffer, image,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+                bufferOffset += (VkDeviceSize)mipW * mipH * mapping->BytesPerPixel;
+            }
+
+            pmgr->TransitionImageLayout(cmd, image,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        }
+
+        vkEndCommandBuffer(cmd);
+
+        VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &cmd;
+        VkResult submitResult = vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle(queue);
+        vkFreeCommandBuffers(device, cmdPool, 1, &cmd);
     }
+
+    vkDestroyBuffer(device, pStagingBuffer, nullptr);
+    vkFreeMemory(device, pStagingMemory, nullptr);
+    pStagingBuffer = VK_NULL_HANDLE;
+    pStagingMemory = VK_NULL_HANDLE;
+    pTexture->pMap = 0;
+    pTexture = 0;
+    StartMipLevel = 0;
+    LevelCount = 0;
 }
 
-// TextureManager
-static TextureFormat s_R8G8B8A8Format(Image_R8G8B8A8, &Image::CopyScanlineDefault);
-static TextureFormat s_B8G8R8A8Format(Image_B8G8R8A8, &Image::CopyScanlineDefault);
-static TextureFormat s_A8Format(Image_A8, &Image::CopyScanlineDefault);
 
-void TextureManager::SetTextureView(unsigned stage, VkImageView view, ImageFillMode fm)
-{
-    if (stage < MaxTextureStages)
-    {
-        CurrentTextureView[stage] = view;
-        CurrentFillMode[stage] = fm;
-    }
-}
+// *** TextureManager
 
-VkImageView TextureManager::GetCurrentTextureView(unsigned stage) const
-{
-    return (stage < MaxTextureStages) ? CurrentTextureView[stage] : VK_NULL_HANDLE;
-}
-
-ImageFillMode TextureManager::GetCurrentFillMode(unsigned stage) const
-{
-    return (stage < MaxTextureStages) ? CurrentFillMode[stage] : ImageFillMode();
-}
-
-void TextureManager::ClearCurrentTextureViews()
-{
-    for (unsigned i = 0; i < MaxTextureStages; i++)
-        CurrentTextureView[i] = VK_NULL_HANDLE;
-}
-
-TextureManager::TextureManager(VkDevice device, VkPhysicalDevice physicalDevice, VkQueue queue, unsigned queueFamilyIndex,
-                               ThreadId renderThreadId, ThreadCommandQueue* commandQueue,
+TextureManager::TextureManager(VkDevice device, VkPhysicalDevice physDevice,
+                               VkCommandPool cmdPool, VkQueue queue,
+                               ThreadId renderThreadId,
+                               ThreadCommandQueue* commandQueue,
                                TextureCache* texCache)
-    : Render::TextureManager(renderThreadId, commandQueue, texCache)
-    , pDevice(device)
-    , pPhysicalDevice(physicalDevice)
-    , pQueue(queue)
-    , QueueFamilyIndex(queueFamilyIndex)
-    , pCommandPool(VK_NULL_HANDLE)
+: Render::TextureManager(renderThreadId, commandQueue, texCache),
+  pDevice(device), pPhysicalDevice(physDevice),
+  pCommandPool(cmdPool), pQueue(queue),
+  DummyImage(VK_NULL_HANDLE), DummyImageView(VK_NULL_HANDLE),
+  DummyImageMemory(VK_NULL_HANDLE), DummySampler(VK_NULL_HANDLE)
 {
-    for (unsigned i = 0; i < MaxTextureStages; i++)
-    {
-        CurrentTextureView[i] = VK_NULL_HANDLE;
-        CurrentFillMode[i] = ImageFillMode();
-    }
-    VkCommandPoolCreateInfo poolInfo = {};
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-    poolInfo.queueFamilyIndex = queueFamilyIndex;
-    if (vkCreateCommandPool(device, &poolInfo, 0, &pCommandPool) != VK_SUCCESS)
-        pCommandPool = VK_NULL_HANDLE;
+    memset(Samplers, 0, sizeof(Samplers));
+    memset(CurrentTextures, 0, sizeof(CurrentTextures));
+    memset(CurrentSamplers, 0, sizeof(CurrentSamplers));
+    initTextureFormats();
+    createDummyTexture();
 }
 
 TextureManager::~TextureManager()
@@ -604,350 +668,322 @@ TextureManager::~TextureManager()
 
 void TextureManager::Reset()
 {
-    if (pCommandPool != VK_NULL_HANDLE && pDevice != VK_NULL_HANDLE)
+    destroyDummyTexture();
+
+    for (unsigned i = 0; i < SamplerTypeCount; i++)
     {
-        vkDestroyCommandPool(pDevice, pCommandPool, 0);
-        pCommandPool = VK_NULL_HANDLE;
+        if (Samplers[i] != VK_NULL_HANDLE)
+        {
+            vkDestroySampler(pDevice, Samplers[i], nullptr);
+            Samplers[i] = VK_NULL_HANDLE;
+        }
     }
+    processTextureKillList();
+}
+
+void TextureManager::initTextureFormats()
+{
+    for (const TextureFormat::Mapping* m = TextureFormatMapping; m->Format != Image_None; m++)
+    {
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(pPhysicalDevice, m->VkFmt, &props);
+        if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)
+        {
+            TextureFormat* tf = SF_HEAP_AUTO_NEW(this) TextureFormat(m);
+            TextureFormats.PushBack(tf);
+        }
+    }
+}
+
+void TextureManager::processTextureKillList()
+{
+    for (unsigned i = 0; i < ViewKills.GetSize(); i++)
+        vkDestroyImageView(pDevice, ViewKills[i], nullptr);
+    ViewKills.Clear();
+
+    for (unsigned i = 0; i < ImageKills.GetSize(); i++)
+        vkDestroyImage(pDevice, ImageKills[i], nullptr);
+    ImageKills.Clear();
+
+    for (unsigned i = 0; i < MemoryKills.GetSize(); i++)
+        vkFreeMemory(pDevice, MemoryKills[i], nullptr);
+    MemoryKills.Clear();
+}
+
+void TextureManager::processInitTextures()
+{
+    // Initialize pending textures that were created on a non-render thread.
+    Render::TextureManager::processInitTextures();
 }
 
 void TextureManager::BeginScene()
 {
+    memset(CurrentTextures, 0, sizeof(CurrentTextures));
+    memset(CurrentSamplers, 0, sizeof(CurrentSamplers));
 }
 
-Render::Texture* TextureManager::CreateTexture(ImageFormat format, unsigned mipLevels, const ImageSize& size,
-                                               unsigned use, ImageBase* pimage, Render::MemoryManager* manager)
+VkSampler TextureManager::GetSampler(const ImageFillMode& fm)
 {
-    (void)manager;
-    const Render::TextureFormat* ptformat = precreateTexture(format, use, pimage);
-    if (!ptformat) return 0;
-    Texture* ptexture = SF_HEAP_AUTO_NEW(this) Texture(pLocks, (const TextureFormat*)ptformat, mipLevels, size, use, pimage);
-    return postCreateTexture(ptexture, use);
+    unsigned sampleIdx = fm.GetSampleMode();
+    unsigned wrapIdx   = fm.GetWrapMode();
+    unsigned idx = sampleIdx * Wrap_Count + wrapIdx;
+    if (idx >= SamplerTypeCount) idx = 0;
+
+    if (Samplers[idx] != VK_NULL_HANDLE)
+        return Samplers[idx];
+
+    // Create sampler on demand
+    VkSamplerCreateInfo ci = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+    ci.magFilter = (sampleIdx == Sample_Point) ? VK_FILTER_NEAREST : VK_FILTER_LINEAR;
+    ci.minFilter = ci.magFilter;
+    ci.mipmapMode = (sampleIdx == Sample_Point) ? VK_SAMPLER_MIPMAP_MODE_NEAREST : VK_SAMPLER_MIPMAP_MODE_LINEAR;
+
+    VkSamplerAddressMode addrMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    if (wrapIdx == Wrap_Repeat) addrMode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    ci.addressModeU = addrMode;
+    ci.addressModeV = addrMode;
+    ci.addressModeW = addrMode;
+    ci.maxLod = VK_LOD_CLAMP_NONE;
+
+    vkCreateSampler(pDevice, &ci, nullptr, &Samplers[idx]);
+    return Samplers[idx];
+}
+
+void TextureManager::SetSamplerState(unsigned stage, unsigned viewCount,
+                                     VkImageView* views, VkSampler sampler)
+{
+    SF_UNUSED(viewCount);
+    if (stage < MaximumStages)
+    {
+        CurrentTextures[stage] = views[0];
+        CurrentSamplers[stage] = sampler;
+    }
+}
+
+Render::Texture* TextureManager::CreateTexture(ImageFormat format, unsigned mipLevels,
+                                                const ImageSize& size, unsigned use,
+                                                ImageBase* pimage, Render::MemoryManager* manager)
+{
+    SF_UNUSED(manager);
+    const Render::TextureFormat* tf = getTextureFormat(format);
+    if (!tf)
+        return 0;
+
+    Texture* ptex = SF_HEAP_AUTO_NEW(this)
+        Texture(pLocks, (const TextureFormat*)tf, mipLevels, size, use, pimage);
+    return postCreateTexture(ptex, use);
+}
+
+Render::Texture* TextureManager::CreateTexture(VkImage image, VkImageView view,
+                                                ImageSize imgSize, ImageBase* pimage)
+{
+    Texture* ptex = SF_HEAP_AUTO_NEW(this)
+        Texture(pLocks, image, view, imgSize, pimage);
+    return postCreateTexture(ptex, 0);
 }
 
 unsigned TextureManager::GetTextureUseCaps(ImageFormat format)
 {
-    unsigned caps = ImageUse_Wrap | ImageUse_Update | ImageUse_RenderTarget;
+    unsigned use = ImageUse_Update;
     if (!ImageData::IsFormatCompressed(format))
-        caps |= ImageUse_PartialUpdate | ImageUse_GenMipmaps;
-    const Render::TextureFormat* ptformat = getTextureFormat(format);
-    if (ptformat && isScanlineCompatible(ptformat))
-        caps |= ImageUse_MapRenderThread;
-    return caps;
+        use |= ImageUse_PartialUpdate | ImageUse_GenMipmaps;
+    const Render::TextureFormat* tf = getTextureFormat(format);
+    if (tf)
+        use |= ImageUse_InitOnly | ImageUse_MapRenderThread;
+    return use;
 }
 
-DepthStencilSurface::DepthStencilSurface(TextureManagerLocks* pmanagerLocks, const ImageSize& size)
-    : Render::DepthStencilSurface(pmanagerLocks, size)
-    , Image(VK_NULL_HANDLE)
-    , View(VK_NULL_HANDLE)
-    , Memory(VK_NULL_HANDLE)
+Render::DepthStencilSurface* TextureManager::CreateDepthStencilSurface(const ImageSize& size,
+                                                                        MemoryManager* manager)
 {
-}
-
-DepthStencilSurface::~DepthStencilSurface()
-{
-    TextureManager* pmgr = (TextureManager*)GetTextureManager();
-    if (pmgr)
-    {
-        VkDevice device = pmgr->GetDevice();
-        if (View != VK_NULL_HANDLE)
-        {
-            vkDestroyImageView(device, View, 0);
-            View = VK_NULL_HANDLE;
-        }
-        if (Image != VK_NULL_HANDLE)
-        {
-            vkDestroyImage(device, Image, 0);
-            Image = VK_NULL_HANDLE;
-        }
-        if (Memory != VK_NULL_HANDLE)
-        {
-            vkFreeMemory(device, Memory, 0);
-            Memory = VK_NULL_HANDLE;
-        }
-    }
-}
-
-bool DepthStencilSurface::Initialize()
-{
-    TextureManager* pmgr = (TextureManager*)GetTextureManager();
-    if (!pmgr || Size.Width == 0 || Size.Height == 0)
-    {
-        State = Texture::State_Valid;
-        return true;
-    }
-    VkDevice device = pmgr->GetDevice();
-    VkPhysicalDevice physicalDevice = pmgr->GetPhysicalDevice();
-    VkFormat format = pickDepthStencilFormat(physicalDevice);
-    VkImageCreateInfo imgInfo = {};
-    imgInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imgInfo.imageType = VK_IMAGE_TYPE_2D;
-    imgInfo.format = format;
-    imgInfo.extent.width = Size.Width;
-    imgInfo.extent.height = Size.Height;
-    imgInfo.extent.depth = 1;
-    imgInfo.mipLevels = 1;
-    imgInfo.arrayLayers = 1;
-    imgInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    imgInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    imgInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    imgInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    imgInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    if (vkCreateImage(device, &imgInfo, 0, &Image) != VK_SUCCESS)
-    {
-        State = Texture::State_InitFailed;
-        return false;
-    }
-    VkMemoryRequirements memReq;
-    vkGetImageMemoryRequirements(device, Image, &memReq);
-    uint32_t memTypeIndex = GetMemoryTypeIndex(physicalDevice, memReq.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    if (memTypeIndex == (uint32_t)-1)
-    {
-        vkDestroyImage(device, Image, 0);
-        Image = VK_NULL_HANDLE;
-        State = Texture::State_InitFailed;
-        return false;
-    }
-    VkMemoryAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memReq.size;
-    allocInfo.memoryTypeIndex = memTypeIndex;
-    if (vkAllocateMemory(device, &allocInfo, 0, &Memory) != VK_SUCCESS)
-    {
-        vkDestroyImage(device, Image, 0);
-        Image = VK_NULL_HANDLE;
-        State = Texture::State_InitFailed;
-        return false;
-    }
-    vkBindImageMemory(device, Image, Memory, 0);
-    VkImageViewCreateInfo viewInfo = {};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = Image;
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = format;
-    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = 1;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
-    if (vkCreateImageView(device, &viewInfo, 0, &View) != VK_SUCCESS)
-    {
-        vkFreeMemory(device, Memory, 0);
-        vkDestroyImage(device, Image, 0);
-        Memory = VK_NULL_HANDLE;
-        Image = VK_NULL_HANDLE;
-        State = Texture::State_InitFailed;
-        return false;
-    }
-    State = Texture::State_Valid;
-    return true;
-}
-
-Render::DepthStencilSurface* TextureManager::CreateDepthStencilSurface(const ImageSize& size, MemoryManager* manager)
-{
-    (void)manager;
-    if (!pDevice || size.Width == 0 || size.Height == 0)
-        return 0;
+    SF_UNUSED(manager);
     DepthStencilSurface* pdss = SF_HEAP_AUTO_NEW(this) DepthStencilSurface(pLocks, size);
-    return postCreateDepthStencilSurface(pdss);
+    if (pdss && !pdss->Initialize())
+    {
+        pdss->Release();
+        return 0;
+    }
+    return pdss;
 }
 
-bool TextureManager::IsDrawableImageFormat(ImageFormat format) const
+bool TextureManager::createDummyTexture()
 {
-    return format == Image_R8G8B8A8 || format == Image_B8G8R8A8;
-}
+    VkImageCreateInfo imageCI = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+    imageCI.imageType = VK_IMAGE_TYPE_2D;
+    imageCI.format = VK_FORMAT_R8G8B8A8_UNORM;
+    imageCI.extent = { 1, 1, 1 };
+    imageCI.mipLevels = 1;
+    imageCI.arrayLayers = 1;
+    imageCI.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageCI.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    imageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-static MappedTexture s_DefaultMappedTexture;
+    if (vkCreateImage(pDevice, &imageCI, nullptr, &DummyImage) != VK_SUCCESS)
+        return false;
 
-Render::MappedTextureBase& TextureManager::getDefaultMappedTexture()
-{
-    return s_DefaultMappedTexture;
-}
+    VkMemoryRequirements memReqs;
+    vkGetImageMemoryRequirements(pDevice, DummyImage, &memReqs);
+    VkMemoryAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+    allocInfo.allocationSize = memReqs.size;
+    allocInfo.memoryTypeIndex = FindMemoryType(pPhysicalDevice, memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if (allocInfo.memoryTypeIndex == UINT32_MAX)
+        return false;
+    if (vkAllocateMemory(pDevice, &allocInfo, nullptr, &DummyImageMemory) != VK_SUCCESS)
+        return false;
+    vkBindImageMemory(pDevice, DummyImage, DummyImageMemory, 0);
 
-Render::MappedTextureBase* TextureManager::createMappedTexture()
-{
-    return SF_HEAP_AUTO_NEW(this) MappedTexture;
-}
+    VkImageViewCreateInfo viewCI = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+    viewCI.image = DummyImage;
+    viewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewCI.format = VK_FORMAT_R8G8B8A8_UNORM;
+    viewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    viewCI.subresourceRange.levelCount = 1;
+    viewCI.subresourceRange.layerCount = 1;
+    if (vkCreateImageView(pDevice, &viewCI, nullptr, &DummyImageView) != VK_SUCCESS)
+        return false;
 
-bool MappedTexture::Map(Render::Texture* ptexture, unsigned mipLevel, unsigned levelCount)
-{
-    if (!ptexture || IsMapped())
+    VkSamplerCreateInfo sampCI = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+    sampCI.magFilter = VK_FILTER_NEAREST;
+    sampCI.minFilter = VK_FILTER_NEAREST;
+    sampCI.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampCI.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampCI.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    if (vkCreateSampler(pDevice, &sampCI, nullptr, &DummySampler) != VK_SUCCESS)
         return false;
-    Texture* pvtex = (Texture*)ptexture;
-    if (pvtex->Texture0.Image == VK_NULL_HANDLE)
-        return false;
-    TextureManager* pmgr = (TextureManager*)ptexture->GetTextureManager();
-    if (!pmgr)
-        return false;
-    ImageSize size = pvtex->GetTextureSize(0);
-    if (size.Width == 0 || size.Height == 0)
-        return false;
-    if (levelCount == 0)
-        levelCount = ptexture->MipLevels - mipLevel;
-    const unsigned bpp = (ptexture->GetFormat() == Image_A8) ? 1 : 4;
-    const unsigned rowBytes = size.Width * bpp;
-    VkDeviceSize bufferSize = (VkDeviceSize)rowBytes * size.Height;
-    VkDevice device = pmgr->GetDevice();
-    VkBufferCreateInfo bufInfo = {};
-    bufInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufInfo.size = bufferSize;
-    bufInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    bufInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    if (vkCreateBuffer(device, &bufInfo, 0, &StagingBuffer) != VK_SUCCESS)
-        return false;
-    VkMemoryRequirements memReq;
-    vkGetBufferMemoryRequirements(device, StagingBuffer, &memReq);
-    uint32_t memTypeIndex = GetMemoryTypeIndex(pmgr->GetPhysicalDevice(), memReq.memoryTypeBits,
+
+    // Upload transparent black pixel and transition to shader-read-only layout
+    // (avoids uninitialized VRAM showing as garbage color when dummy texture is sampled)
+    const uint8_t pixelData[4] = { 0, 0, 0, 0 };
+
+    VkBufferCreateInfo stagingBufCI = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    stagingBufCI.size = 4;
+    stagingBufCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    stagingBufCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VkBuffer stagingBuf = VK_NULL_HANDLE;
+    vkCreateBuffer(pDevice, &stagingBufCI, nullptr, &stagingBuf);
+
+    VkMemoryRequirements stagingMemReqs;
+    vkGetBufferMemoryRequirements(pDevice, stagingBuf, &stagingMemReqs);
+    VkMemoryAllocateInfo stagingAllocInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+    stagingAllocInfo.allocationSize = stagingMemReqs.size;
+    stagingAllocInfo.memoryTypeIndex = FindMemoryType(pPhysicalDevice, stagingMemReqs.memoryTypeBits,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    if (memTypeIndex == (uint32_t)-1)
-    {
-        vkDestroyBuffer(device, StagingBuffer, 0);
-        StagingBuffer = VK_NULL_HANDLE;
-        return false;
-    }
-    VkMemoryAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memReq.size;
-    allocInfo.memoryTypeIndex = memTypeIndex;
-    if (vkAllocateMemory(device, &allocInfo, 0, &StagingMemory) != VK_SUCCESS)
-    {
-        vkDestroyBuffer(device, StagingBuffer, 0);
-        StagingBuffer = VK_NULL_HANDLE;
-        return false;
-    }
-    vkBindBufferMemory(device, StagingBuffer, StagingMemory, 0);
-    if (vkMapMemory(device, StagingMemory, 0, bufferSize, 0, &pMappedPtr) != VK_SUCCESS)
-    {
-        vkFreeMemory(device, StagingMemory, 0);
-        vkDestroyBuffer(device, StagingBuffer, 0);
-        StagingMemory = VK_NULL_HANDLE;
-        StagingBuffer = VK_NULL_HANDLE;
-        return false;
-    }
-    pTexture = ptexture;
-    StartMipLevel = mipLevel;
-    LevelCount = (int)levelCount;
-    Data.Initialize(ptexture->GetImageFormat(), levelCount, Planes, 1, true);
-    Data.SetPlane(0, size, rowBytes, (UPInt)bufferSize, (UByte*)pMappedPtr);
-    ptexture->pMap = this;
+    VkDeviceMemory stagingMem = VK_NULL_HANDLE;
+    vkAllocateMemory(pDevice, &stagingAllocInfo, nullptr, &stagingMem);
+    vkBindBufferMemory(pDevice, stagingBuf, stagingMem, 0);
+
+    void* mapped = nullptr;
+    vkMapMemory(pDevice, stagingMem, 0, 4, 0, &mapped);
+    memcpy(mapped, pixelData, 4);
+    vkUnmapMemory(pDevice, stagingMem);
+
+    VkCommandBufferAllocateInfo cbAI = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    cbAI.commandPool = pCommandPool;
+    cbAI.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cbAI.commandBufferCount = 1;
+    VkCommandBuffer cmd;
+    vkAllocateCommandBuffers(pDevice, &cbAI, &cmd);
+
+    VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(cmd, &beginInfo);
+
+    TransitionImageLayout(cmd, DummyImage,
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    VkBufferImageCopy copyRegion = {};
+    copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.imageSubresource.layerCount = 1;
+    copyRegion.imageExtent = { 1, 1, 1 };
+    vkCmdCopyBufferToImage(cmd, stagingBuf, DummyImage,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+
+    TransitionImageLayout(cmd, DummyImage,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    vkEndCommandBuffer(cmd);
+
+    VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &cmd;
+    vkQueueSubmit(pQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(pQueue);
+    vkFreeCommandBuffers(pDevice, pCommandPool, 1, &cmd);
+
+    vkDestroyBuffer(pDevice, stagingBuf, nullptr);
+    vkFreeMemory(pDevice, stagingMem, nullptr);
+
     return true;
 }
 
-void MappedTexture::Unmap(bool applyUpdate)
+void TextureManager::destroyDummyTexture()
 {
-    if (!IsMapped() || !pTexture)
-    {
-        LevelCount = 0;
-        return;
-    }
-    Texture* pvtex = (Texture*)pTexture;
-    TextureManager* pmgr = (TextureManager*)pTexture->GetTextureManager();
-    if (!pmgr)
-    {
-        if (pTexture)
-            pTexture->pMap = 0;
-        pTexture = 0;
-        LevelCount = 0;
-        return;
-    }
-    VkDevice device = pmgr->GetDevice();
-    if (pMappedPtr)
-    {
-        vkUnmapMemory(device, StagingMemory);
-        pMappedPtr = 0;
-    }
-    VkQueue queue = pmgr->GetQueue();
-    VkCommandPool cmdPool = pmgr->GetCommandPool();
-    if (applyUpdate && StagingBuffer != VK_NULL_HANDLE && queue != VK_NULL_HANDLE && cmdPool != VK_NULL_HANDLE && pvtex->Texture0.Image != VK_NULL_HANDLE)
-    {
-        ImageSize size = pvtex->GetTextureSize(0);
-        const unsigned bpp = (pTexture->GetFormat() == Image_A8) ? 1 : 4;
-        VkDeviceSize bufferSize = (VkDeviceSize)size.Width * bpp * size.Height;
-        VkCommandBufferAllocateInfo cmdAlloc = {};
-        cmdAlloc.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        cmdAlloc.commandPool = cmdPool;
-        cmdAlloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        cmdAlloc.commandBufferCount = 1;
-        VkCommandBuffer cmd = VK_NULL_HANDLE;
-        if (vkAllocateCommandBuffers(device, &cmdAlloc, &cmd) == VK_SUCCESS)
-        {
-            VkCommandBufferBeginInfo beginInfo = {};
-            beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-            vkBeginCommandBuffer(cmd, &beginInfo);
-            VkImageMemoryBarrier barrier = {};
-            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-            barrier.oldLayout = pvtex->LayoutShaderReadReady ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
-            barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            barrier.image = pvtex->Texture0.Image;
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            barrier.subresourceRange.baseMipLevel = 0;
-            barrier.subresourceRange.levelCount = 1;
-            barrier.subresourceRange.baseArrayLayer = 0;
-            barrier.subresourceRange.layerCount = 1;
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, 0, 0, 0, 1, &barrier);
-            VkBufferImageCopy region = {};
-            region.bufferOffset = 0;
-            region.bufferRowLength = 0;
-            region.bufferImageHeight = 0;
-            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            region.imageSubresource.mipLevel = 0;
-            region.imageSubresource.baseArrayLayer = 0;
-            region.imageSubresource.layerCount = 1;
-            region.imageOffset = { 0, 0, 0 };
-            region.imageExtent = { size.Width, size.Height, 1 };
-            vkCmdCopyBufferToImage(cmd, StagingBuffer, pvtex->Texture0.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-            barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, 0, 0, 0, 1, &barrier);
-            pvtex->LayoutShaderReadReady = true;
-            vkEndCommandBuffer(cmd);
-            VkFence fence = VK_NULL_HANDLE;
-            VkFenceCreateInfo fenceInfo = {};
-            fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-            if (vkCreateFence(device, &fenceInfo, 0, &fence) == VK_SUCCESS)
-            {
-                VkSubmitInfo submit = {};
-                submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-                submit.commandBufferCount = 1;
-                submit.pCommandBuffers = &cmd;
-                vkQueueSubmit(queue, 1, &submit, fence);
-                vkWaitForFences(device, 1, &fence, VK_TRUE, (uint64_t)-1);
-                vkDestroyFence(device, fence, 0);
-            }
-            vkFreeCommandBuffers(device, cmdPool, 1, &cmd);
-        }
-    }
-    if (StagingMemory != VK_NULL_HANDLE)
-    {
-        vkFreeMemory(device, StagingMemory, 0);
-        StagingMemory = VK_NULL_HANDLE;
-    }
-    if (StagingBuffer != VK_NULL_HANDLE)
-    {
-        vkDestroyBuffer(device, StagingBuffer, 0);
-        StagingBuffer = VK_NULL_HANDLE;
-    }
-    if (pTexture)
-        pTexture->pMap = 0;
-    pTexture = 0;
-    LevelCount = 0;
+    if (DummySampler != VK_NULL_HANDLE)
+    { vkDestroySampler(pDevice, DummySampler, nullptr); DummySampler = VK_NULL_HANDLE; }
+    if (DummyImageView != VK_NULL_HANDLE)
+    { vkDestroyImageView(pDevice, DummyImageView, nullptr); DummyImageView = VK_NULL_HANDLE; }
+    if (DummyImage != VK_NULL_HANDLE)
+    { vkDestroyImage(pDevice, DummyImage, nullptr); DummyImage = VK_NULL_HANDLE; }
+    if (DummyImageMemory != VK_NULL_HANDLE)
+    { vkFreeMemory(pDevice, DummyImageMemory, nullptr); DummyImageMemory = VK_NULL_HANDLE; }
 }
 
-const Render::TextureFormat* TextureManager::getTextureFormat(ImageFormat format) const
+void TextureManager::TransitionImageLayout(VkCommandBuffer cmd, VkImage image,
+                                           VkImageLayout oldLayout, VkImageLayout newLayout,
+                                           VkImageAspectFlags aspect)
 {
-    if (format == Image_R8G8B8A8)
-        return &s_R8G8B8A8Format;
-    if (format == Image_B8G8R8A8)
-        return &s_B8G8R8A8Format;
-    if (format == Image_A8)
-        return &s_A8Format;
-    return 0;
+    VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+    barrier.oldLayout = oldLayout;
+    barrier.newLayout = newLayout;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = image;
+    barrier.subresourceRange.aspectMask = aspect;
+    barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+    barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+    VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+    if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+    {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    }
+    else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+    {
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    }
+    else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+    {
+        barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        srcStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        dstStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    }
+    else if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+    {
+        barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        srcStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    }
+    else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+    {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    }
+
+    vkCmdPipelineBarrier(cmd, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
 }}} // Scaleform::Render::Vulkan

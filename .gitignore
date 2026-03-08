@@ -44,10 +44,32 @@ Bin/Tools/GFxShaderMaker/GFxShaderMaker.pdb
 Bin/Tools/GFxShaderMaker/GFxShaderMaker.deps.json
 Bin/Tools/GFxShaderMaker/GFxShaderMaker.runtimeconfig.json
 
+# Build intermediates
+*.pdb
+*.ilk
+*.map
+Obj/
+3rdParty/expat-2.1.0/Obj/
+3rdParty/jpeg-8d/Obj/
+3rdParty/libpng-1.5.13/Obj/
+3rdParty/zlib-1.2.7/Obj/
+Lib/Win32/Msvc10/Release/NonSCU/
+
+# Generated shader sources (rebuilt by GFxShaderMaker)
+Src/Render/D3D1x/Shaders/
+
+# Test binaries (rebuilt from Tests/VisualRegression/build_tests.ps1)
+Bin/x64/Msvc10/Tests/
+
+# Visual regression test output
+Tests/VisualRegression/Output/
+
+# IDE workspace files
+*.code-workspace
+
 # Root-level debug/capture session artifacts
 screenshot_*.ppm
 debug_cmds.txt
 debug_stderr.txt
 vk_stdout.txt
 vk_stderr.txt
-

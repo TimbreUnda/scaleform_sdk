@@ -1,42 +1,67 @@
 /**************************************************************************
 
 Filename    :   Vulkan_HAL.cpp
-Content     :   Vulkan HAL implementation (scaffold).
-Created     :   2025
-Authors     :   Vulkan backend
-
-Copyright   :   Copyright 2011 Autodesk, Inc. All Rights reserved.
+Content     :   Vulkan HAL implementation.
+Created     :   2026
+Authors     :   Scaleform Vulkan Backend
 
 **************************************************************************/
 
 #include "Kernel/SF_Debug.h"
-#include "Kernel/SF_HeapNew.h"
+#include "Kernel/SF_Random.h"
 #include "Render/Vulkan/Vulkan_HAL.h"
 #include "Render/Render_BufferGeneric.h"
-#include "Render/Render_Vertex.h"
+#include "Kernel/SF_HeapNew.h"
+#include "Render/Vulkan/Vulkan_Events.h"
+#include "Render/Render_TextureCacheGeneric.h"
+
+#include <string.h>
 
 namespace Scaleform { namespace Render { namespace Vulkan {
 
+// Static members for deferred framebuffer deletion
+Array<VkFramebuffer> RenderTargetData::PendingDeletes;
+VkDevice             RenderTargetData::PendingDeleteDevice = VK_NULL_HANDLE;
+
+
+// *** HAL
+
 HAL::HAL(ThreadCommandQueue* commandQueue)
-    : Render::ShaderHAL<ShaderManager, ShaderInterface>(commandQueue)
-    , pDevice(VK_NULL_HANDLE)
-    , pPhysicalDevice(VK_NULL_HANDLE)
-    , pQueue(VK_NULL_HANDLE)
-    , QueueFamilyIndex(0)
-    , pRenderPass(VK_NULL_HANDLE)
-    , pColorFormat(VK_FORMAT_UNDEFINED)
-    , Cache(Memory::GetGlobalHeap(), MeshCacheParams::PC_Defaults)
-    , PrevBatchType(PrimitiveBatch::DP_None)
-    , StencilChecked(false)
-    , StencilAvailable(false)
-    , DepthBufferAvailable(false)
-    , CurrentBlendMode(Blend_None)
-    , CurrentSourceAc(false)
-    , CurrentStencilMode(StencilMode_Disabled)
-    , MaskStackTop(0)
-    , DebugFrame(0)
-    , pCurrentCommandBuffer(VK_NULL_HANDLE)
+: Render::ShaderHAL<ShaderManager, ShaderInterface>(commandQueue),
+  pDevice(VK_NULL_HANDLE),
+  pPhysicalDevice(VK_NULL_HANDLE),
+  pGraphicsQueue(VK_NULL_HANDLE),
+  GraphicsQueueFamily(0),
+  pCommandPool(VK_NULL_HANDLE),
+  pCommandBuffer(VK_NULL_HANDLE),
+  pCurrentRenderPass(VK_NULL_HANDLE),
+  pInstance(VK_NULL_HANDLE),
+  pOffscreenRenderPass(VK_NULL_HANDLE),
+  pOffscreenRenderPassDS(VK_NULL_HANDLE),
+  InRenderPass(false),
+  pMainRenderPass(VK_NULL_HANDLE),
+  pMainResumeRenderPass(VK_NULL_HANDLE),
+  pMainFramebuffer(VK_NULL_HANDLE),
+  MainRenderExtent{0, 0},
+  Cache(Memory::GetGlobalHeap(), MeshCacheParams::PC_Defaults),
+  PrevBatchType(PrimitiveBatch::DP_None),
+  StencilChecked(false), StencilAvailable(false),
+  DepthBufferAvailable(false),
+  RasterMode(RasterMode_Default),
+  pPipelineLayout(VK_NULL_HANDLE),
+  pPipelineCache(VK_NULL_HANDLE),
+  pDescriptorSetLayout(VK_NULL_HANDLE),
+  CurrentFrame(0),
+  UBORingBuffer(VK_NULL_HANDLE),
+  UBORingMemory(VK_NULL_HANDLE),
+  pUBORingData(nullptr),
+  UBORingOffset(0),
+  CurrentStencilMode(StencilMode_Disabled),
+  CurrentBlendType(0)
 {
+    memset(FrameDescriptorPools, 0, sizeof(FrameDescriptorPools));
+    initBlendDescriptions();
+    initDepthStencilDescriptions();
 }
 
 HAL::~HAL()
@@ -44,62 +69,96 @@ HAL::~HAL()
     ShutdownHAL();
 }
 
+
+// *** Initialization
+
 bool HAL::InitHAL(const Vulkan::HALInitParams& params)
 {
     if (!initHAL(params))
         return false;
 
-    if (!params.Device || !params.Queue)
+    if (!params.pDevice)
         return false;
 
-    pDevice         = params.Device;
-    pPhysicalDevice = params.PhysicalDevice;
-    pQueue          = params.Queue;
-    QueueFamilyIndex = params.QueueFamilyIndex;
-    pRenderPass     = params.RenderPass;
-    pColorFormat    = params.ColorFormat;
+    pDevice            = params.pDevice;
+    pPhysicalDevice    = params.pPhysicalDevice;
+    pGraphicsQueue     = params.pGraphicsQueue;
+    GraphicsQueueFamily = params.GraphicsQueueFamily;
+    pCommandPool       = params.pCommandPool;
+    pCommandBuffer     = params.pCommandBuffer;
+    pCurrentRenderPass = params.pRenderPass;
+    pMainRenderPass    = params.pRenderPass;
+    pInstance          = params.pInstance;
 
-    if (SManager.Initialize(this) && Cache.Initialize(pDevice, pPhysicalDevice))
+    Vulkan::RenderEvent::InitializeEvents(pInstance, pCommandBuffer);
+
+    if (!createPipelineLayout()) { ShutdownHAL(); return false; }
+    if (!createOffscreenRenderPass()) { ShutdownHAL(); return false; }
+    if (!createOffscreenRenderPassDS()) { ShutdownHAL(); return false; }
+    if (!createUBORing()) { ShutdownHAL(); return false; }
+    if (!SManager.Initialize(this)) { ShutdownHAL(); return false; }
+    if (!Cache.Initialize(pDevice, pPhysicalDevice, &Cache.RSync))
     {
-        if (params.pTextureManager)
-            pTextureManager = params.GetTextureManager();
-        else
-        {
-            pTextureManager = *SF_HEAP_AUTO_NEW(this) TextureManager(pDevice, pPhysicalDevice, pQueue, QueueFamilyIndex, params.RenderThreadId, pRTCommandQueue);
-            if (!pTextureManager)
-            {
-                Cache.Reset();
-                SManager.Reset();
-                return false;
-            }
-        }
+        ShutdownHAL();
+        return false;
+    }
 
-        Matrices = *SF_HEAP_AUTO_NEW(this) MatrixState(this);
+    Cache.GetRenderSync()->SetDevice(pDevice, pGraphicsQueue);
 
-        if (params.pRenderBufferManager)
-            pRenderBufferManager = params.pRenderBufferManager;
-        else
-        {
-            pRenderBufferManager = *SF_HEAP_AUTO_NEW(this) RenderBufferManagerGeneric(RBGenericImpl::DSSM_Exact);
-            if (!pRenderBufferManager || !createDefaultRenderBuffer())
-            {
-                ShutdownHAL();
-                return false;
-            }
-        }
+    // Create descriptor pools for frames in flight
+    for (unsigned f = 0; f < SF_VK_MAX_FRAMES_IN_FLIGHT; f++)
+    {
+        VkDescriptorPoolSize poolSizes[] = {
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         SF_VK_DESCRIPTOR_POOL_MAX_SETS * 2 },
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, SF_VK_DESCRIPTOR_POOL_MAX_SETS * (SF_VK_MAX_TEXTURE_STAGES + SF_VK_MAX_TEXTURE_STAGES - 1) },
+        };
+        VkDescriptorPoolCreateInfo poolCI = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+        poolCI.maxSets       = SF_VK_DESCRIPTOR_POOL_MAX_SETS;
+        poolCI.poolSizeCount = 2;
+        poolCI.pPoolSizes    = poolSizes;
+        SF_VK_CHECK_RETURN(vkCreateDescriptorPool(pDevice, &poolCI, nullptr, &FrameDescriptorPools[f]), false);
+    }
 
-        if (pTextureManager && pRenderBufferManager)
+    // Texture manager
+    if (params.pTextureManager)
+        pTextureManager = params.GetTextureManager();
+    else
+    {
+        pTextureManager = *SF_HEAP_AUTO_NEW(this) TextureManager(
+            pDevice, pPhysicalDevice, pCommandPool, pGraphicsQueue,
+            params.RenderThreadId, pRTCommandQueue);
+        if (!pTextureManager)
         {
-            HALState |= HS_ModeSet;
-            notifyHandlers(HAL_Initialize);
-            return true;
+            Cache.Reset();
+            SManager.Reset();
+            return false;
         }
     }
 
-    pDevice = VK_NULL_HANDLE;
-    pQueue  = VK_NULL_HANDLE;
+    Matrices = *SF_HEAP_AUTO_NEW(this) MatrixState(this);
+
+    if (params.pRenderBufferManager)
+        pRenderBufferManager = params.pRenderBufferManager;
+    else
+    {
+        pRenderBufferManager = *SF_HEAP_AUTO_NEW(this) RenderBufferManagerGeneric(RBGenericImpl::DSSM_Exact);
+        if (!pRenderBufferManager || !createDefaultRenderBuffer())
+        {
+            ShutdownHAL();
+            return false;
+        }
+    }
+
+    if (pTextureManager && pRenderBufferManager)
+    {
+        HALState |= HS_ModeSet;
+        notifyHandlers(HAL_Initialize);
+        return true;
+    }
+
     return false;
 }
+
 
 bool HAL::ShutdownHAL()
 {
@@ -109,29 +168,92 @@ bool HAL::ShutdownHAL()
     if (!shutdownHAL())
         return false;
 
-    Cache.Reset();
+    Vulkan::RenderEvent::ShutdownEvents();
+
+    if (pDevice)
+        vkDeviceWaitIdle(pDevice);
+
+    // Drain any framebuffers queued for deferred deletion
+    RenderTargetData::DrainPendingDeletes();
+
+    // Destroy pipelines
+    for (PipelineMap::Iterator it = Pipelines.Begin(); it != Pipelines.End(); ++it)
+        vkDestroyPipeline(pDevice, it->Second, nullptr);
+    Pipelines.Clear();
+
+    destroyPipelineLayout();
+    destroyOffscreenRenderPass();
+    destroyUBORing();
+
+    for (unsigned f = 0; f < SF_VK_MAX_FRAMES_IN_FLIGHT; f++)
+    {
+        if (FrameDescriptorPools[f] != VK_NULL_HANDLE)
+        {
+            vkDestroyDescriptorPool(pDevice, FrameDescriptorPools[f], nullptr);
+            FrameDescriptorPools[f] = VK_NULL_HANDLE;
+        }
+    }
+
+    destroyRenderBuffers();
+    pRenderBufferManager.Clear();
+
+    pTextureManager->Reset();
+    pTextureManager.Clear();
     SManager.Reset();
-    if (pTextureManager)
-        pTextureManager->Reset();
-    pTextureManager = 0;
-    pRenderBufferManager = 0;
-    Matrices = 0;
+
+    Cache.GetRenderSync()->SetDevice(VK_NULL_HANDLE, VK_NULL_HANDLE);
+    Cache.Reset();
+
+    // Final drain: ~RenderTargetData may have pushed framebuffers during
+    // destroyRenderBuffers / pRenderBufferManager.Clear above.
+    RenderTargetData::DrainPendingDeletes();
 
     pDevice = VK_NULL_HANDLE;
-    pQueue  = VK_NULL_HANDLE;
-    HALState &= ~HS_ModeSet;
-    notifyHandlers(HAL_Shutdown);
     return true;
 }
 
-// Vulkan does not override BeginFrame(); the base Render::HAL::BeginFrame() is used,
-// which calls GetRQProcessor().BeginFrame() and thus registers the mesh cache via
-// meshCache.SetRQCacheInterface(&Caches). Ensure the app calls BeginFrame() before drawing.
+
+void HAL::PrepareForReset()
+{
+    SF_ASSERT(HALState & HS_ModeSet);
+    if (HALState & HS_ReadyForReset)
+        return;
+    notifyHandlers(HAL_PrepareForReset);
+    HALState |= HS_ReadyForReset;
+}
+
+bool HAL::RestoreAfterReset()
+{
+    if (!IsInitialized()) return false;
+    if (!(HALState & HS_ReadyForReset)) return true;
+    notifyHandlers(HAL_RestoreAfterReset);
+    HALState &= ~HS_ReadyForReset;
+    return true;
+}
+
+
+// *** Rendering
+
 bool HAL::BeginScene()
 {
-    VKDIAG("VK[F%04u] BeginScene (HALBeginScene)\n", DebugFrame);
     if (!Render::HAL::BeginScene())
         return false;
+
+    ScopedRenderEvent GPUEvent(GetEvent(Event_BeginScene), __FUNCTION__);
+
+    // Drain deferred framebuffer deletions from the previous frame(s).
+    // Safe here because the app waits on the in-flight fence before calling BeginScene.
+    RenderTargetData::DrainPendingDeletes();
+
+    // Return render targets used last frame back to the pool now that the GPU is done.
+    for (unsigned i = 0; i < PendingRTReleases.GetSize(); ++i)
+        PendingRTReleases[i]->SetInUse(false);
+    PendingRTReleases.Clear();
+
+    unsigned frameIdx = CurrentFrame % SF_VK_MAX_FRAMES_IN_FLIGHT;
+    vkResetDescriptorPool(pDevice, FrameDescriptorPools[frameIdx], 0);
+    UBORingOffset = 0;
+
     SManager.BeginScene();
     ShaderData.BeginScene();
     return true;
@@ -139,196 +261,150 @@ bool HAL::BeginScene()
 
 bool HAL::EndScene()
 {
-    unsigned f = DebugFrame > 0 ? DebugFrame - 1 : 0;
-    VKDIAG("VK[F%04u] EndScene enter (RTstackSz=%u)\n", f, (unsigned)RenderTargetStack.GetSize());
+    ScopedRenderEvent GPUEvent(GetEvent(Event_Scene), 0, false);
+
+    // Release filter temp RTs from RBCL_InUse before the base class calls
+    // EndFrame() which asserts that list is empty.  The strong references in
+    // PendingRTReleases keep the underlying textures alive until BeginScene
+    // of a later frame (after the GPU fence has been waited on).
+    for (unsigned i = 0; i < PendingRTReleases.GetSize(); ++i)
+        PendingRTReleases[i]->SetInUse(false);
+
     if (!Render::HAL::EndScene())
-    {
-        VKDIAG("VK[F%04u] EndScene: base class returned false\n", f);
         return false;
-    }
-    VKDIAG("VK[F%04u] EndScene after base (Flush done)\n", f);
     SManager.EndScene();
-    VKDIAG("VK[F%04u] EndScene after SManager.EndScene\n", f);
-    for (UPInt i = 0; i < RenderTargetStack.GetSize(); i++)
-    {
-        RenderTargetData* phd = (RenderTargetData*)RenderTargetStack[i].pRenderTarget->GetRenderTargetData();
-        if (phd && phd->pDepthStencilBuffer)
-            pRenderBufferManager->NotifyDepthStencilFrameDone(phd->pDepthStencilBuffer);
-    }
-    VKDIAG("VK[F%04u] EndScene done\n", f);
+
+    CurrentFrame++;
     return true;
-}
-
-void HAL::EndDisplay()
-{
-    VKDIAG("VK[F%04u] EndDisplay enter (MaskTop=%u)\n", DebugFrame > 0 ? DebugFrame - 1 : 0, MaskStackTop);
-    Flush();
-    VKDIAG("VK[F%04u] EndDisplay after Flush\n", DebugFrame > 0 ? DebugFrame - 1 : 0);
-    Render::HAL::EndDisplay();
-    VKDIAG("VK[F%04u] EndDisplay done\n", DebugFrame > 0 ? DebugFrame - 1 : 0);
-}
-
-void HAL::Draw(const RenderQueueItem& item)
-{
-    Render::HAL::Draw(item);
 }
 
 void HAL::beginDisplay(BeginDisplayData* data)
 {
-    VKDIAG("VK[F%04u] beginDisplay MaskTop=%u\n", DebugFrame, MaskStackTop);
-    DebugFrame++;
-    StencilChecked  = false;
-    StencilAvailable = false;
-    DepthBufferAvailable = false;
-    HALState &= ~HS_DrawingMask;
+    GetEvent(Event_Display).Begin(__FUNCTION__);
     Render::HAL::beginDisplay(data);
-    if (pCurrentCommandBuffer)
-        applyStencilMode(StencilMode_Disabled, 0);
 }
 
 void HAL::updateViewport()
 {
-    if (!(HALState & HS_ViewValid))
-        return;
-    if (!pCurrentCommandBuffer)
-        return;
-    int dx = ViewRect.x1 - VP.Left;
-    int dy = ViewRect.y1 - VP.Top;
-    CalcHWViewMatrix(0, &Matrices->View2D, ViewRect, dx, dy);
-    Matrices->SetUserMatrix(Matrices->User);
-    Matrices->ViewRect = ViewRect;
-    Matrices->UVPOChanged = true;
+    if (HALState & HS_ViewValid)
+    {
+        Rect<int> vpRect;
 
-    if (!pCurrentCommandBuffer)
-        return;
-    Rect<int> vpRect;
-    if (!(HALState & HS_InRenderTarget))
-        vpRect = ViewRect;
-    else
-        vpRect.SetRect(VP.Left, VP.Top, VP.Left + VP.Width, VP.Top + VP.Height);
+        int dx = ViewRect.x1 - VP.Left,
+            dy = ViewRect.y1 - VP.Top;
+        CalcHWViewMatrix(0, &Matrices->View2D, ViewRect, dx, dy);
+        Matrices->SetUserMatrix(Matrices->User);
+        Matrices->ViewRect  = ViewRect;
+        Matrices->UVPOChanged = 1;
 
-    int w = vpRect.Width();
-    int h = vpRect.Height();
-    if (w < 1) w = 1;
-    if (h < 1) h = 1;
+        if (!(HALState & HS_InRenderTarget))
+            vpRect = ViewRect;
+        else
+            vpRect.SetRect(VP.Left, VP.Top, VP.Left + VP.Width, VP.Top + VP.Height);
 
-    VkViewport viewport = {};
-    viewport.x = (float)vpRect.x1;
-    viewport.y = (float)vpRect.y1 + (float)h;
-    viewport.width = (float)w;
-    viewport.height = -(float)h;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(pCurrentCommandBuffer, 0, 1, &viewport);
+        VkViewport vp = {};
+        vp.x      = (float)vpRect.x1;
+        vp.width  = Alg::Max(1.0f, (float)vpRect.Width());
+        // Negative height flips Y axis to match D3D/GL convention where
+        // CalcHWViewMatrix maps y=0 to clip Y=+1 (top) and y=height to clip Y=-1 (bottom).
+        // In Vulkan clip space, Y=-1 is top and Y=+1 is bottom, so the flip is needed.
+        vp.y      = (float)vpRect.y1 + Alg::Max(1.0f, (float)vpRect.Height());
+        vp.height = -Alg::Max(1.0f, (float)vpRect.Height());
+        vp.minDepth = 0.0f;
+        vp.maxDepth = 1.0f;
 
-    VkRect2D scissor = {};
-    scissor.offset.x = vpRect.x1;
-    scissor.offset.y = vpRect.y1;
-    scissor.extent.width = (uint32_t)w;
-    scissor.extent.height = (uint32_t)h;
-    vkCmdSetScissor(pCurrentCommandBuffer, 0, 1, &scissor);
+        VkRect2D scissor = {};
+        scissor.offset = { vpRect.x1, vpRect.y1 };
+        scissor.extent = { (uint32_t)Alg::Max(1, vpRect.Width()),
+                           (uint32_t)Alg::Max(1, vpRect.Height()) };
+
+        vkCmdSetViewport(pCommandBuffer, 0, 1, &vp);
+        vkCmdSetScissor(pCommandBuffer, 0, 1, &scissor);
+    }
 }
 
-void HAL::clearSolidRectangle(const Rect<int>& r, Color color)
-{
-    if (!pCurrentCommandBuffer)
-        return;
-    int w = r.Width();
-    int h = r.Height();
-    if (w <= 0 || h <= 0)
-        return;
-    VkClearAttachment clearAtt = {};
-    clearAtt.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    clearAtt.colorAttachment = 0;
-    clearAtt.clearValue.color.float32[0] = color.GetRed()   / 255.0f;
-    clearAtt.clearValue.color.float32[1] = color.GetGreen() / 255.0f;
-    clearAtt.clearValue.color.float32[2] = color.GetBlue()  / 255.0f;
-    clearAtt.clearValue.color.float32[3] = color.GetAlpha() / 255.0f;
-    VkClearRect clearRect = {};
-    clearRect.rect.offset.x = r.x1;
-    clearRect.rect.offset.y = r.y1;
-    clearRect.rect.extent.width  = (uint32_t)w;
-    clearRect.rect.extent.height = (uint32_t)h;
-    clearRect.baseArrayLayer = 0;
-    clearRect.layerCount = 1;
-    vkCmdClearAttachments(pCurrentCommandBuffer, 1, &clearAtt, 1, &clearRect);
-}
 
 void HAL::DrawProcessedPrimitive(Primitive* pprimitive,
-                                 PrimitiveBatch* pstart, PrimitiveBatch* pend)
+                                  PrimitiveBatch* pstart, PrimitiveBatch* pend)
 {
-    VKDIAG("VK[F%04u] DrawProcessedPrimitive enter (meshCount=%u inDisplay=%d)\n",
-        DebugFrame > 0 ? DebugFrame - 1 : 0,
-        pprimitive ? pprimitive->GetMeshCount() : 0,
-        (int)!!(GetHALState() & HS_InDisplay));
-    if (!checkState(HS_InDisplay, __FUNCTION__) ||
-        !pCurrentCommandBuffer || !pprimitive->GetMeshCount())
+    SF_AMP_SCOPE_RENDER_TIMER(__FUNCTION__, Amp_Profile_Level_High);
+    ScopedRenderEvent GPUEvent(GetEvent(Event_DrawPrimitive), __FUNCTION__);
+
+    if (!checkState(HS_InDisplay, __FUNCTION__) || !pprimitive->GetMeshCount())
         return;
 
     SF_ASSERT(pend != 0);
-
     PrimitiveBatch* pbatch = pstart ? pstart : pprimitive->Batches.GetFirst();
 
     ShaderData.BeginPrimitive();
 
+    unsigned bidx = 0;
     while (pbatch != pend)
     {
         MeshCacheItem* pmesh = (MeshCacheItem*)pbatch->GetCacheItem();
-        unsigned       meshIndex = pbatch->GetMeshIndex();
-        unsigned       batchMeshCount = pbatch->GetMeshCount();
+        unsigned meshIndex = pbatch->GetMeshIndex();
+        unsigned batchMeshCount = pbatch->GetMeshCount();
 
         if (pmesh)
         {
+            Profiler.SetBatch((UPInt)pprimitive, bidx);
+
             unsigned fillFlags = FillFlags;
             if (batchMeshCount > 0)
                 fillFlags |= pprimitive->Meshes[0].M.Has3D() ? FF_3DProjection : 0;
 
-            SManager.SetPrimitiveFill(pprimitive->pFill, fillFlags, pbatch->Type, pbatch->pFormat, batchMeshCount, Matrices,
-                                      &pprimitive->Meshes[meshIndex], &ShaderData);
+            const ShaderManager::Shader& pShader =
+                SManager.SetPrimitiveFill(pprimitive->pFill, fillFlags, pbatch->Type, pbatch->pFormat, batchMeshCount, Matrices,
+                                          &pprimitive->Meshes[meshIndex], &ShaderData);
 
-            VkDeviceSize vbOffset = (VkDeviceSize)pmesh->VBAllocOffset;
-            VkBuffer vb = pmesh->pVertexBuffer;
-            vkCmdBindVertexBuffers(pCurrentCommandBuffer, 0, 1, &vb, &vbOffset);
-            vkCmdBindIndexBuffer(pCurrentCommandBuffer, pmesh->pIndexBuffer, pmesh->IBAllocOffset, VK_INDEX_TYPE_UINT16);
+            // Bind vertex and index buffers
+            VkBuffer vb = pmesh->pVertexBuffer->GetHWBuffer();
+            VkDeviceSize vbOffset = pmesh->VBAllocOffset;
+            vkCmdBindVertexBuffers(pCommandBuffer, 0, 1, &vb, &vbOffset);
+            vkCmdBindIndexBuffer(pCommandBuffer, pmesh->pIndexBuffer->GetHWBuffer(),
+                                 0, VK_INDEX_TYPE_UINT16);
 
-            if (HALState & HS_ViewValid)
+            // Bind the correct pipeline
+            if ((HALState & HS_ViewValid) && pShader)
             {
-                unsigned drawInstances;
-                if (pbatch->Type != PrimitiveBatch::DP_Instanced)
+                SysVertexFormat* pvf = (SysVertexFormat*)pbatch->pFormat->pSysFormat.GetPtr();
+                const ShaderPair& curSh = ShaderData.GetCurrentShaders();
+                VkPipeline pipeline = GetPipeline(curSh.pVDesc ? curSh.pVDesc->Type : ShaderDesc::ST_None,
+                                                  curSh.pFDesc ? curSh.pFDesc->Type : ShaderDesc::ST_None,
+                                                  CurrentBlendType, CurrentStencilMode, pvf);
+                if (pipeline != VK_NULL_HANDLE && InRenderPass)
                 {
-                    vkCmdDrawIndexed(pCurrentCommandBuffer, pmesh->IndexCount, 1, 0, 0, 0);
-                    drawInstances = 1;
-                }
-                else
-                {
-                    vkCmdDrawIndexed(pCurrentCommandBuffer, pmesh->IndexCount, batchMeshCount, 0, 0, 0);
-                    drawInstances = batchMeshCount;
-                }
+                    vkCmdBindPipeline(pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-                AccumulatedStats.Primitives++;
-                AccumulatedStats.Meshes += drawInstances;
-                AccumulatedStats.Triangles += pmesh->IndexCount / 3 * drawInstances;
+                    UPInt indexOffset = pmesh->IBAllocOffset / sizeof(IndexType);
+                    if (pbatch->Type != PrimitiveBatch::DP_Instanced)
+                        drawIndexedPrimitive(pmesh->IndexCount, pmesh->MeshCount, indexOffset, 0);
+                    else
+                        drawIndexedInstanced(pmesh->IndexCount, pbatch->GetMeshCount(), indexOffset, 0);
+                }
             }
 
+            pmesh->GPUFence = Cache.GetRenderSync()->InsertFence();
             pmesh->MoveToCacheListFront(MCL_ThisFrame);
         }
 
         pbatch = pbatch->GetNext();
+        bidx++;
     }
 }
 
+
 void HAL::DrawProcessedComplexMeshes(ComplexMesh* complexMesh,
-                                    const StrideArray<HMatrix>& matrices)
+                                      const StrideArray<HMatrix>& matrices)
 {
+    SF_AMP_SCOPE_RENDER_TIMER(__FUNCTION__, Amp_Profile_Level_High);
+    ScopedRenderEvent GPUEvent(GetEvent(Event_DrawComplex), __FUNCTION__);
+
     typedef ComplexMesh::FillRecord   FillRecord;
     typedef PrimitiveBatch::BatchType BatchType;
 
     MeshCacheItem* pmesh = (MeshCacheItem*)complexMesh->GetCacheItem();
-    VKDIAG("VK[F%04u] DrawProcessedComplexMeshes enter (hasMesh=%d inDisplay=%d)\n",
-        DebugFrame > 0 ? DebugFrame - 1 : 0,
-        (int)(pmesh != 0),
-        (int)!!(GetHALState() & HS_InDisplay));
-    if (!checkState(HS_InDisplay, __FUNCTION__) || !pCurrentCommandBuffer || !pmesh)
+    if (!checkState(HS_InDisplay, __FUNCTION__) || !pmesh)
         return;
 
     const FillRecord* fillRecords = complexMesh->GetFillRecords();
@@ -354,12 +430,14 @@ void HAL::DrawProcessedComplexMeshes(ComplexMesh* complexMesh,
     }
 
     const Matrix2F* textureMatrices = complexMesh->GetFillMatrixCache();
-    VkBuffer vb = pmesh->pVertexBuffer;
-    vkCmdBindIndexBuffer(pCurrentCommandBuffer, pmesh->pIndexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
+    VkBuffer ib = pmesh->pIndexBuffer->GetHWBuffer();
+    vkCmdBindIndexBuffer(pCommandBuffer, ib, 0, VK_INDEX_TYPE_UINT16);
 
     for (unsigned fillIndex = 0; fillIndex < fillCount; fillIndex++)
     {
         const FillRecord& fr = fillRecords[fillIndex];
+        Profiler.SetBatch((UPInt)complexMesh, fillIndex);
 
         unsigned fillFlags = FillFlags;
         unsigned startIndex = 0;
@@ -367,31 +445,39 @@ void HAL::DrawProcessedComplexMeshes(ComplexMesh* complexMesh,
         {
             const HMatrix& hm = matrices[0];
             fillFlags |= hm.Has3D() ? FF_3DProjection : 0;
-
             for (unsigned i = 0; i < instanceCount; i++)
             {
                 const HMatrix& hm2 = matrices[startIndex + i];
-                if (!(hm2.GetCxform() == Cxform::Identity))
+                if (!(Profiler.GetCxform(hm2.GetCxform()) == Cxform::Identity))
                     fillFlags |= FF_Cxform;
             }
         }
 
-        const VertexFormat* pfmt = fr.pFormats[formatIndex];
-        if (!pfmt)
-            pfmt = fr.pFormats[0];
-        if (!pfmt)
-            continue;
+        PrimitiveFillType fillType = Profiler.GetFillType(fr.pFill->GetType());
+        const ShaderManager::Shader& pso = SManager.SetFill(fillType, fillFlags, batchType, fr.pFormats[formatIndex], &ShaderData);
 
-        PrimitiveFillType fillType = fr.pFill->GetType();
-        const ShaderManager::Shader& pso = SManager.SetFill(fillType, fillFlags, batchType, pfmt, &ShaderData);
-
-        if (pfmt->Size != vertexSize)
+        bool pipelineBound = false;
+        if ((HALState & HS_ViewValid) && pso && InRenderPass)
         {
-            vertexSize      = pfmt->Size;
-            vertexBaseIndex = 0;
+            SysVertexFormat* pvf = (SysVertexFormat*)fr.pFormats[formatIndex]->pSysFormat.GetPtr();
+            const ShaderPair& curSh = ShaderData.GetCurrentShaders();
+            VkPipeline pipeline = GetPipeline(curSh.pVDesc ? curSh.pVDesc->Type : ShaderDesc::ST_None,
+                                              curSh.pFDesc ? curSh.pFDesc->Type : ShaderDesc::ST_None,
+                                              CurrentBlendType, CurrentStencilMode, pvf);
+            if (pipeline != VK_NULL_HANDLE)
+            {
+                vkCmdBindPipeline(pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+                pipelineBound = true;
+            }
+        }
 
-            VkDeviceSize vbOffset = (VkDeviceSize)(fr.VertexByteOffset + pmesh->VBAllocOffset);
-            vkCmdBindVertexBuffers(pCurrentCommandBuffer, 0, 1, &vb, &vbOffset);
+        if (fr.pFormats[formatIndex]->Size != vertexSize)
+        {
+            vertexSize = fr.pFormats[formatIndex]->Size;
+            vertexBaseIndex = 0;
+            VkBuffer vb = pmesh->pVertexBuffer->GetHWBuffer();
+            VkDeviceSize byteOffset = fr.VertexByteOffset + pmesh->VBAllocOffset;
+            vkCmdBindVertexBuffers(pCommandBuffer, 0, 1, &vb, &byteOffset);
         }
 
         UByte textureCount = fr.pFill->GetTextureCount();
@@ -400,12 +486,11 @@ void HAL::DrawProcessedComplexMeshes(ComplexMesh* complexMesh,
         for (unsigned i = 0; i < instanceCount; i++)
         {
             const HMatrix& hm = matrices[startIndex + i];
-
             ShaderData.SetMatrix(pso, Uniform::SU_mvp, complexMesh->GetVertexMatrix(), hm, Matrices, 0, i % maxDrawCount);
             if (solid)
-                ShaderData.SetColor(pso, Uniform::SU_cxmul, fr.pFill->GetSolidColor(), 0, i % maxDrawCount);
+                ShaderData.SetColor(pso, Uniform::SU_cxmul, Profiler.GetColor(fr.pFill->GetSolidColor()), 0, i % maxDrawCount);
             else if (fillFlags & FF_Cxform)
-                ShaderData.SetCxform(pso, hm.GetCxform(), 0, i % maxDrawCount);
+                ShaderData.SetCxform(pso, Profiler.GetCxform(hm.GetCxform()), 0, i % maxDrawCount);
 
             for (unsigned tm = 0, stage = 0; tm < textureCount; tm++)
             {
@@ -419,10 +504,11 @@ void HAL::DrawProcessedComplexMeshes(ComplexMesh* complexMesh,
             if (batchType != PrimitiveBatch::DP_Instanced)
             {
                 ShaderData.Finish(1);
-                vkCmdDrawIndexed(pCurrentCommandBuffer, fr.IndexCount, 1, fr.IndexOffset + indexBufferOffset, vertexBaseIndex, 0);
-                AccumulatedStats.Primitives++;
-                AccumulatedStats.Meshes++;
-                AccumulatedStats.Triangles += fr.IndexCount / 3;
+                if (pipelineBound)
+                {
+                    drawIndexedPrimitive(fr.IndexCount, instanceCount, fr.IndexOffset + indexBufferOffset, vertexBaseIndex);
+                    AccumulatedStats.Primitives++;
+                }
                 if (!lastPrimitive)
                     ShaderData.BeginPrimitive();
             }
@@ -432,25 +518,46 @@ void HAL::DrawProcessedComplexMeshes(ComplexMesh* complexMesh,
                 if (lastPrimitive && (i + 1) % maxDrawCount != 0)
                     drawCount = (i + 1) % maxDrawCount;
                 ShaderData.Finish(drawCount);
-                vkCmdDrawIndexed(pCurrentCommandBuffer, fr.IndexCount, drawCount, fr.IndexOffset + indexBufferOffset, vertexBaseIndex, 0);
-                AccumulatedStats.Primitives++;
-                AccumulatedStats.Meshes += drawCount;
-                AccumulatedStats.Triangles += fr.IndexCount / 3 * drawCount;
+                if (pipelineBound)
+                {
+                    drawIndexedInstanced(fr.IndexCount, drawCount, fr.IndexOffset + indexBufferOffset, vertexBaseIndex);
+                    AccumulatedStats.Primitives++;
+                }
                 if (!lastPrimitive)
                     ShaderData.BeginPrimitive();
             }
         }
 
+        AccumulatedStats.Triangles += (fr.IndexCount / 3) * instanceCount;
+        AccumulatedStats.Meshes += instanceCount;
         vertexBaseIndex += fr.VertexCount;
     }
 
     pmesh->MoveToCacheListFront(MCL_ThisFrame);
 }
 
+
+// *** Mask / Stencil
+
+bool HAL::checkMaskBufferCaps()
+{
+    if (!StencilChecked)
+    {
+        StencilChecked = true;
+        StencilAvailable = true;
+        DepthBufferAvailable = false;
+    }
+    return StencilAvailable;
+}
+
 void HAL::PushMask_BeginSubmit(MaskPrimitive* prim)
 {
+    GetEvent(Event_Mask).Begin(__FUNCTION__);
+
     if (!checkState(HS_InDisplay, __FUNCTION__))
         return;
+
+    Profiler.SetDrawMode(1);
 
     if (!StencilAvailable && !DepthBufferAvailable)
     {
@@ -458,12 +565,14 @@ void HAL::PushMask_BeginSubmit(MaskPrimitive* prim)
             return;
     }
 
+    CurrentBlendType = GetBlendType(Blend_Normal, Write_None);
+
     bool viewportValid = (HALState & HS_ViewValid) != 0;
-    unsigned maxStencilValue = MaskStackTop;
 
     if (MaskStackTop && (MaskStack.GetSize() > MaskStackTop) && viewportValid && StencilAvailable)
     {
-        applyStencilMode(StencilMode_ClearMasksAbove, maxStencilValue);
+        CurrentStencilMode = StencilMode_Available_ClearMasksAbove;
+        vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)MaskStackTop);
         MaskPrimitive* erasePrim = MaskStack[MaskStackTop].pPrimitive;
         drawMaskClearRectangles(erasePrim->GetMaskAreaMatrices(), erasePrim->GetMaskCount());
     }
@@ -473,41 +582,121 @@ void HAL::PushMask_BeginSubmit(MaskPrimitive* prim)
     e.pPrimitive       = prim;
     e.OldViewportValid = viewportValid;
     e.OldViewRect      = ViewRect;
-    unsigned depthBefore = MaskStackTop;
     MaskStackTop++;
-    VKDIAG("VK[F%04u] PushMask %u->%u WriteMaskRef=%u\n", DebugFrame > 0 ? DebugFrame - 1 : 0, depthBefore, MaskStackTop, MaskStackTop - 1);
+
     HALState |= HS_DrawingMask;
-    AccumulatedStats.Masks++;
 
     if (prim->IsClipped() && viewportValid)
     {
-        const Matrix2F& m = prim->GetMaskAreaMatrix(0).GetMatrix2D();
-        RectF clipBounds(m.Tx(), m.Ty(), m.Tx() + m.Sx(), m.Ty() + m.Sy());
-        Rect<int> newViewRect;
-        newViewRect.SetRect(
-            Alg::Max<int>(ViewRect.x1, (int)clipBounds.x1),
-            Alg::Max<int>(ViewRect.y1, (int)clipBounds.y1),
-            Alg::Min<int>(ViewRect.x2, (int)ceilf(clipBounds.x2)),
-            Alg::Min<int>(ViewRect.y2, (int)ceilf(clipBounds.y2)));
-
-        if (newViewRect.x2 > newViewRect.x1 && newViewRect.y2 > newViewRect.y1)
+        Rect<int> boundClip;
+        if (!Matrices->OrientationSet)
         {
-            ViewRect = newViewRect;
-            HALState |= HS_ViewValid;
-            updateViewport();
+            const Matrix2F& m = prim->GetMaskAreaMatrix(0).GetMatrix2D();
+            SF_ASSERT((m.Shx() == 0.0f) && (m.Shy() == 0.0f));
+            boundClip = Rect<int>(VP.Left + (int)m.Tx(), VP.Top + (int)m.Ty(),
+                VP.Left + (int)(m.Tx() + m.Sx()), VP.Top + (int)(m.Ty() + m.Sy()));
+        }
+        else
+        {
+            Matrix2F m = prim->GetMaskAreaMatrix(0).GetMatrix2D();
+            m.Append(Matrices->Orient2D);
+            RectF rect = m.EncloseTransform(RectF(0,0,1,1));
+            boundClip = Rect<int>(VP.Left + (int)rect.x1, VP.Top + (int)rect.y1,
+                VP.Left + (int)rect.x2, VP.Top + (int)rect.y2);
+        }
+
+        if (!ViewRect.IntersectRect(&ViewRect, boundClip))
+        {
+            ViewRect.Clear();
+            HALState &= ~HS_ViewValid;
+            viewportValid = false;
+        }
+        updateViewport();
+
+        if ((MaskStackTop == 1) && viewportValid)
+        {
+            if (StencilAvailable)
+            {
+                VkClearAttachment clearAtt = {};
+                clearAtt.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
+                clearAtt.clearValue.depthStencil = { 1.0f, 0 };
+                VkClearRect clearRect = {};
+                clearRect.rect.offset = { ViewRect.x1, ViewRect.y1 };
+                clearRect.rect.extent = { (uint32_t)Alg::Max(1, ViewRect.Width()),
+                                          (uint32_t)Alg::Max(1, ViewRect.Height()) };
+                clearRect.layerCount = 1;
+                vkCmdClearAttachments(pCommandBuffer, 1, &clearAtt, 1, &clearRect);
+            }
+            else if (DepthBufferAvailable)
+            {
+                VkClearAttachment clearAtt = {};
+                clearAtt.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+                clearAtt.clearValue.depthStencil = { 1.0f, 0 };
+                VkClearRect clearRect = {};
+                clearRect.rect.offset = { ViewRect.x1, ViewRect.y1 };
+                clearRect.rect.extent = { (uint32_t)Alg::Max(1, ViewRect.Width()),
+                                          (uint32_t)Alg::Max(1, ViewRect.Height()) };
+                clearRect.layerCount = 1;
+                vkCmdClearAttachments(pCommandBuffer, 1, &clearAtt, 1, &clearRect);
+            }
+        }
+    }
+    else if ((MaskStackTop == 1) && viewportValid)
+    {
+        if (StencilAvailable)
+        {
+            CurrentStencilMode = StencilMode_Available_ClearMasks;
+            vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)(MaskStackTop - 1));
+            drawMaskClearRectangles(prim->GetMaskAreaMatrices(), prim->GetMaskCount());
+        }
+        else if (DepthBufferAvailable)
+        {
+            UPInt maskCount = prim->GetMaskCount();
+            for (UPInt i = 0; i < maskCount; i++)
+            {
+                const Matrix2F& m = prim->GetMaskAreaMatrix(i).GetMatrix2D();
+                RectF bounds(m.EncloseTransform(RectF(1.0f)));
+                Rect<int> boundClip((int)bounds.x1, (int)bounds.y1, (int)bounds.x2, (int)bounds.y2);
+                boundClip.Offset(VP.Left, VP.Top);
+                if (boundClip.IntersectRect(&boundClip, ViewRect))
+                {
+                    VkClearAttachment clearAtt = {};
+                    clearAtt.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+                    clearAtt.clearValue.depthStencil = { 1.0f, 0 };
+                    VkClearRect clearRect = {};
+                    clearRect.rect.offset = { boundClip.x1, boundClip.y1 };
+                    clearRect.rect.extent = { (uint32_t)(boundClip.x2 - boundClip.x1),
+                                              (uint32_t)(boundClip.y2 - boundClip.y1) };
+                    clearRect.layerCount = 1;
+                    vkCmdClearAttachments(pCommandBuffer, 1, &clearAtt, 1, &clearRect);
+                }
+            }
         }
     }
 
     if (StencilAvailable)
-        // Pass MaskStackTop-1 (parent depth) so the EQUAL+INCR pipeline only writes
-        // the new depth value inside the parent mask's existing area, matching D3D1x
-        // which calls OMSetDepthStencilState(WriteMask, MaskStackTop-1).
-        applyStencilMode(StencilMode_WriteMask, MaskStackTop - 1);
+    {
+        CurrentStencilMode = StencilMode_Available_WriteMask;
+        vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)(MaskStackTop - 1));
+    }
+    else if (DepthBufferAvailable)
+    {
+        if (MaskStackTop == 1)
+            CurrentStencilMode = StencilMode_DepthOnly_WriteMask;
+        else
+            CurrentStencilMode = StencilMode_Unavailable;
+        vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)(MaskStackTop - 1));
+    }
+    ++AccumulatedStats.Masks;
 }
+
 
 void HAL::EndMaskSubmit()
 {
-    if (!checkState(HS_InDisplay | HS_DrawingMask, __FUNCTION__))
+    ScopedRenderEvent GPUEvent(GetEvent(Event_Mask), 0, false);
+    Profiler.SetDrawMode(0);
+
+    if (!checkState(HS_InDisplay|HS_DrawingMask, __FUNCTION__))
         return;
     HALState &= ~HS_DrawingMask;
     SF_ASSERT(MaskStackTop);
@@ -516,21 +705,30 @@ void HAL::EndMaskSubmit()
     applyBlendMode(size > 0 ? BlendModeStack[size - 1] : Blend_Normal);
 
     if (StencilAvailable)
-        applyStencilMode(StencilMode_TestMask, MaskStackTop);
-    VKDIAG("VK[F%04u] EndMaskSubmit TestMaskRef=%u\n", DebugFrame > 0 ? DebugFrame - 1 : 0, MaskStackTop);
+    {
+        CurrentStencilMode = StencilMode_Available_TestMask;
+        vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)MaskStackTop);
+    }
+    else if (DepthBufferAvailable)
+    {
+        CurrentStencilMode = StencilMode_DepthOnly_TestMask;
+        vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, 0);
+    }
 }
+
 
 void HAL::PopMask()
 {
+    ScopedRenderEvent GPUEvent(GetEvent(Event_PopMask), __FUNCTION__);
+
     if (!checkState(HS_InDisplay, __FUNCTION__))
         return;
 
     if (!StencilAvailable && !DepthBufferAvailable)
         return;
     SF_ASSERT(MaskStackTop);
-    unsigned depthBefore = MaskStackTop;
     MaskStackTop--;
-    VKDIAG("VK[F%04u] PopMask %u->%u\n", DebugFrame > 0 ? DebugFrame - 1 : 0, depthBefore, MaskStackTop);
+
     if (MaskStack[MaskStackTop].pPrimitive->IsClipped())
     {
         ViewRect = MaskStack[MaskStackTop].OldViewRect;
@@ -544,213 +742,412 @@ void HAL::PopMask()
     if (StencilAvailable)
     {
         if (MaskStackTop == 0)
-            applyStencilMode(StencilMode_Disabled, 0);
+            CurrentStencilMode = StencilMode_Disabled;
         else
-            applyStencilMode(StencilMode_TestMask, MaskStackTop);
+            CurrentStencilMode = StencilMode_Available_TestMask;
+        vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)MaskStackTop);
+    }
+    else if (DepthBufferAvailable)
+    {
+        CurrentStencilMode = StencilMode_DepthOnly_TestMask;
+        vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)MaskStackTop);
     }
 }
 
-bool HAL::checkMaskBufferCaps()
+void HAL::clearSolidRectangle(const Rect<int>& r, Color color)
 {
-    if (!StencilChecked)
-    {
-        StencilChecked = true;
-        StencilAvailable = false;
-        DepthBufferAvailable = false;
+    ScopedRenderEvent GPUEvent(GetEvent(Event_Clear), __FUNCTION__);
 
-        if (RenderTargetStack.GetSize() > 0)
-        {
-            RenderTargetData* phd = (RenderTargetData*)RenderTargetStack.Back().pRenderTarget->GetRenderTargetData();
-            if (phd && phd->pDepthStencilBuffer)
-            {
-                StencilAvailable = true;
-                DepthBufferAvailable = true;
-            }
-        }
-    }
-    if (!StencilAvailable && !DepthBufferAvailable)
-    {
-        SF_DEBUG_WARNONCE(1, "HAL::PushMask_BeginSubmit used, but stencil is not available");
-        return false;
-    }
-    return true;
+    color = Profiler.GetClearColor(color);
+
+    if (!Profiler.ShouldDrawMask())
+        CurrentBlendType = GetBlendType(Blend_None, Write_All);
+
+    float colorf[4];
+    color.GetRGBAFloat(colorf, colorf+1, colorf+2, colorf+3);
+    Matrix2F m((float)r.Width(), 0.0f, (float)r.x1,
+               0.0f, (float)r.Height(), (float)r.y1);
+    Matrix2F mvp(m, Matrices->UserView);
+
+    unsigned fillflags = 0;
+    const ShaderManager::Shader& pso = SManager.SetFill(PrimFill_SolidColor, fillflags, PrimitiveBatch::DP_Single,
+        &VertexXY16iAlpha::Format, &ShaderData);
+    ShaderData.SetMatrix(pso, Uniform::SU_mvp, mvp);
+    ShaderData.SetUniform(pso, Uniform::SU_cxmul, colorf, 4);
+    ShaderData.Finish(1);
+
+    SysVertexFormat* pvf = (SysVertexFormat*)VertexXY16iAlpha::Format.pSysFormat.GetPtr();
+    const ShaderPair& curSh = ShaderData.GetCurrentShaders();
+    VkPipeline pipeline = GetPipeline(curSh.pVDesc ? curSh.pVDesc->Type : ShaderDesc::ST_None,
+                                      curSh.pFDesc ? curSh.pFDesc->Type : ShaderDesc::ST_None,
+                                      CurrentBlendType, CurrentStencilMode, pvf);
+    if (pipeline != VK_NULL_HANDLE)
+        vkCmdBindPipeline(pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+    drawScreenQuad();
+
+    if (!Profiler.ShouldDrawMask())
+        applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_None);
 }
 
-void HAL::applyStencilMode(StencilMode mode, unsigned referenceValue)
-{
-    if (!pCurrentCommandBuffer)
-        return;
-    CurrentStencilMode = mode;
-    switch (mode)
-    {
-    case StencilMode_Disabled:
-        vkCmdSetStencilReference(pCurrentCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, 0);
-        vkCmdSetStencilWriteMask(pCurrentCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, 0);
-        vkCmdSetStencilCompareMask(pCurrentCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, 0);
-        break;
-    case StencilMode_WriteMask:
-        vkCmdSetStencilReference(pCurrentCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, referenceValue);
-        vkCmdSetStencilWriteMask(pCurrentCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, 0xFF);
-        vkCmdSetStencilCompareMask(pCurrentCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, 0xFF);
-        break;
-    case StencilMode_TestMask:
-        vkCmdSetStencilReference(pCurrentCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, referenceValue);
-        vkCmdSetStencilWriteMask(pCurrentCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, 0);
-        vkCmdSetStencilCompareMask(pCurrentCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, 0xFF);
-        break;
-    case StencilMode_ClearMasksAbove:
-        vkCmdSetStencilReference(pCurrentCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, referenceValue);
-        vkCmdSetStencilWriteMask(pCurrentCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, 0xFF);
-        vkCmdSetStencilCompareMask(pCurrentCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, 0xFF);
-        break;
-    default:
-        break;
-    }
-}
 
-void HAL::drawMaskClearRectangles(const HMatrix* matrices, UPInt count)
-{
-    if (!pCurrentCommandBuffer || count == 0)
-        return;
-
-    // Use vkCmdClearAttachments to directly write the target stencil value into each
-    // rectangle. MaskStackTop still holds the "erase-to" value here because it has
-    // not been incremented yet when this function is called from PushMask_BeginSubmit.
-    VkClearAttachment clearAtt = {};
-    clearAtt.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
-    clearAtt.clearValue.depthStencil.stencil = MaskStackTop;
-
-    for (UPInt i = 0; i < count; i++)
-    {
-        const Matrix2F& m = matrices[i].GetMatrix2D();
-        float x1 = m.Tx();
-        float y1 = m.Ty();
-        float x2 = x1 + m.Sx();
-        float y2 = y1 + m.Sy();
-
-        if (x2 <= x1 || y2 <= y1)
-            continue;
-
-        VkClearRect clearRect = {};
-        clearRect.rect.offset.x      = (int32_t)x1;
-        clearRect.rect.offset.y      = (int32_t)y1;
-        clearRect.rect.extent.width  = (uint32_t)(x2 - x1 + 0.5f);
-        clearRect.rect.extent.height = (uint32_t)(y2 - y1 + 0.5f);
-        clearRect.baseArrayLayer = 0;
-        clearRect.layerCount     = 1;
-        vkCmdClearAttachments(pCurrentCommandBuffer, 1, &clearAtt, 1, &clearRect);
-    }
-}
+// *** Blend modes
 
 void HAL::applyBlendModeImpl(BlendMode mode, bool sourceAc, bool forceAc)
 {
-    CurrentBlendMode = mode;
-    CurrentSourceAc = sourceAc;
-    (void)forceAc;
-    // Pipeline selection (solid vs solid+blend) is done in ShaderInterface::Finish based on CurrentBlendMode.
+    SF_UNUSED(forceAc);
+    CurrentBlendType = GetBlendType(mode, Write_All, sourceAc);
 }
 
-Render::TextureManager* HAL::GetTextureManager() const
-{
-    return pTextureManager.GetPtr();
-}
 
-MeshCache& HAL::GetMeshCache()
-{
-    return Cache;
-}
+// *** Pipeline management
 
-RenderTargetData::RenderTargetData(RenderBuffer* buffer, DepthStencilBuffer* pdsb,
-                                   VkImageView colorView, VkImageView depthView)
-    : RenderBuffer::RenderTargetData(buffer, pdsb)
-    , pRenderView(colorView)
-    , pDepthView(depthView)
+bool HAL::createPipelineLayout()
 {
-}
+    // Descriptor set layout:
+    //   binding 0 = VS UBO
+    //   binding 1 = FS UBO
+    //   binding 2 = sampler2D tex[MAX_STAGES]  (array — for TexTGTexTG, YUV, YUVA shaders)
+    //   bindings 3..MAX = sampler2D             (individual — for filter shaders like FBox2Shadow)
+    //
+    // Two SPIR-V patterns coexist in the compiled shaders:
+    //   (a) Array style:      layout(binding=2) uniform sampler2D tex[N];
+    //   (b) Individual style: layout(binding=2) uniform sampler2D srctex;
+    //                         layout(binding=3) uniform sampler2D tex;
+    // The layout must satisfy both: binding 2 as an array of MAX_STAGES covers (a),
+    // and separate bindings 3+ cover (b).
+    const unsigned numExtraBindings = (SF_VK_MAX_TEXTURE_STAGES > 1) ? SF_VK_MAX_TEXTURE_STAGES - 1 : 0;
+    VkDescriptorSetLayoutBinding bindings[3 + SF_VK_MAX_TEXTURE_STAGES] = {};
+    unsigned bindingCount = 0;
 
-RenderTargetData::~RenderTargetData()
-{
-}
+    bindings[bindingCount].binding         = 0;
+    bindings[bindingCount].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[bindingCount].descriptorCount = 1;
+    bindings[bindingCount].stageFlags      = VK_SHADER_STAGE_VERTEX_BIT;
+    bindingCount++;
 
-void RenderTargetData::UpdateData(RenderBuffer* buffer, VkImageView colorView,
-                                  DepthStencilBuffer* pdsb, VkImageView depthView)
-{
-    if (!buffer) return;
-    RenderTargetData* pold = (Vulkan::RenderTargetData*)buffer->GetRenderTargetData();
-    if (!pold)
+    bindings[bindingCount].binding         = 1;
+    bindings[bindingCount].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[bindingCount].descriptorCount = 1;
+    bindings[bindingCount].stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT;
+    bindingCount++;
+
+    // Binding 2: array of samplers (satisfies array-style shaders)
+    bindings[bindingCount].binding         = 2;
+    bindings[bindingCount].descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    bindings[bindingCount].descriptorCount = SF_VK_MAX_TEXTURE_STAGES;
+    bindings[bindingCount].stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT;
+    bindingCount++;
+
+    // Bindings 3+ : individual samplers (satisfies individual-binding-style shaders)
+    for (unsigned s = 1; s < SF_VK_MAX_TEXTURE_STAGES; s++)
     {
-        pold = SF_NEW RenderTargetData(buffer, pdsb, colorView, depthView);
-        buffer->SetRenderTargetData(pold);
-        return;
+        bindings[bindingCount].binding         = 2 + s;
+        bindings[bindingCount].descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        bindings[bindingCount].descriptorCount = 1;
+        bindings[bindingCount].stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT;
+        bindingCount++;
     }
-    if (pdsb)
-        pold->pDepthStencilBuffer = pdsb;
-    pold->pRenderView = colorView;
-    if (depthView)
-        pold->pDepthView = depthView;
+
+    VkDescriptorSetLayoutCreateInfo layoutCI = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+    layoutCI.bindingCount = bindingCount;
+    layoutCI.pBindings    = bindings;
+    SF_VK_CHECK_RETURN(vkCreateDescriptorSetLayout(pDevice, &layoutCI, nullptr, &pDescriptorSetLayout), false);
+
+    VkPipelineLayoutCreateInfo plCI = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+    plCI.setLayoutCount = 1;
+    plCI.pSetLayouts    = &pDescriptorSetLayout;
+    SF_VK_CHECK_RETURN(vkCreatePipelineLayout(pDevice, &plCI, nullptr, &pPipelineLayout), false);
+
+    VkPipelineCacheCreateInfo cacheCI = { VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
+    SF_VK_CHECK_RETURN(vkCreatePipelineCache(pDevice, &cacheCI, nullptr, &pPipelineCache), false);
+
+    return true;
 }
 
-RenderTarget* HAL::CreateRenderTarget(VkImageView colorView, VkImageView depthView, const ImageSize& size)
+void HAL::destroyPipelineLayout()
 {
-    if (!colorView || size.Width == 0 || size.Height == 0)
+    if (pPipelineCache != VK_NULL_HANDLE)
+    {
+        vkDestroyPipelineCache(pDevice, pPipelineCache, nullptr);
+        pPipelineCache = VK_NULL_HANDLE;
+    }
+    if (pPipelineLayout != VK_NULL_HANDLE)
+    {
+        vkDestroyPipelineLayout(pDevice, pPipelineLayout, nullptr);
+        pPipelineLayout = VK_NULL_HANDLE;
+    }
+    if (pDescriptorSetLayout != VK_NULL_HANDLE)
+    {
+        vkDestroyDescriptorSetLayout(pDevice, pDescriptorSetLayout, nullptr);
+        pDescriptorSetLayout = VK_NULL_HANDLE;
+    }
+}
+
+
+VkPipeline HAL::GetPipeline(ShaderDesc::ShaderType vsShader, ShaderDesc::ShaderType fsShader,
+                             unsigned blendType, unsigned stencilMode, const SysVertexFormat* pvf)
+{
+    PipelineKey key;
+    key.Shader      = vsShader;
+    key.FragShaderType = fsShader;
+    key.BlendType   = blendType;
+    key.StencilMode = stencilMode;
+    key.RasterMode  = (unsigned)RasterMode;
+    key.pVFormat    = pvf;
+    key.pRenderPass = pCurrentRenderPass;
+
+    VkPipeline* existing = Pipelines.Get(key);
+    if (existing)
+        return *existing;
+
+    // Create pipeline lazily
+    unsigned vsIdx = VertexShaderDesc::GetShaderIndex(vsShader, SManager.ShaderModel);
+    unsigned fsIdx = FragShaderDesc::GetShaderIndex(fsShader, SManager.ShaderModel);
+    const VertexShader* pvs = &SManager.StaticVShaders[vsIdx];
+    const FragShader* pfs   = &SManager.StaticFShaders[fsIdx];
+
+    if (!pvs || pvs->pProg == VK_NULL_HANDLE || !pfs || pfs->pProg == VK_NULL_HANDLE)
+        return VK_NULL_HANDLE;
+
+    VkPipelineShaderStageCreateInfo stages[2] = {};
+    stages[0] = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+    stages[0].stage  = VK_SHADER_STAGE_VERTEX_BIT;
+    stages[0].module = pvs->pProg;
+    stages[0].pName  = "main";
+
+    stages[1] = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+    stages[1].stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
+    stages[1].module = pfs->pProg;
+    stages[1].pName  = "main";
+
+    VkPipelineVertexInputStateCreateInfo vertexInput = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+    if (pvf)
+    {
+        vertexInput.vertexBindingDescriptionCount   = 1;
+        vertexInput.pVertexBindingDescriptions      = &pvf->BindingDesc;
+        vertexInput.vertexAttributeDescriptionCount = pvf->AttributeCount;
+        vertexInput.pVertexAttributeDescriptions    = pvf->Attributes;
+    }
+
+    VkPipelineInputAssemblyStateCreateInfo inputAsm = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
+    inputAsm.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+    VkPipelineViewportStateCreateInfo vpState = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
+    vpState.viewportCount = 1;
+    vpState.scissorCount  = 1;
+
+    VkPipelineRasterizationStateCreateInfo rasterState = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
+    rasterState.polygonMode = (key.RasterMode == RasterMode_Wireframe) ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
+    rasterState.cullMode    = VK_CULL_MODE_NONE;
+    rasterState.frontFace   = VK_FRONT_FACE_CLOCKWISE;
+    rasterState.lineWidth   = 1.0f;
+
+    VkPipelineMultisampleStateCreateInfo msState = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
+    msState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+    VkPipelineColorBlendStateCreateInfo blendState = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
+    VkPipelineColorBlendAttachmentState blendAtt = (blendType < BlendTypeCount)
+        ? BlendDescs[blendType] : BlendDescs[0];
+    blendState.attachmentCount = 1;
+    blendState.pAttachments    = &blendAtt;
+
+    VkPipelineDepthStencilStateCreateInfo dsState = (stencilMode < StencilMode_Count)
+        ? DepthStencilDescs[stencilMode] : DepthStencilDescs[0];
+
+    VkDynamicState dynStates[] = {
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR,
+        VK_DYNAMIC_STATE_STENCIL_REFERENCE
+    };
+    VkPipelineDynamicStateCreateInfo dynState = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
+    dynState.dynamicStateCount = 3;
+    dynState.pDynamicStates    = dynStates;
+
+    VkGraphicsPipelineCreateInfo pipelineCI = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
+    pipelineCI.stageCount          = 2;
+    pipelineCI.pStages             = stages;
+    pipelineCI.pVertexInputState   = &vertexInput;
+    pipelineCI.pInputAssemblyState = &inputAsm;
+    pipelineCI.pViewportState      = &vpState;
+    pipelineCI.pRasterizationState = &rasterState;
+    pipelineCI.pMultisampleState   = &msState;
+    pipelineCI.pDepthStencilState  = &dsState;
+    pipelineCI.pColorBlendState    = &blendState;
+    pipelineCI.pDynamicState       = &dynState;
+    pipelineCI.layout              = pPipelineLayout;
+    pipelineCI.renderPass          = pCurrentRenderPass;
+    pipelineCI.subpass             = 0;
+
+    VkPipeline pipeline = VK_NULL_HANDLE;
+    VkResult r = vkCreateGraphicsPipelines(pDevice, pPipelineCache, 1, &pipelineCI, nullptr, &pipeline);
+    if (r != VK_SUCCESS)
+    {
+        SF_DEBUG_WARNING1(1, "Vulkan: Failed to create graphics pipeline, VkResult=%d", (int)r);
+        return VK_NULL_HANDLE;
+    }
+
+    Pipelines.Set(key, pipeline);
+    return pipeline;
+}
+
+
+// *** UBO ring buffer
+
+bool HAL::createUBORing()
+{
+    VkBufferCreateInfo bufCI = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    bufCI.size  = SF_VK_UBO_RING_SIZE;
+    bufCI.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    bufCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    SF_VK_CHECK_RETURN(vkCreateBuffer(pDevice, &bufCI, nullptr, &UBORingBuffer), false);
+
+    VkMemoryRequirements memReqs;
+    vkGetBufferMemoryRequirements(pDevice, UBORingBuffer, &memReqs);
+
+    VkMemoryAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+    allocInfo.allocationSize = memReqs.size;
+    allocInfo.memoryTypeIndex = FindMemoryType(pPhysicalDevice, memReqs.memoryTypeBits,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    if (allocInfo.memoryTypeIndex == UINT32_MAX)
+    {
+        SF_DEBUG_WARNING(1, "Vulkan: No suitable memory type for UBO ring buffer");
+        return false;
+    }
+    SF_VK_CHECK_RETURN(vkAllocateMemory(pDevice, &allocInfo, nullptr, &UBORingMemory), false);
+    SF_VK_CHECK_RETURN(vkBindBufferMemory(pDevice, UBORingBuffer, UBORingMemory, 0), false);
+
+    void* mapped;
+    SF_VK_CHECK_RETURN(vkMapMemory(pDevice, UBORingMemory, 0, SF_VK_UBO_RING_SIZE, 0, &mapped), false);
+    pUBORingData = (UByte*)mapped;
+
+    return true;
+}
+
+void HAL::destroyUBORing()
+{
+    if (pUBORingData && UBORingMemory != VK_NULL_HANDLE)
+    {
+        vkUnmapMemory(pDevice, UBORingMemory);
+        pUBORingData = nullptr;
+    }
+    if (UBORingBuffer != VK_NULL_HANDLE)
+    {
+        vkDestroyBuffer(pDevice, UBORingBuffer, nullptr);
+        UBORingBuffer = VK_NULL_HANDLE;
+    }
+    if (UBORingMemory != VK_NULL_HANDLE)
+    {
+        vkFreeMemory(pDevice, UBORingMemory, nullptr);
+        UBORingMemory = VK_NULL_HANDLE;
+    }
+}
+
+UPInt HAL::allocUBOSpace(UPInt size)
+{
+    size = (size + 255) & ~(UPInt)255;
+    UPInt offset = UBORingOffset;
+    UBORingOffset += size;
+    if (UBORingOffset > SF_VK_UBO_RING_SIZE)
+    {
+        SF_DEBUG_ASSERT(0, "Vulkan: UBO ring buffer overflow - increase SF_VK_UBO_RING_SIZE");
+        SF_DEBUG_WARNING(1, "Vulkan: UBO ring buffer overflow, data corruption likely");
         return 0;
-    RenderTarget* prt = pRenderBufferManager->CreateRenderTarget(size, RBuffer_User, Image_R8G8B8A8, 0);
-    if (!prt) return 0;
-    Ptr<DepthStencilBuffer> pdsb = 0;
-    if (depthView)
-        pdsb = *pRenderBufferManager->CreateDepthStencilBuffer(size);
-    RenderTargetData::UpdateData(prt, colorView, pdsb, depthView);
-    return prt;
+    }
+    return offset;
+}
+
+
+// *** Render targets
+
+bool HAL::createDefaultRenderBuffer()
+{
+    if (!pRenderBufferManager)
+        return false;
+
+    ImageSize rtSize(0, 0);
+    RenderTarget* existing = GetDefaultRenderTarget();
+    if (existing)
+    {
+        rtSize = existing->GetSize();
+    }
+    else
+    {
+        rtSize = ImageSize(1, 1);
+        Ptr<RenderTarget> ptarget = *SF_HEAP_AUTO_NEW(this) RenderTarget(0, RBuffer_Default, rtSize);
+        RenderTargetData::UpdateData(ptarget, pDevice, VK_NULL_HANDLE, 0, VK_NULL_HANDLE, VK_NULL_HANDLE);
+        SetRenderTarget(ptarget);
+    }
+
+    return pRenderBufferManager->Initialize(pTextureManager, Image_R8G8B8A8, rtSize);
 }
 
 RenderTarget* HAL::CreateRenderTarget(Render::Texture* texture, bool needsStencil)
 {
+    SF_UNUSED2(texture, needsStencil);
+    // Create render target from texture
     Vulkan::Texture* pt = (Vulkan::Texture*)texture;
-    if (!pt || texture->GetTextureStageCount() != 1)
-        return 0;
-    RenderTarget* prt = pRenderBufferManager->CreateRenderTarget(
-        texture->GetSize(), RBuffer_Texture, texture->GetFormat(), texture);
-    if (!prt) return 0;
-    VkImageView colorView = pt->Texture0.View;
-    Ptr<DepthStencilBuffer> pdsb = 0;
-    VkImageView depthView = VK_NULL_HANDLE;
+    RenderTarget* prt = pRenderBufferManager->CreateRenderTarget(pt->GetSize(), RBuffer_User, pt->GetFormat(), pt);
+
     if (needsStencil)
     {
-        pdsb = *pRenderBufferManager->CreateDepthStencilBuffer(texture->GetSize());
-        if (pdsb && pdsb->GetSurface())
-            depthView = ((Vulkan::DepthStencilSurface*)pdsb->GetSurface())->GetView();
+        DepthStencilBuffer* pdsb = pRenderBufferManager->CreateDepthStencilBuffer(pt->GetSize());
+        if (pdsb)
+        {
+            Vulkan::DepthStencilSurface* pdss = (Vulkan::DepthStencilSurface*)pdsb->GetSurface();
+            VkImageView dsView = pdss ? pdss->pDepthStencilView : VK_NULL_HANDLE;
+            RenderTargetData::UpdateData(prt, pDevice, pt->pTextures[0].View, pdsb, dsView, VK_NULL_HANDLE);
+        }
     }
-    RenderTargetData::UpdateData(prt, colorView, pdsb, depthView);
+    else
+    {
+        RenderTargetData::UpdateData(prt, pDevice, pt->pTextures[0].View, 0, VK_NULL_HANDLE, VK_NULL_HANDLE);
+    }
     return prt;
 }
 
 RenderTarget* HAL::CreateTempRenderTarget(const ImageSize& size, bool needsStencil)
 {
-    RenderTarget* prt = pRenderBufferManager->CreateTempRenderTarget(size);
+    // Clamp to 1x1 minimum so degenerate filter areas (zero scale from collapsed
+    // display objects) never reach vkCreateImage / vkCreateFramebuffer with a zero
+    // extent (VUID-VkImageCreateInfo-extent-00944/00945).
+    ImageSize safeSize(Alg::Max<UInt32>(1, size.Width), Alg::Max<UInt32>(1, size.Height));
+
+    RenderTarget* prt = pRenderBufferManager->CreateTempRenderTarget(safeSize);
     if (!prt) return 0;
-    Vulkan::Texture* pt = (Vulkan::Texture*)prt->GetTexture();
-    VkImageView colorView = pt ? pt->Texture0.View : VK_NULL_HANDLE;
-    Ptr<DepthStencilBuffer> pdsb = 0;
-    VkImageView depthView = VK_NULL_HANDLE;
+    Render::Texture* pt = prt->GetTexture();
+    if (!pt) return 0;
+
     if (needsStencil)
     {
-        pdsb = *pRenderBufferManager->CreateDepthStencilBuffer(size);
-        if (pdsb && pdsb->GetSurface())
-            depthView = ((Vulkan::DepthStencilSurface*)pdsb->GetSurface())->GetView();
+        DepthStencilBuffer* pdsb = pRenderBufferManager->CreateDepthStencilBuffer(safeSize);
+        if (pdsb)
+        {
+            Vulkan::DepthStencilSurface* pdss = (Vulkan::DepthStencilSurface*)pdsb->GetSurface();
+            VkImageView dsView = pdss ? pdss->pDepthStencilView : VK_NULL_HANDLE;
+            RenderTargetData::UpdateData(prt, pDevice, ((Vulkan::Texture*)pt)->pTextures[0].View,
+                pdsb, dsView, VK_NULL_HANDLE);
+        }
     }
-    RenderTargetData::UpdateData(prt, colorView, pdsb, depthView);
+    else
+    {
+        RenderTargetData::UpdateData(prt, pDevice, ((Vulkan::Texture*)pt)->pTextures[0].View,
+            0, VK_NULL_HANDLE, VK_NULL_HANDLE);
+    }
     return prt;
 }
 
-bool HAL::SetRenderTarget(RenderTarget* target, bool setState)
+bool HAL::SetRenderTarget(RenderTarget* ptarget, bool setState)
 {
-    (void)setState;
-    if (HALState & HS_InScene)
-        Flush();
+    if (!ptarget) return false;
+    SF_UNUSED(setState);
+
     if (HALState & HS_InDisplay)
         return false;
+
     RenderTargetEntry entry;
-    entry.pRenderTarget = target;
+    entry.pRenderTarget = ptarget;
+
     if (RenderTargetStack.GetSize() > 0)
         RenderTargetStack[0] = entry;
     else
@@ -760,22 +1157,68 @@ bool HAL::SetRenderTarget(RenderTarget* target, bool setState)
 
 void HAL::PushRenderTarget(const RectF& frameRect, RenderTarget* prt, unsigned flags)
 {
-    (void)flags;
+    SF_UNUSED(flags);
+
     HALState |= HS_InRenderTarget;
     RenderTargetEntry entry;
     entry.pRenderTarget = prt;
     entry.OldViewport = VP;
     entry.OldViewRect = ViewRect;
     entry.OldMatrixState.CopyFrom(Matrices);
-    if (!prt)
-    {
-        RenderTargetStack.PushBack(entry);
-        return;
-    }
-
     Matrices->Orient2D.SetIdentity();
     Matrices->Orient3D.SetIdentity();
     Matrices->SetUserMatrix(Matrix2F::Identity);
+    RenderTargetStack.PushBack(entry);
+
+    if (!prt)
+        return;
+
+    StencilChecked = false;
+    ++AccumulatedStats.RTChanges;
+
+    RenderTargetData* phd = (RenderTargetData*)prt->GetRenderTargetData();
+
+    if (phd && phd->pRenderSurface != VK_NULL_HANDLE && pOffscreenRenderPass != VK_NULL_HANDLE)
+    {
+        if (InRenderPass)
+        {
+            vkCmdEndRenderPass(pCommandBuffer);
+            InRenderPass = false;
+        }
+
+        const ImageSize& bs = prt->GetBufferSize();
+        // Guard: zero-size buffer can't produce a valid framebuffer or render area.
+        if (bs.Width == 0 || bs.Height == 0)
+            return;
+
+        // Use the DS render pass when a depth/stencil view is attached.
+        bool hasDS = (phd->pDSSurface != VK_NULL_HANDLE);
+        VkRenderPass selectedRP = hasDS ? pOffscreenRenderPassDS : pOffscreenRenderPass;
+
+        if (phd->pFramebuffer == VK_NULL_HANDLE)
+        {
+            phd->pFramebuffer = createFramebuffer(phd->pRenderSurface, phd->pDSSurface,
+                                                  bs.Width, bs.Height, selectedRP);
+        }
+
+        if (phd->pFramebuffer != VK_NULL_HANDLE)
+        {
+            VkRenderPassBeginInfo rpBI = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+            rpBI.renderPass  = selectedRP;
+            rpBI.framebuffer = phd->pFramebuffer;
+            rpBI.renderArea.extent = { bs.Width, bs.Height };
+
+            VkClearValue clearVals[2] = {};
+            clearVals[1].depthStencil = { 1.0f, 0 };
+            rpBI.clearValueCount = hasDS ? 2 : 1;
+            rpBI.pClearValues    = clearVals;
+
+            pCurrentRenderPass = selectedRP;
+            vkCmdBeginRenderPass(pCommandBuffer, &rpBI, VK_SUBPASS_CONTENTS_INLINE);
+            InRenderPass = true;
+        }
+    }
+
     Rect<int> viewRect = prt->GetRect();
     const ImageSize& bs = prt->GetBufferSize();
     VP = Viewport(bs.Width, bs.Height, viewRect.x1, viewRect.y1, viewRect.Width(), viewRect.Height());
@@ -783,86 +1226,892 @@ void HAL::PushRenderTarget(const RectF& frameRect, RenderTarget* prt, unsigned f
     ViewRect.y1 = (int)frameRect.y1;
     ViewRect.x2 = (int)frameRect.x2;
     ViewRect.y2 = (int)frameRect.y2;
-
     Matrices->ViewRectOriginal.Offset(-entry.OldViewport.Left, -entry.OldViewport.Top);
     Matrices->UVPOChanged = true;
-    StencilChecked = false;
-    ++AccumulatedStats.RTChanges;
     HALState |= HS_ViewValid;
     updateViewport();
 
-    if ((flags & PRT_NoClear) == 0)
-    {
-        Rect<int> clearRect(ViewRect.x1, ViewRect.y1, ViewRect.x2, ViewRect.y2);
-        clearSolidRectangle(clearRect, Color(0, 0, 0, 0));
-    }
+    // LOAD_OP_CLEAR in the offscreen render pass guarantees transparent-black
+    // at render-pass start; no explicit vkCmdClearAttachments needed.
+    // NOTE: PRT_NoClear (used by DrawableImage) is currently NOT honoured
+    // because LOAD_OP_CLEAR always clears.  If DrawableImage support is
+    // needed, add a second render pass with LOAD_OP_LOAD for that path.
+    SF_UNUSED(flags);
 
-    RenderTargetStack.PushBack(entry);
+    applyBlendMode(Blend_Normal, false, true);
 }
 
 void HAL::PopRenderTarget(unsigned flags)
 {
-    (void)flags;
+    SF_UNUSED(flags);
+
     RenderTargetEntry& entry = RenderTargetStack.Back();
-    RenderTarget* prt = entry.pRenderTarget;
 
-    prt->SetInUse(false);
-
-    if (prt && prt->GetType() == RBuffer_Temporary)
+    if (InRenderPass)
     {
-        RenderTargetData* phd = (RenderTargetData*)prt->GetRenderTargetData();
-        if (phd)
-        {
-            phd->pDepthView = VK_NULL_HANDLE;
-            phd->pDepthStencilBuffer = 0;
-        }
+        vkCmdEndRenderPass(pCommandBuffer);
+        InRenderPass = false;
     }
 
     Matrices->CopyFrom(&entry.OldMatrixState);
     ViewRect = entry.OldViewRect;
     VP = entry.OldViewport;
+
     RenderTargetStack.PopBack();
 
-    if (RenderTargetStack.GetSize() == 1)
+    if (RenderTargetStack.GetSize() <= 1)
+    {
         HALState &= ~HS_InRenderTarget;
 
+        // Resume the main swapchain render pass so that the caller can immediately
+        // composite the filter result without drawing outside a render pass.
+        if (pMainResumeRenderPass != VK_NULL_HANDLE && pMainFramebuffer != VK_NULL_HANDLE)
+        {
+            VkRenderPassBeginInfo rpBI = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+            rpBI.renderPass  = pMainResumeRenderPass;
+            rpBI.framebuffer = pMainFramebuffer;
+            rpBI.renderArea.extent = MainRenderExtent;
+            vkCmdBeginRenderPass(pCommandBuffer, &rpBI, VK_SUBPASS_CONTENTS_INLINE);
+            InRenderPass = true;
+            // Use the main render pass as the pipeline key so pipelines are shared
+            // with those created during regular (non-filter) main-pass rendering.
+            pCurrentRenderPass = pMainRenderPass;
+
+        }
+    }
+
+    ++AccumulatedStats.RTChanges;
     StencilChecked = false;
-    HALState |= HS_ViewValid;
     updateViewport();
 }
 
-bool HAL::createDefaultRenderBuffer()
+
+// *** Filters
+
+void HAL::PushFilters(FilterPrimitive* prim)
 {
-    ImageSize rtSize(1280, 720);
-    return pRenderBufferManager->Initialize(pTextureManager, Image_R8G8B8A8, rtSize);
+    GetEvent(Event_Filter).Begin(__FUNCTION__);
+    if (!checkState(HS_InDisplay, __FUNCTION__))
+        return;
+
+    FilterStackEntry e = {prim, 0};
+
+    if (!shouldRenderFilters(prim))
+    {
+        FilterStack.PushBack(e);
+        return;
+    }
+
+    if (!Profiler.ShouldDrawMask())
+    {
+        Profiler.SetDrawMode(2);
+
+        setBatchUnitSquareVertexStream();
+
+        unsigned fillflags = 0;
+        float colorf[4];
+        Profiler.GetColor(0xFFFFFFFF).GetRGBAFloat(colorf);
+        const ShaderManager::Shader& pso = SManager.SetFill(PrimFill_SolidColor, fillflags,
+            PrimitiveBatch::DP_Single, &VertexXY16iAlpha::Format, &ShaderData);
+        Matrix2F mvp(prim->GetFilterAreaMatrix().GetMatrix2D(), Matrices->UserView);
+        ShaderData.SetMatrix(pso, Uniform::SU_mvp, mvp);
+        ShaderData.SetUniform(pso, Uniform::SU_cxmul, colorf, 4);
+        ShaderData.Finish(1);
+
+        SysVertexFormat* pvf = (SysVertexFormat*)VertexXY16iAlpha::Format.pSysFormat.GetPtr();
+        const ShaderPair& curSh = ShaderData.GetCurrentShaders();
+        VkPipeline pipeline = GetPipeline(curSh.pVDesc ? curSh.pVDesc->Type : ShaderDesc::ST_None,
+                                          curSh.pFDesc ? curSh.pFDesc->Type : ShaderDesc::ST_None,
+                                          CurrentBlendType, CurrentStencilMode, pvf);
+        if (pipeline != VK_NULL_HANDLE)
+            vkCmdBindPipeline(pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+        drawPrimitive(6, 1);
+        FilterStack.PushBack(e);
+        return;
+    }
+
+    if (HALState & HS_CachedFilter)
+    {
+        FilterStack.PushBack(e);
+        return;
+    }
+
+    if (MaskStackTop != 0 && !prim->GetMaskPresent())
+    {
+        if (StencilAvailable)
+        {
+            CurrentStencilMode = StencilMode_Available_TestMask;
+            vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)MaskStackTop);
+        }
+        else if (DepthBufferAvailable)
+        {
+            CurrentStencilMode = StencilMode_DepthOnly_TestMask;
+            vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)MaskStackTop);
+        }
+    }
+
+    HALState |= HS_DrawingFilter;
+
+    if (prim->GetCacheState() == FilterPrimitive::Cache_Uncached)
+    {
+        const Matrix2F& m = e.pPrimitive->GetFilterAreaMatrix().GetMatrix2D();
+        // Skip entirely when the filter area is degenerate (collapsed/invisible object).
+        // A zero-scale matrix would produce a 0x0 render target which violates Vulkan
+        // spec (VUID-VkFramebufferCreateInfo-width-00885 etc.).
+        if (m.Sx() < 1.0f || m.Sy() < 1.0f)
+            return;
+        e.pRenderTarget = *CreateTempRenderTarget(ImageSize((UInt32)m.Sx(), (UInt32)m.Sy()), prim->GetMaskPresent());
+        RectF frameRect(m.Tx(), m.Ty(), m.Tx() + m.Sx(), m.Ty() + m.Sy());
+        PushRenderTarget(frameRect, e.pRenderTarget);
+        applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, false);
+
+        if (prim->GetMaskPresent())
+        {
+            RenderTargetData* phd = (RenderTargetData*)e.pRenderTarget->GetRenderTargetData();
+            if (phd && phd->pDSSurface != VK_NULL_HANDLE)
+            {
+                if (StencilAvailable)
+                {
+                    VkClearAttachment clearAtt = {};
+                    clearAtt.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
+                    clearAtt.clearValue.depthStencil = { 0.0f, (uint32_t)MaskStackTop };
+                    VkClearRect clearRect = {};
+                    clearRect.rect.extent = { (uint32_t)m.Sx(), (uint32_t)m.Sy() };
+                    clearRect.layerCount = 1;
+                    vkCmdClearAttachments(pCommandBuffer, 1, &clearAtt, 1, &clearRect);
+                }
+            }
+        }
+    }
+    else
+    {
+        HALState |= HS_CachedFilter;
+        CachedFilterIndex = (int)FilterStack.GetSize();
+        GetRQProcessor().SetQueueEmitFilter(RenderQueueProcessor::QPF_Filters);
+    }
+    FilterStack.PushBack(e);
 }
 
-void HAL::MapVertexFormat(PrimitiveFillType fill, const VertexFormat* sourceFormat,
-                          const VertexFormat** single,
-                          const VertexFormat** batch, const VertexFormat** instanced, unsigned)
+void HAL::drawUncachedFilter(const FilterStackEntry& e)
 {
-    SManager.MapVertexFormat(fill, sourceFormat, single, batch, instanced);
+    const FilterSet* filters = e.pPrimitive->GetFilters();
+    unsigned filterCount = filters->GetFilterCount();
+    const Filter* filter = 0;
+    unsigned pass = 0, passes = 0;
+
+    if (!e.pPrimitive || !e.pRenderTarget)
+    {
+        return;
+    }
+
+    SF_ASSERT(RenderTargetStack.Back().pRenderTarget == e.pRenderTarget);
+    const int MaxTemporaryTextures = 3;
+    Ptr<RenderTarget> temporaryTextures[MaxTemporaryTextures];
+    memset(temporaryTextures, 0, sizeof temporaryTextures);
+
+    ImageSize size = e.pRenderTarget->GetSize();
+    temporaryTextures[0] = e.pRenderTarget;
+
+    setBatchUnitSquareVertexStream();
+    applyBlendMode(Blend_Overlay, true);
+
+    unsigned shaders[ShaderManager::MaximumFilterPasses];
+    for (unsigned i = 0; i < filterCount; ++i)
+    {
+        filter = filters->GetFilter(i);
+        passes = SManager.GetFilterPasses(filter, FillFlags, shaders);
+
+        bool requireSource = false;
+        if (filter->GetFilterType() >= Filter_Shadow &&
+            filter->GetFilterType() <= Filter_Blur_End)
+        {
+            temporaryTextures[Target_Original] = temporaryTextures[Target_Source];
+            requireSource = true;
+        }
+
+        for (pass = 0; pass < passes; ++pass)
+        {
+            if (pass == passes - 1 && i == filterCount - 1)
+                break;
+
+            if (!temporaryTextures[1])
+                temporaryTextures[1] = *CreateTempRenderTarget(size, false);
+
+            RenderTargetData* prtData = (RenderTargetData*)temporaryTextures[1]->GetRenderTargetData();
+            if (!prtData)
+                break;
+
+            if (InRenderPass)
+            {
+                vkCmdEndRenderPass(pCommandBuffer);
+                InRenderPass = false;
+            }
+
+            const ImageSize& tbs = temporaryTextures[1]->GetBufferSize();
+            bool hasDS = (prtData->pDSSurface != VK_NULL_HANDLE);
+            VkRenderPass filterRP = hasDS ? pOffscreenRenderPassDS : pOffscreenRenderPass;
+
+            if (prtData->pFramebuffer == VK_NULL_HANDLE)
+            {
+                prtData->pFramebuffer = createFramebuffer(prtData->pRenderSurface,
+                    hasDS ? prtData->pDSSurface : VK_NULL_HANDLE,
+                    tbs.Width, tbs.Height, filterRP);
+            }
+
+            if (prtData->pFramebuffer != VK_NULL_HANDLE)
+            {
+                VkRenderPassBeginInfo rpBI = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+                rpBI.renderPass  = filterRP;
+                rpBI.framebuffer = prtData->pFramebuffer;
+                rpBI.renderArea.extent = { tbs.Width, tbs.Height };
+                VkClearValue clearVals[2] = {};
+                clearVals[1].depthStencil = { 1.0f, 0 };
+                rpBI.clearValueCount = hasDS ? 2 : 1;
+                rpBI.pClearValues    = clearVals;
+                pCurrentRenderPass = filterRP;
+                vkCmdBeginRenderPass(pCommandBuffer, &rpBI, VK_SUBPASS_CONTENTS_INLINE);
+                InRenderPass = true;
+                // LOAD_OP_CLEAR in the render pass guarantees the RT is zeroed;
+                // no explicit vkCmdClearAttachments needed.
+            }
+
+            ++AccumulatedStats.RTChanges;
+
+            RenderTarget* prt = temporaryTextures[1];
+            const Rect<int>& viewRect = prt->GetRect();
+            const ImageSize& bs = prt->GetBufferSize();
+            VP = Viewport(bs.Width, bs.Height, viewRect.x1, viewRect.y1, viewRect.Width(), viewRect.Height());
+            ViewRect = Rect<int>(viewRect.x1, viewRect.y1, viewRect.x2, viewRect.y2);
+            HALState |= HS_ViewValid;
+            updateViewport();
+
+            Matrix2F mvp = Matrix2F::Scaling(2,-2) * Matrix2F::Translation(-0.5f, -0.5f);
+            SManager.SetFilterFill(mvp, Cxform::Identity, filter, temporaryTextures, shaders, pass, passes,
+                &VertexXY16iAlpha::Format, &ShaderData);
+
+            if (InRenderPass)
+            {
+                SysVertexFormat* pvf = (SysVertexFormat*)VertexXY16iAlpha::Format.pSysFormat.GetPtr();
+                const ShaderPair& curSh = ShaderData.GetCurrentShaders();
+                VkPipeline pipeline = GetPipeline(curSh.pVDesc ? curSh.pVDesc->Type : ShaderDesc::ST_None,
+                                                  curSh.pFDesc ? curSh.pFDesc->Type : ShaderDesc::ST_None,
+                                                  CurrentBlendType, CurrentStencilMode, pvf);
+                if (pipeline != VK_NULL_HANDLE)
+                {
+                    vkCmdBindPipeline(pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+                    drawPrimitive(6, 1);
+                }
+            }
+            else
+            {
+            }
+
+            if (requireSource && pass == 0)
+                temporaryTextures[0] = *CreateTempRenderTarget(size, false);
+
+            Alg::Swap(temporaryTextures[0], temporaryTextures[1]);
+        }
+    }
+
+    bool cacheAsBitmap = passes == 0;
+    SF_DEBUG_ASSERT(!cacheAsBitmap || filterCount == 1, "Expected exactly one cacheAsBitmap filter.");
+
+    if (temporaryTextures[Target_Source] && (Profiler.IsFilterCachingEnabled() || cacheAsBitmap))
+    {
+        RenderTarget* cacheResults[2] = { temporaryTextures[0], temporaryTextures[2] };
+        e.pPrimitive->SetCacheResults(cacheAsBitmap ? FilterPrimitive::Cache_Target : FilterPrimitive::Cache_PreTarget,
+                                      cacheResults, cacheAsBitmap ? 1 : 2);
+        if (RenderTargetData* rtd0 = (RenderTargetData*)cacheResults[0]->GetRenderTargetData())
+            rtd0->CacheID = reinterpret_cast<UPInt>(e.pPrimitive.GetPtr());
+        if (cacheResults[1])
+            if (RenderTargetData* rtd1 = (RenderTargetData*)cacheResults[1]->GetRenderTargetData())
+                rtd1->CacheID = reinterpret_cast<UPInt>(e.pPrimitive.GetPtr());
+    }
+    else
+    {
+        e.pPrimitive->SetCacheResults(FilterPrimitive::Cache_Uncached, 0, 0);
+    }
+
+    PopRenderTarget();
+
+    if (MaskStackTop != 0)
+    {
+        if (StencilAvailable)
+        {
+            CurrentStencilMode = StencilMode_Available_TestMask;
+            vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)MaskStackTop);
+        }
+        else if (DepthBufferAvailable)
+        {
+            CurrentStencilMode = StencilMode_DepthOnly_TestMask;
+            vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)MaskStackTop);
+        }
+    }
+
+    if (passes != 0)
+    {
+        setBatchUnitSquareVertexStream();
+        const Matrix2F& mvp = Matrices->UserView * e.pPrimitive->GetFilterAreaMatrix().GetMatrix2D();
+        const Cxform&   cx  = e.pPrimitive->GetFilterAreaMatrix().GetCxform();
+
+        SManager.SetFilterFill(mvp, cx, filter, temporaryTextures, shaders, pass, passes,
+            &VertexXY16iAlpha::Format, &ShaderData);
+        applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, true);
+
+        if (InRenderPass)
+        {
+            SysVertexFormat* pvf = (SysVertexFormat*)VertexXY16iAlpha::Format.pSysFormat.GetPtr();
+            const ShaderPair& curSh = ShaderData.GetCurrentShaders();
+
+            VkPipeline pipeline = GetPipeline(curSh.pVDesc ? curSh.pVDesc->Type : ShaderDesc::ST_None,
+                                              curSh.pFDesc ? curSh.pFDesc->Type : ShaderDesc::ST_None,
+                                              CurrentBlendType, CurrentStencilMode, pvf);
+            if (pipeline != VK_NULL_HANDLE)
+            {
+                vkCmdBindPipeline(pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+                drawPrimitive(6, 1);
+            }
+        }
+        else
+        {
+        }
+        applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, false);
+    }
+    else
+    {
+        drawCachedFilter(e.pPrimitive);
+    }
+
+    for (unsigned i = 0; i < MaxTemporaryTextures; ++i)
+    {
+        if (temporaryTextures[i])
+            PendingRTReleases.PushBack(temporaryTextures[i]);
+    }
+    AccumulatedStats.Filters += filters->GetFilterCount();
+}
+
+void HAL::drawCachedFilter(FilterPrimitive* primitive)
+{
+    setBatchUnitSquareVertexStream();
+
+    const int MaxTemporaryTextures = 3;
+    switch (primitive->GetCacheState())
+    {
+        case FilterPrimitive::Cache_PreTarget:
+        {
+            const FilterSet* filters = primitive->GetFilters();
+            UPInt filterIndex = filters->GetFilterCount() - 1;
+            const Filter* filter = filters->GetFilter(filterIndex);
+            unsigned shaders[ShaderManager::MaximumFilterPasses];
+            unsigned passes = SManager.GetFilterPasses(filter, FillFlags, shaders);
+
+            Ptr<RenderTarget> temporaryTextures[MaxTemporaryTextures];
+            memset(temporaryTextures, 0, sizeof temporaryTextures);
+            RenderTarget* results[2];
+            primitive->GetCacheResults(results, 2);
+            temporaryTextures[0] = results[0];
+            ImageSize size = temporaryTextures[0]->GetSize();
+            temporaryTextures[1] = *CreateTempRenderTarget(size, false);
+            temporaryTextures[2] = results[1];
+            PushRenderTarget(RectF((float)size.Width, (float)size.Height), temporaryTextures[1]);
+
+            Matrix2F mvp = Matrix2F::Scaling(2,-2) * Matrix2F::Translation(-0.5f, -0.5f);
+            SManager.SetFilterFill(mvp, Cxform::Identity, filter, temporaryTextures, shaders, passes - 1, passes,
+                &VertexXY16iAlpha::Format, &ShaderData);
+            applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, true, true);
+
+            if (InRenderPass)
+            {
+                SysVertexFormat* pvf = (SysVertexFormat*)VertexXY16iAlpha::Format.pSysFormat.GetPtr();
+                const ShaderPair& curSh = ShaderData.GetCurrentShaders();
+                VkPipeline pipeline = GetPipeline(curSh.pVDesc ? curSh.pVDesc->Type : ShaderDesc::ST_None,
+                                                  curSh.pFDesc ? curSh.pFDesc->Type : ShaderDesc::ST_None,
+                                                  CurrentBlendType, CurrentStencilMode, pvf);
+                if (pipeline != VK_NULL_HANDLE)
+                {
+                    vkCmdBindPipeline(pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+                    drawPrimitive(6, 1);
+                }
+            }
+            PopRenderTarget();
+
+            RenderTarget* prt = temporaryTextures[1];
+            primitive->SetCacheResults(FilterPrimitive::Cache_Target, &prt, 1);
+            if (RenderTargetData* rtd = (RenderTargetData*)prt->GetRenderTargetData())
+                rtd->CacheID = reinterpret_cast<UPInt>(primitive);
+            drawCachedFilter(primitive);
+
+            for (unsigned i = 0; i < MaxTemporaryTextures; ++i)
+            {
+                if (temporaryTextures[i])
+                    PendingRTReleases.PushBack(temporaryTextures[i]);
+            }
+            break;
+        }
+
+        case FilterPrimitive::Cache_Target:
+        {
+            unsigned fillFlags = (FillFlags | FF_Cxform | FF_AlphaWrite);
+            const ShaderManager::Shader& pso = SManager.SetFill(PrimFill_Texture, fillFlags, PrimitiveBatch::DP_Single,
+                &VertexXY16iAlpha::Format, &ShaderData);
+
+            RenderTarget* results;
+            primitive->GetCacheResults(&results, 1);
+            Texture* ptexture = (Vulkan::Texture*)results->GetTexture();
+            const Matrix2F& mvp = Matrices->UserView * primitive->GetFilterAreaMatrix().GetMatrix2D();
+            const Rect<int>& srect = results->GetRect();
+            Matrix2F texgen;
+            texgen.AppendTranslation((float)srect.x1, (float)srect.y1);
+            texgen.AppendScaling((float)srect.Width() / ptexture->GetSize().Width,
+                                 (float)srect.Height() / ptexture->GetSize().Height);
+
+            const Cxform& cx = primitive->GetFilterAreaMatrix().GetCxform();
+            ShaderData.SetCxform(pso, cx);
+            ShaderData.SetUniform(pso, Uniform::SU_mvp, &mvp.M[0][0], 8);
+            ShaderData.SetUniform(pso, Uniform::SU_texgen, &texgen.M[0][0], 8);
+            ShaderData.SetTexture(pso, Uniform::SU_tex, ptexture, ImageFillMode(Wrap_Clamp, Sample_Linear));
+            ShaderData.Finish(1);
+
+            applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, true, true);
+
+            if (InRenderPass)
+            {
+                SysVertexFormat* pvf = (SysVertexFormat*)VertexXY16iAlpha::Format.pSysFormat.GetPtr();
+                const ShaderPair& curSh = ShaderData.GetCurrentShaders();
+                VkPipeline pipeline = GetPipeline(curSh.pVDesc ? curSh.pVDesc->Type : ShaderDesc::ST_None,
+                                                  curSh.pFDesc ? curSh.pFDesc->Type : ShaderDesc::ST_None,
+                                                  CurrentBlendType, CurrentStencilMode, pvf);
+                if (pipeline != VK_NULL_HANDLE)
+                {
+                    vkCmdBindPipeline(pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+                    drawPrimitive(6, 1);
+                }
+            }
+            applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, false, (HALState & HS_InRenderTarget) != 0);
+
+            results->SetInUse(false);
+            if (!Profiler.IsFilterCachingEnabled())
+                primitive->SetCacheResults(FilterPrimitive::Cache_Uncached, 0, 0);
+            break;
+        }
+
+        default: SF_ASSERT(0); break;
+    }
+}
+
+bool HAL::shouldRenderFilters(const FilterPrimitive* prim) const
+{
+    SF_UNUSED(prim);
+    return true;
+}
+
+
+// *** Draw primitives
+
+// Override the base-class drawMaskClearRectangles to bind the Vulkan pipeline before drawing.
+// The base implementation (Render_ShaderHAL.h) sets a red debug color {1,0,0,0.5} on the cxmul
+// uniform and relies on colorWriteMask==0 to suppress it. In Vulkan, the blend state is baked
+// into pipeline objects, so we must explicitly bind the correct pipeline (Write_None) here —
+// the last-bound pipeline may have had color writes enabled and would let the red bleed through.
+void HAL::drawMaskClearRectangles(const HMatrix* matrices, UPInt count)
+{
+    ScopedRenderEvent GPUEvent(GetEvent(Event_MaskClear), "HAL::drawMaskClearRectangles");
+
+    unsigned fillflags = 0;
+    const ShaderManager::Shader& pso = SManager.SetFill(PrimFill_SolidColor, fillflags,
+        PrimitiveBatch::DP_Batch, &VertexXY16iAlpha::Format, &ShaderData);
+
+    setBatchUnitSquareVertexStream();
+
+    // Bind pipeline with the current stencil mode and Write_None blend (colorWriteMask=0).
+    // This must happen after SetFill so the vertex format / shader pair is resolved.
+    SysVertexFormat* pvf = (SysVertexFormat*)VertexXY16iAlpha::Format.pSysFormat.GetPtr();
+    const ShaderPair& curSh = ShaderData.GetCurrentShaders();
+    VkPipeline pipeline = GetPipeline(curSh.pVDesc ? curSh.pVDesc->Type : ShaderDesc::ST_None,
+                                      curSh.pFDesc ? curSh.pFDesc->Type : ShaderDesc::ST_None,
+                                      CurrentBlendType, CurrentStencilMode, pvf);
+    if (pipeline != VK_NULL_HANDLE)
+        vkCmdBindPipeline(pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+    static const float colorf[] = {1.f, 0.f, 0.f, 0.5f}; // debug color; suppressed by colorWriteMask=0
+    for (UPInt i = 0; i < count; )
+    {
+        unsigned drawRangeCount = Alg::Min<unsigned>((unsigned)(count - i), SF_RENDER_MAX_BATCHES);
+        for (unsigned j = 0; j < drawRangeCount; j++)
+        {
+            ShaderData.SetMatrix(pso, Uniform::SU_mvp, Matrix2F::Identity, matrices[i + j], Matrices, 0, j);
+            ShaderData.SetUniform(pso, Uniform::SU_cxmul, colorf, 4);
+        }
+        ShaderData.Finish(drawRangeCount);
+        drawPrimitive(drawRangeCount * 6, drawRangeCount);
+        i += drawRangeCount;
+    }
 }
 
 void HAL::setBatchUnitSquareVertexStream()
 {
-    if (!pCurrentCommandBuffer || Cache.pMaskEraseBatchVertexBuffer == VK_NULL_HANDLE)
-        return;
+    VkBuffer vb = Cache.GetMaskEraseBatchVB();
     VkDeviceSize offset = 0;
-    vkCmdBindVertexBuffers(pCurrentCommandBuffer, 0, 1, &Cache.pMaskEraseBatchVertexBuffer, &offset);
+    vkCmdBindVertexBuffers(pCommandBuffer, 0, 1, &vb, &offset);
 }
 
 void HAL::drawPrimitive(unsigned indexCount, unsigned meshCount)
 {
-    if (!pCurrentCommandBuffer)
-        return;
-    vkCmdDraw(pCurrentCommandBuffer, indexCount, meshCount, 0, 0);
+    vkCmdDraw(pCommandBuffer, indexCount, meshCount, 0, 0);
+    SF_UNUSED(meshCount);
+    AccumulatedStats.Triangles += indexCount / 3;
+    AccumulatedStats.Primitives++;
+}
+
+void HAL::drawIndexedPrimitive(unsigned indexCount, unsigned meshCount,
+                                UPInt indexOffset, unsigned vertexBaseIndex)
+{
+    vkCmdDrawIndexed(pCommandBuffer, indexCount, 1, (uint32_t)indexOffset, (int32_t)vertexBaseIndex, 0);
+    SF_UNUSED(meshCount);
+    AccumulatedStats.Triangles += indexCount / 3;
+    AccumulatedStats.Primitives++;
+}
+
+void HAL::drawIndexedInstanced(unsigned indexCount, unsigned meshCount,
+                                UPInt indexOffset, unsigned vertexBaseIndex)
+{
+    vkCmdDrawIndexed(pCommandBuffer, indexCount, meshCount, (uint32_t)indexOffset, (int32_t)vertexBaseIndex, 0);
+    AccumulatedStats.Triangles += (indexCount / 3) * meshCount;
+    AccumulatedStats.Primitives++;
 }
 
 void HAL::drawScreenQuad()
 {
     setBatchUnitSquareVertexStream();
     drawPrimitive(6, 1);
+}
+
+
+// *** Events
+
+Render::RenderEvent& HAL::GetEvent(EventType eventType)
+{
+    Vulkan::RenderEvent::UpdateCommandBuffer(pCommandBuffer);
+    return Events[eventType];
+}
+
+
+// *** Offscreen render pass
+
+bool HAL::createOffscreenRenderPass()
+{
+    VkAttachmentDescription colorAtt = {};
+    colorAtt.format         = VK_FORMAT_R8G8B8A8_UNORM;
+    colorAtt.samples        = VK_SAMPLE_COUNT_1_BIT;
+    // CLEAR + UNDEFINED: every use of this render pass starts from a clean slate.
+    // Using LOAD_OP_CLEAR (not DONT_CARE) guarantees the hardware zeroes the
+    // attachment at render-pass start, preventing stale data from recycled
+    // render-target textures from bleeding through filter backgrounds.
+    // initialLayout=UNDEFINED is compatible with both freshly-created images and
+    // images that were previously used as shader resources (SHADER_READ_ONLY_OPTIMAL).
+    colorAtt.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAtt.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAtt.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAtt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAtt.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAtt.finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    VkAttachmentReference colorRef = {};
+    colorRef.attachment = 0;
+    colorRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass = {};
+    subpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments    = &colorRef;
+
+    // dep[0]: external → subpass: wait for prior color output before writing.
+    VkSubpassDependency deps[2] = {};
+    deps[0].srcSubpass    = VK_SUBPASS_EXTERNAL;
+    deps[0].dstSubpass    = 0;
+    deps[0].srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    deps[0].dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    deps[0].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    deps[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+
+    // dep[1]: subpass → external: ensure color writes are visible to subsequent
+    // fragment shader reads (the render target is sampled as a texture next pass).
+    deps[1].srcSubpass    = 0;
+    deps[1].dstSubpass    = VK_SUBPASS_EXTERNAL;
+    deps[1].srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    deps[1].dstStageMask  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    deps[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    deps[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    VkRenderPassCreateInfo rpCI = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
+    rpCI.attachmentCount = 1;
+    rpCI.pAttachments    = &colorAtt;
+    rpCI.subpassCount    = 1;
+    rpCI.pSubpasses      = &subpass;
+    rpCI.dependencyCount = 2;
+    rpCI.pDependencies   = deps;
+
+    SF_VK_CHECK_RETURN(vkCreateRenderPass(pDevice, &rpCI, nullptr, &pOffscreenRenderPass), false);
+    return true;
+}
+
+bool HAL::createOffscreenRenderPassDS()
+{
+    // Query supported depth/stencil format (same fallback order as DepthStencilSurface::Initialize)
+    VkFormat dsCandidates[] = { VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT };
+    VkFormat dsFormat = VK_FORMAT_UNDEFINED;
+    for (auto fmt : dsCandidates)
+    {
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(pPhysicalDevice, fmt, &props);
+        if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+        {
+            dsFormat = fmt;
+            break;
+        }
+    }
+    if (dsFormat == VK_FORMAT_UNDEFINED)
+        return false;
+
+    // Color attachment (same as the non-DS version)
+    VkAttachmentDescription attachments[2] = {};
+    attachments[0].format         = VK_FORMAT_R8G8B8A8_UNORM;
+    attachments[0].samples        = VK_SAMPLE_COUNT_1_BIT;
+    attachments[0].loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[0].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[0].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[0].initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[0].finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    // Depth/stencil attachment
+    attachments[1].format         = dsFormat;
+    attachments[1].samples        = VK_SAMPLE_COUNT_1_BIT;
+    attachments[1].loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[1].storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[1].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[1].initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[1].finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference colorRef = {};
+    colorRef.attachment = 0;
+    colorRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference dsRef = {};
+    dsRef.attachment = 1;
+    dsRef.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass = {};
+    subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount    = 1;
+    subpass.pColorAttachments       = &colorRef;
+    subpass.pDepthStencilAttachment = &dsRef;
+
+    VkSubpassDependency deps[2] = {};
+    deps[0].srcSubpass    = VK_SUBPASS_EXTERNAL;
+    deps[0].dstSubpass    = 0;
+    deps[0].srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    deps[0].dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    deps[0].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    deps[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+
+    deps[1].srcSubpass    = 0;
+    deps[1].dstSubpass    = VK_SUBPASS_EXTERNAL;
+    deps[1].srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    deps[1].dstStageMask  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    deps[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    deps[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    VkRenderPassCreateInfo rpCI = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
+    rpCI.attachmentCount = 2;
+    rpCI.pAttachments    = attachments;
+    rpCI.subpassCount    = 1;
+    rpCI.pSubpasses      = &subpass;
+    rpCI.dependencyCount = 2;
+    rpCI.pDependencies   = deps;
+
+    SF_VK_CHECK_RETURN(vkCreateRenderPass(pDevice, &rpCI, nullptr, &pOffscreenRenderPassDS), false);
+    return true;
+}
+
+void HAL::destroyOffscreenRenderPass()
+{
+    if (pOffscreenRenderPass != VK_NULL_HANDLE)
+    {
+        vkDestroyRenderPass(pDevice, pOffscreenRenderPass, nullptr);
+        pOffscreenRenderPass = VK_NULL_HANDLE;
+    }
+    if (pOffscreenRenderPassDS != VK_NULL_HANDLE)
+    {
+        vkDestroyRenderPass(pDevice, pOffscreenRenderPassDS, nullptr);
+        pOffscreenRenderPassDS = VK_NULL_HANDLE;
+    }
+}
+
+VkFramebuffer HAL::createFramebuffer(VkImageView colorView, VkImageView dsView,
+                                     unsigned width, unsigned height, VkRenderPass rp)
+{
+    // Spec: width and height must be > 0 (VUID-VkFramebufferCreateInfo-width-00885/height-00887).
+    if (width == 0 || height == 0)
+    {
+        SF_DEBUG_WARNING2(1, "Vulkan: skipping framebuffer creation with zero extent (%ux%u)", width, height);
+        return VK_NULL_HANDLE;
+    }
+
+    VkImageView attachments[2];
+    unsigned attachCount = 0;
+    if (colorView != VK_NULL_HANDLE)
+        attachments[attachCount++] = colorView;
+    if (dsView != VK_NULL_HANDLE)
+        attachments[attachCount++] = dsView;
+
+    VkFramebufferCreateInfo fbCI = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
+    fbCI.renderPass      = rp;
+    fbCI.attachmentCount = attachCount;
+    fbCI.pAttachments    = attachments;
+    fbCI.width           = width;
+    fbCI.height          = height;
+    fbCI.layers          = 1;
+
+    VkFramebuffer fb = VK_NULL_HANDLE;
+    VkResult r = vkCreateFramebuffer(pDevice, &fbCI, nullptr, &fb);
+    if (r != VK_SUCCESS)
+        SF_DEBUG_WARNING1(1, "Vulkan: Failed to create framebuffer, VkResult=%d", (int)r);
+    return fb;
+}
+
+
+// *** Blend descriptions
+
+void HAL::initBlendDescriptions()
+{
+    static const VkBlendOp BlendOps[BlendOp_Count] =
+    {
+        VK_BLEND_OP_ADD,              // BlendOp_ADD
+        VK_BLEND_OP_MAX,              // BlendOp_MAX
+        VK_BLEND_OP_MIN,              // BlendOp_MIN
+        VK_BLEND_OP_REVERSE_SUBTRACT, // BlendOp_REVSUBTRACT
+    };
+    static const VkBlendFactor BlendFactors[BlendFactor_Count] =
+    {
+        VK_BLEND_FACTOR_ZERO,                // BlendFactor_ZERO
+        VK_BLEND_FACTOR_ONE,                 // BlendFactor_ONE
+        VK_BLEND_FACTOR_SRC_ALPHA,           // BlendFactor_SRCALPHA
+        VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, // BlendFactor_INVSRCALPHA
+        VK_BLEND_FACTOR_DST_COLOR,           // BlendFactor_DESTCOLOR
+        VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR, // BlendFactor_INVDESTCOLOR
+    };
+
+    memset(BlendDescs, 0, sizeof(BlendDescs));
+
+    for (unsigned i = 0; i < BlendTypeCount; i++)
+    {
+        VkPipelineColorBlendAttachmentState& d = BlendDescs[i];
+
+        if (i >= (unsigned)(Blend_Count * 2))
+        {
+            // Write_None: disable all color writes
+            d.blendEnable    = VK_FALSE;
+            d.colorWriteMask = 0;
+            continue;
+        }
+
+        d.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                           VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        d.blendEnable = VK_TRUE;
+
+        bool     sourceAc = (i >= (unsigned)Blend_Count);
+        unsigned mode     = i % Blend_Count;
+
+        const BlendModeDescriptor& bmd = BlendModeTable[mode];
+        d.colorBlendOp        = BlendOps[bmd.Operator];
+        d.srcColorBlendFactor = BlendFactors[bmd.SourceColor];
+        d.dstColorBlendFactor = BlendFactors[bmd.DestColor];
+        d.alphaBlendOp        = BlendOps[bmd.Operator];
+        d.srcAlphaBlendFactor = BlendFactors[bmd.SourceAlpha];
+        d.dstAlphaBlendFactor = BlendFactors[bmd.DestAlpha];
+
+        // For source-AC (premultiplied alpha): replace SRC_ALPHA with ONE for color source
+        if (sourceAc && d.srcColorBlendFactor == VK_BLEND_FACTOR_SRC_ALPHA)
+            d.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+    }
+}
+
+
+void HAL::initDepthStencilDescriptions()
+{
+    memset(DepthStencilDescs, 0, sizeof(DepthStencilDescs));
+
+    for (unsigned i = 0; i < StencilMode_Count; i++)
+    {
+        DepthStencilDescs[i].sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        DepthStencilDescs[i].depthTestEnable  = VK_FALSE;
+        DepthStencilDescs[i].depthWriteEnable = VK_FALSE;
+        DepthStencilDescs[i].stencilTestEnable = VK_FALSE;
+    }
+
+    // StencilMode_Available_WriteMask: write stencil
+    auto& wm = DepthStencilDescs[StencilMode_Available_WriteMask];
+    wm.stencilTestEnable = VK_TRUE;
+    wm.front.failOp      = VK_STENCIL_OP_KEEP;
+    wm.front.depthFailOp = VK_STENCIL_OP_KEEP;
+    wm.front.passOp      = VK_STENCIL_OP_INCREMENT_AND_CLAMP;
+    wm.front.compareOp   = VK_COMPARE_OP_ALWAYS;
+    wm.front.compareMask = 0xFF;
+    wm.front.writeMask   = 0xFF;
+    wm.back = wm.front;
+
+    // StencilMode_Available_TestMask: test stencil
+    auto& tm = DepthStencilDescs[StencilMode_Available_TestMask];
+    tm.stencilTestEnable = VK_TRUE;
+    tm.front.failOp      = VK_STENCIL_OP_KEEP;
+    tm.front.depthFailOp = VK_STENCIL_OP_KEEP;
+    tm.front.passOp      = VK_STENCIL_OP_KEEP;
+    tm.front.compareOp   = VK_COMPARE_OP_LESS_OR_EQUAL;
+    tm.front.compareMask = 0xFF;
+    tm.front.writeMask   = 0x00;
+    tm.back = tm.front;
+
+    // StencilMode_Available_ClearMasks: unconditionally write reference value into stencil.
+    // Matches D3D1x: COMPARISON_ALWAYS + STENCIL_OP_REPLACE (on both pass and depth-fail).
+    auto& cm = DepthStencilDescs[StencilMode_Available_ClearMasks];
+    cm.stencilTestEnable = VK_TRUE;
+    cm.front.failOp      = VK_STENCIL_OP_KEEP;
+    cm.front.depthFailOp = VK_STENCIL_OP_REPLACE;
+    cm.front.passOp      = VK_STENCIL_OP_REPLACE;
+    cm.front.compareOp   = VK_COMPARE_OP_ALWAYS;
+    cm.front.compareMask = 0xFF;
+    cm.front.writeMask   = 0xFF;
+    cm.back = cm.front;
+
+    // StencilMode_Available_ClearMasksAbove: write reference value only where stencil >= ref.
+    // Matches D3D1x: COMPARISON_LESS_EQUAL (ref <= buffer) + STENCIL_OP_REPLACE.
+    // Used to restore a nested mask level by clamping any higher stencil values back down.
+    auto& cma = DepthStencilDescs[StencilMode_Available_ClearMasksAbove];
+    cma.stencilTestEnable = VK_TRUE;
+    cma.front.failOp      = VK_STENCIL_OP_KEEP;
+    cma.front.depthFailOp = VK_STENCIL_OP_KEEP;
+    cma.front.passOp      = VK_STENCIL_OP_REPLACE;
+    cma.front.compareOp   = VK_COMPARE_OP_LESS_OR_EQUAL;
+    cma.front.compareMask = 0xFF;
+    cma.front.writeMask   = 0xFF;
+    cma.back = cma.front;
+
+    // StencilMode_DepthOnly_WriteMask
+    auto& dw = DepthStencilDescs[StencilMode_DepthOnly_WriteMask];
+    dw = wm;
+    dw.depthTestEnable  = VK_TRUE;
+    dw.depthWriteEnable = VK_TRUE;
+    dw.depthCompareOp   = VK_COMPARE_OP_ALWAYS;
+
+    // StencilMode_DepthOnly_TestMask
+    auto& dt = DepthStencilDescs[StencilMode_DepthOnly_TestMask];
+    dt = tm;
+    dt.depthTestEnable  = VK_TRUE;
+    dt.depthCompareOp   = VK_COMPARE_OP_ALWAYS;
 }
 
 }}} // Scaleform::Render::Vulkan

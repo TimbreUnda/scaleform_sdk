@@ -168,6 +168,7 @@
     <ClCompile Include="..\..\..\..\..\Src\Render\Vulkan\Vulkan_ShaderDescs.cpp" />
     <ClCompile Include="..\..\..\..\..\Src\Render\Vulkan\Vulkan_ShaderBinary.cpp" />
     <ClCompile Include="..\..\..\..\..\Src\Render\Vulkan\Vulkan_Texture.cpp" />
+    <ClCompile Include="..\..\..\..\..\Src\Render\Vulkan\Vulkan_Events.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

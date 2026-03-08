@@ -32,6 +32,11 @@ Based on GFxPlayerTinyVulkan.cpp with:
 #include "GFx/GFx_ImageCreator.h"
 #include "GFx_Renderer_Vulkan.h"
 #include "Render/Renderer2D.h"
+#include "Render/ImageFiles/JPEG_ImageFile.h"
+#include "Render/ImageFiles/PNG_ImageFile.h"
+#include "Render/ImageFiles/TGA_ImageFile.h"
+#include "Render/ImageFiles/DDS_ImageFile.h"
+#include "GFx_FontProvider_Win32.h"
 
 using namespace Scaleform;
 using namespace Scaleform::Render;
@@ -88,7 +93,34 @@ static Ptr<Renderer2D>   pRenderer;
 class CaptureLog : public Scaleform::Log
 {
 public:
-    virtual void LogMessageVarg(Scaleform::LogMessageId, const char*, va_list) {}
+    virtual void LogMessageVarg(Scaleform::LogMessageId id, const char* fmt, va_list args)
+    {
+        vfprintf(stderr, fmt, args);
+        fprintf(stderr, "\n");
+    }
+};
+
+// ---------------------------------------------------------------------------
+// Thread command queue (single-threaded: execute immediately)
+// ---------------------------------------------------------------------------
+
+class CaptureThreadCommandQueue : public Render::ThreadCommandQueue
+{
+public:
+    Vulkan::HAL* pHAL;
+    Renderer2D*  pR2D;
+
+    virtual void GetRenderInterfaces(Render::Interfaces* p)
+    {
+        p->pHAL            = pHAL;
+        p->pRenderer2D     = pR2D;
+        p->pTextureManager = pHAL->GetTextureManager();
+        p->RenderThreadID  = 0;
+    }
+    virtual void PushThreadCommand(Render::ThreadCommand* command)
+    {
+        if (command) command->Execute();
+    }
 };
 
 // ---------------------------------------------------------------------------
@@ -620,9 +652,19 @@ int main(int argc, char* argv[])
 
     pRenderer = *SF_NEW Renderer2D(pHAL.GetPtr());
 
+    CaptureThreadCommandQueue* queue = new CaptureThreadCommandQueue();
+    queue->pHAL = pHAL.GetPtr();
+    queue->pR2D = pRenderer.GetPtr();
+
     // Load SWF
     Loader* pLoader = new Loader();
     pLoader->SetLog(Ptr<Scaleform::Log>(*SF_NEW CaptureLog()));
+
+    Ptr<FileOpener> pFileOpener = *new FileOpener;
+    pLoader->SetFileOpener(pFileOpener);
+
+    Ptr<FontProviderWin32> fontProvider = *new FontProviderWin32(::GetDC(0));
+    pLoader->SetFontProvider(fontProvider);
 
     Ptr<ASSupport> pAS2Support = *new GFx::AS2Support();
     pLoader->SetAS2Support(pAS2Support);
@@ -631,6 +673,18 @@ int main(int argc, char* argv[])
 
     Ptr<GFx::ImageCreator> pImageCreator = *SF_NEW GFx::ImageCreator(pHAL->GetTextureManager());
     pLoader->SetImageCreator(pImageCreator);
+
+    // Register image file handlers (JPEG, PNG, etc.) for SWF-embedded bitmaps
+    Ptr<GFx::ImageFileHandlerRegistry> pImgReg = *new GFx::ImageFileHandlerRegistry();
+#ifdef SF_ENABLE_LIBJPEG
+    pImgReg->AddHandler(&SF::Render::JPEG::FileReader::Instance);
+#endif
+#ifdef SF_ENABLE_LIBPNG
+    pImgReg->AddHandler(&SF::Render::PNG::FileReader::Instance);
+#endif
+    pImgReg->AddHandler(&SF::Render::TGA::FileReader::Instance);
+    pImgReg->AddHandler(&SF::Render::DDS::FileReader::Instance);
+    pLoader->SetImageFileHandlerRegistry(pImgReg);
 
     Ptr<GFx::ActionControl> pActCtrl = *SF_NEW GFx::ActionControl(GFx::ActionControl::Action_ErrorSuppress);
     pLoader->SetActionControl(pActCtrl);
@@ -642,7 +696,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    Ptr<Movie> pMovie = *pMovieDef->CreateInstance();
+    Ptr<Movie> pMovie = *pMovieDef->CreateInstance(false, 0, 0, queue);
     if (!pMovie)
     {
         fprintf(stderr, "CaptureVulkan: Failed to create movie instance\n");
@@ -776,6 +830,7 @@ int main(int argc, char* argv[])
     pMovieDef.Clear();
     delete pLoader;
     pLoader = nullptr;
+    delete queue;
     pRenderer.Clear();
     if (pHAL) { pHAL->ShutdownHAL(); pHAL.Clear(); }
     CleanupVulkan();

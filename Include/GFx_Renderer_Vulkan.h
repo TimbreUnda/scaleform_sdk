@@ -1,18 +1,22 @@
 /**************************************************************************
 
 Filename    :   GFx_Renderer_Vulkan.h
-Content     :   Convenience header for Vulkan renderer.
-Created     :   2025
-Authors     :   Vulkan backend
+Content     :   Convenience header for Vulkan rendering support.
+Created     :   2026
 
-Copyright   :   Copyright 2011 Autodesk, Inc. All Rights reserved.
+Copyright   :   Copyright 2026 Autodesk, Inc. All Rights reserved.
+
+Use of this software is subject to the terms of the Autodesk license
+agreement provided at the time of installation or download, or which
+otherwise accompanies this software in either electronic or hard copy form.
 
 **************************************************************************/
 
-#ifndef INC_GFx_Renderer_Vulkan_H
-#define INC_GFx_Renderer_Vulkan_H
+#ifndef INC_GFX_RENDERER_VULKAN_H
+#define INC_GFX_RENDERER_VULKAN_H
 
-#include "../Src/Render/Vulkan/Vulkan_HAL.h"
-#include "../Src/Render/Vulkan/Vulkan_Texture.h"
+#include "Render/Vulkan/Vulkan_HAL.h"
+#include "Render/Vulkan/Vulkan_Texture.h"
+#include "Render/Vulkan/Vulkan_Events.h"
 
-#endif // INC_GFx_Renderer_Vulkan_H
+#endif // INC_GFX_RENDERER_VULKAN_H

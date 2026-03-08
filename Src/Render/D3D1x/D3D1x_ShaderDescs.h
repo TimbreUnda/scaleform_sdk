@@ -3,10 +3,10 @@
     PublicHeader:   Render
     Filename    :   D3D1x_ShaderDescs.h
     Content     :   D3D1x Shader descriptors
-    Created     :   12/11/2012
+    Created     :   06.03.2026
     Authors     :   Automatically generated.
 
-    Copyright   :   Copyright 2012 Autodesk, Inc. All Rights reserved.
+    Copyright   :   Copyright 2026 Autodesk, Inc. All Rights reserved.
 
     Use of this software is subject to the terms of the Autodesk license
     agreement provided at the time of installation or download, or which
@@ -32,7 +32,7 @@
 
 namespace Scaleform { namespace Render { namespace D3D1x {
 
-const static SInt64 SF_GFXSHADERMAKER_TIMESTAMP = -8588463584028513493LL;
+const static SInt64 SF_GFXSHADERMAKER_TIMESTAMP = -8584287844720065912LL;
 struct Uniform
 {
     enum Flags

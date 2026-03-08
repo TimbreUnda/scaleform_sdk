@@ -1,159 +1,119 @@
 /**************************************************************************
 
 Filename    :   Vulkan_MeshCache.cpp
-Content     :   Vulkan mesh cache with chunk-based allocation and eviction.
-Created     :   2025
-Authors     :   Vulkan backend
-
-Copyright   :   Copyright 2011 Autodesk, Inc. All rights reserved.
+Content     :   Vulkan mesh cache implementation.
+Created     :   2026
+Authors     :   Scaleform Vulkan Backend
 
 **************************************************************************/
 
 #include "Render/Vulkan/Vulkan_MeshCache.h"
-#include "Render/Vulkan/Vulkan_ShaderDescs.h"
-#include "Render/Render_Vertex.h"
+#include "Render/Vulkan/Vulkan_HAL.h"
 #include "Kernel/SF_Debug.h"
 #include "Kernel/SF_HeapNew.h"
+#include "Render/Render_Primitive.h"
 
 namespace Scaleform { namespace Render { namespace Vulkan {
 
-// ***** VulkanMeshBuffer
+// *** MeshBuffer
 
-VulkanMeshBuffer::VulkanMeshBuffer(UPInt size, AllocType type, unsigned arena)
-    : Render::MeshBuffer(size, type, arena)
-    , Buffer(VK_NULL_HANDLE)
-    , Memory(VK_NULL_HANDLE)
-    , Device(VK_NULL_HANDLE)
+MeshBuffer::~MeshBuffer()
 {
+    SF_ASSERT(Buffer == VK_NULL_HANDLE && "MeshBuffer destroyed without calling Destroy()");
 }
 
-VulkanMeshBuffer::~VulkanMeshBuffer()
+bool MeshBuffer::Create(VkDevice device, VkPhysicalDevice physDevice)
 {
-    Destroy();
-}
+    VkBufferCreateInfo bufCI = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    bufCI.size  = Size;
+    bufCI.usage = Usage;
+    bufCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-bool VulkanMeshBuffer::Create(VkDevice device, VkPhysicalDevice physicalDevice)
-{
-    if (Buffer != VK_NULL_HANDLE)
-        return true;
+    SF_VK_CHECK_RETURN(vkCreateBuffer(device, &bufCI, nullptr, &Buffer), false);
 
-    Device = device;
+    VkMemoryRequirements memReqs;
+    vkGetBufferMemoryRequirements(device, Buffer, &memReqs);
 
-    VkBufferCreateInfo bufInfo = {};
-    bufInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufInfo.size = Size;
-    bufInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-    bufInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VkMemoryAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+    allocInfo.allocationSize = memReqs.size;
+    allocInfo.memoryTypeIndex = FindMemoryType(physDevice, memReqs.memoryTypeBits,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-    if (vkCreateBuffer(device, &bufInfo, 0, &Buffer) != VK_SUCCESS)
+    if (allocInfo.memoryTypeIndex == UINT32_MAX)
         return false;
 
-    VkMemoryRequirements memReq;
-    vkGetBufferMemoryRequirements(device, Buffer, &memReq);
+    SF_VK_CHECK_RETURN(vkAllocateMemory(device, &allocInfo, nullptr, &Memory), false);
+    SF_VK_CHECK_RETURN(vkBindBufferMemory(device, Buffer, Memory, 0), false);
 
-    VkPhysicalDeviceMemoryProperties memProps;
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProps);
-    uint32_t memTypeIndex = (uint32_t)-1;
-    for (uint32_t i = 0; i < memProps.memoryTypeCount; i++)
-    {
-        if ((memReq.memoryTypeBits & (1u << i)) &&
-            (memProps.memoryTypes[i].propertyFlags & (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) ==
-                (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
-        {
-            memTypeIndex = i;
-            break;
-        }
-    }
-    if (memTypeIndex == (uint32_t)-1)
-    {
-        vkDestroyBuffer(device, Buffer, 0);
-        Buffer = VK_NULL_HANDLE;
-        return false;
-    }
-
-    VkMemoryAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memReq.size;
-    allocInfo.memoryTypeIndex = memTypeIndex;
-
-    if (vkAllocateMemory(device, &allocInfo, 0, &Memory) != VK_SUCCESS)
-    {
-        vkDestroyBuffer(device, Buffer, 0);
-        Buffer = VK_NULL_HANDLE;
-        return false;
-    }
-
-    vkBindBufferMemory(device, Buffer, Memory, 0);
-
-    if (vkMapMemory(device, Memory, 0, Size, 0, &pData) != VK_SUCCESS)
-    {
-        vkFreeMemory(device, Memory, 0);
-        vkDestroyBuffer(device, Buffer, 0);
-        Buffer = VK_NULL_HANDLE;
-        Memory = VK_NULL_HANDLE;
-        return false;
-    }
+    void* mapped = nullptr;
+    SF_VK_CHECK_RETURN(vkMapMemory(device, Memory, 0, Size, 0, &mapped), false);
+    pData = (UByte*)mapped;
 
     return true;
 }
 
-void VulkanMeshBuffer::Destroy()
+void MeshBuffer::Destroy(VkDevice device)
 {
-    if (Device == VK_NULL_HANDLE)
-        return;
-    if (pData)
+    if (pData && Memory != VK_NULL_HANDLE)
     {
-        vkUnmapMemory(Device, Memory);
-        pData = 0;
-    }
-    if (Memory != VK_NULL_HANDLE)
-    {
-        vkFreeMemory(Device, Memory, 0);
-        Memory = VK_NULL_HANDLE;
+        vkUnmapMemory(device, Memory);
+        pData = nullptr;
     }
     if (Buffer != VK_NULL_HANDLE)
     {
-        vkDestroyBuffer(Device, Buffer, 0);
+        vkDestroyBuffer(device, Buffer, nullptr);
         Buffer = VK_NULL_HANDLE;
     }
-    Device = VK_NULL_HANDLE;
-}
-
-// ***** MeshCacheItem
-
-MeshCacheItem* MeshCacheItem::Create(MeshType type, MeshCacheListSet* pcacheList, MeshBaseContent& mc,
-                                     VkBuffer pvb, VkBuffer pib,
-                                     UPInt vertexOffset, UPInt vertexAllocSize, unsigned vertexCount,
-                                     UPInt indexOffset, UPInt indexAllocSize, unsigned indexCount,
-                                     UPInt allocAddress, UPInt allocSize)
-{
-    MeshCacheItem* p = (MeshCacheItem*)Render::MeshCacheItem::Create(type, pcacheList, sizeof(MeshCacheItem), mc,
-                                                                      vertexAllocSize + indexAllocSize, vertexCount, indexCount);
-    if (p)
+    if (Memory != VK_NULL_HANDLE)
     {
-        p->pVertexBuffer = pvb;
-        p->pIndexBuffer  = pib;
-        p->VBAllocOffset = vertexOffset;
-        p->VBAllocSize   = vertexAllocSize;
-        p->IBAllocOffset = indexOffset;
-        p->IBAllocSize   = indexAllocSize;
-        p->AllocAddress  = allocAddress;
-        p->AllocSize     = allocSize;
+        vkFreeMemory(device, Memory, nullptr);
+        Memory = VK_NULL_HANDLE;
     }
-    return p;
 }
 
-// ***** MeshCache
+
+// *** MeshBufferSet
+
+MeshBuffer* MeshBufferSet::CreateBuffer(VkDevice device, VkPhysicalDevice physDevice,
+                                        UPInt size, MeshBuffer::AllocType type)
+{
+    MeshBuffer* pbuf;
+    if (Usage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)
+        pbuf = SF_HEAP_AUTO_NEW(this) VertexBuffer(size, type, Arena);
+    else
+        pbuf = SF_HEAP_AUTO_NEW(this) IndexBuffer(size, type, Arena);
+
+    if (!pbuf->Create(device, physDevice))
+    {
+        delete pbuf;
+        return nullptr;
+    }
+    Buffers.PushBack(pbuf);
+    return pbuf;
+}
+
+void MeshBufferSet::DestroyAll()
+{
+    for (unsigned i = 0; i < Buffers.GetSize(); i++)
+        delete Buffers[i];
+    Buffers.Clear();
+}
+
+
+// *** MeshCache
 
 MeshCache::MeshCache(MemoryHeap* pheap, const MeshCacheParams& params)
-    : Render::MeshCache(pheap, params)
-    , pDevice(VK_NULL_HANDLE)
-    , pPhysicalDevice(VK_NULL_HANDLE)
-    , CacheList(this)
-    , Allocator(pHeap)
-    , TotalSize(0)
-    , pMaskEraseBatchVertexBuffer(VK_NULL_HANDLE)
-    , MaskEraseBatchVertexMemory(VK_NULL_HANDLE)
+: Render::MeshCache(pheap, params),
+  CacheList(this),
+  VertexBuffers(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 0, 0),
+  IndexBuffers(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0, 0),
+  Mapped(false),
+  pCurrentVB(nullptr), CurrentVBFreeOffset(0),
+  pCurrentIB(nullptr), CurrentIBFreeOffset(0),
+  pDevice(VK_NULL_HANDLE), pPhysicalDevice(VK_NULL_HANDLE),
+  DestroyFrameCount(0),
+  MaskEraseBatchVertexBuffer(VK_NULL_HANDLE),
+  MaskEraseBatchVertexMemory(VK_NULL_HANDLE)
 {
 }
 
@@ -162,23 +122,18 @@ MeshCache::~MeshCache()
     Reset();
 }
 
-bool MeshCache::Initialize(VkDevice device, VkPhysicalDevice physicalDevice)
+bool MeshCache::Initialize(VkDevice device, VkPhysicalDevice physDevice, RenderSync* psync)
 {
     pDevice = device;
-    pPhysicalDevice = physicalDevice;
+    pPhysicalDevice = physDevice;
+    pRQCaches = 0;
 
     if (!StagingBuffer.Initialize(pHeap, Params.StagingBufferSize))
         return false;
+    if (!RSync.SetDevice(device, VK_NULL_HANDLE))
+        return false;
 
-    // Create initial reserve buffer if configured
-    if (Params.MemReserve > 0)
-    {
-        UPInt reserveSize = Alg::Align(Params.MemReserve, (UPInt)BufferAlignment);
-        if (!allocMeshBuffer(reserveSize, MeshBuffer::AT_Reserve))
-            return false;
-    }
-
-    if (!createMaskEraseBatchVertexBuffer(physicalDevice))
+    if (!createMaskEraseBatchVertexBuffer())
         return false;
 
     return true;
@@ -186,306 +141,270 @@ bool MeshCache::Initialize(VkDevice device, VkPhysicalDevice physicalDevice)
 
 void MeshCache::Reset()
 {
-    ClearCache();
-    while (!Buffers.IsEmpty())
-    {
-        VulkanMeshBuffer* pb = (VulkanMeshBuffer*)Buffers.GetFirst();
-        pb->RemoveNode();
-        releaseMeshBuffer(pb);
-    }
-    TotalSize = 0;
+    pCurrentVB = nullptr;
+    CurrentVBFreeOffset = 0;
+    pCurrentIB = nullptr;
+    CurrentIBFreeOffset = 0;
 
-    if (pDevice != VK_NULL_HANDLE)
-    {
-        if (pMaskEraseBatchVertexBuffer != VK_NULL_HANDLE)
-        {
-            vkDestroyBuffer(pDevice, pMaskEraseBatchVertexBuffer, 0);
-            pMaskEraseBatchVertexBuffer = VK_NULL_HANDLE;
-        }
-        if (MaskEraseBatchVertexMemory != VK_NULL_HANDLE)
-        {
-            vkFreeMemory(pDevice, MaskEraseBatchVertexMemory, 0);
-            MaskEraseBatchVertexMemory = VK_NULL_HANDLE;
-        }
-    }
+    destroyMaskEraseBatchVertexBuffer();
+    destroyAllPendingBuffers();
 
-    pDevice = VK_NULL_HANDLE;
-    pPhysicalDevice = VK_NULL_HANDLE;
-    StagingBuffer.Reset();
+    for (unsigned i = 0; i < VertexBuffers.Buffers.GetSize(); i++)
+        VertexBuffers.Buffers[i]->Destroy(pDevice);
+    VertexBuffers.DestroyAll();
+
+    for (unsigned i = 0; i < IndexBuffers.Buffers.GetSize(); i++)
+        IndexBuffers.Buffers[i]->Destroy(pDevice);
+    IndexBuffers.DestroyAll();
 }
 
-VulkanMeshBuffer* MeshCache::allocMeshBuffer(UPInt size, MeshBuffer::AllocType atype, unsigned arena)
+bool MeshCache::SetParams(const MeshCacheParams& argParams)
 {
-    VulkanMeshBuffer* pb = SF_NEW(pHeap) VulkanMeshBuffer(size, atype, arena);
-    if (!pb || !pb->Create(pDevice, pPhysicalDevice))
-    {
-        if (pb)
-            delete pb;
-        return 0;
-    }
-
-    Allocator.AddSegment((UPInt)pb->pData, pb->GetSize());
-    TotalSize += pb->GetSize();
-    Buffers.PushBack(pb);
-
-    return pb;
-}
-
-void MeshCache::releaseMeshBuffer(VulkanMeshBuffer* pbuffer)
-{
-    if (!pbuffer)
-        return;
-    Allocator.RemoveSegment((UPInt)pbuffer->pData, pbuffer->GetSize());
-    TotalSize -= pbuffer->GetSize();
-    pbuffer->RemoveNode();
-    pbuffer->Destroy();
-    delete pbuffer;
-}
-
-VulkanMeshBuffer* MeshCache::findBuffer(UPInt address)
-{
-    VulkanMeshBuffer* pb = (VulkanMeshBuffer*)Buffers.GetFirst();
-    while (!Buffers.IsNull(pb))
-    {
-        UPInt base = (UPInt)pb->pData;
-        if (address >= base && address < base + pb->GetSize())
-            return pb;
-        pb = (VulkanMeshBuffer*)pb->pNext;
-    }
-    return 0;
-}
-
-bool MeshCache::allocBuffer(UPInt* pallocAddress, UPInt size, bool waitForCache)
-{
-    *pallocAddress = Allocator.Alloc(size);
-    if (*pallocAddress != ~UPInt(0))
-        return true;
-
-    MeshCacheItem* pitems;
-
-    // #1. Reclaim memory from destroyed-but-not-freed items
-    if (CacheList.EvictPendingFree(Allocator))
-        goto alloc_size_available;
-
-    // #2. Evict LRU items, optionally with limit to allow growth
-    if ((TotalSize + MinGranularity) <= Params.MemLimit)
-    {
-        if (CacheList.EvictLRUTillLimit(MCL_LRUTail, Allocator, size, Params.LRUTailSize))
-            goto alloc_size_available;
-
-        if (size <= Alg::PMin(Params.MemLimit - TotalSize, (UPInt)Params.MemGranularity))
-        {
-            if (allocMeshBuffer(Alg::PMin(Params.MemLimit - TotalSize, (UPInt)Params.MemGranularity), MeshBuffer::AT_Chunk, 0))
-                goto alloc_size_available;
-        }
-    }
-
-    if (CacheList.EvictLRU(MCL_LRUTail, Allocator, size))
-        goto alloc_size_available;
-
-    // #3. Evict from previous frame
-    MeshCacheListSet::ListSlot& prevFrameList = CacheList.GetSlot(MCL_PrevFrame);
-    pitems = (MeshCacheItem*)prevFrameList.GetFirst();
-    while (!prevFrameList.IsNull(pitems))
-    {
-        if (Evict(pitems, &Allocator) >= size)
-            goto alloc_size_available;
-        pitems = (MeshCacheItem*)prevFrameList.GetFirst();
-    }
-
-    // #4. Evict from current frame (Vulkan uses QM_ExtendLocks, no fences - always evict)
-    MeshCacheListSet::ListSlot& thisFrameList = CacheList.GetSlot(MCL_ThisFrame);
-    pitems = (MeshCacheItem*)thisFrameList.GetFirst();
-    while (!thisFrameList.IsNull(pitems))
-    {
-        if (Evict(pitems, &Allocator) >= size)
-            goto alloc_size_available;
-        pitems = (MeshCacheItem*)thisFrameList.GetFirst();
-    }
-
-    (void)waitForCache;
-    return false;
-
-alloc_size_available:
-    *pallocAddress = Allocator.Alloc(size);
-    SF_ASSERT(*pallocAddress != ~UPInt(0));
+    Params = argParams;
+    if (StagingBuffer.GetBuffer())
+        StagingBuffer.Initialize(pHeap, Params.StagingBufferSize);
     return true;
 }
 
-bool MeshCache::createMaskEraseBatchVertexBuffer(VkPhysicalDevice physicalDevice)
+UPInt MeshCache::Evict(Render::MeshCacheItem* p, AllocAddr* pallocator, MeshBase* pskipMesh)
 {
-    struct VertexXY32fAlpha { float x, y; UByte Alpha[4]; };
-    const unsigned bufferSize = sizeof(VertexXY32fAlpha) * 6 * SF_RENDER_MAX_BATCHES;
-    VkBufferCreateInfo bufInfo = {};
-    bufInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufInfo.size = bufferSize;
-    bufInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    bufInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    if (vkCreateBuffer(pDevice, &bufInfo, 0, &pMaskEraseBatchVertexBuffer) != VK_SUCCESS)
-        return false;
-    VkMemoryRequirements memReq;
-    vkGetBufferMemoryRequirements(pDevice, pMaskEraseBatchVertexBuffer, &memReq);
-    VkPhysicalDeviceMemoryProperties memProps;
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProps);
-    uint32_t memTypeIndex = (uint32_t)-1;
-    for (uint32_t i = 0; i < memProps.memoryTypeCount; i++)
-    {
-        if ((memReq.memoryTypeBits & (1u << i)) &&
-            (memProps.memoryTypes[i].propertyFlags & (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) ==
-                (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
-        {
-            memTypeIndex = i;
-            break;
-        }
-    }
-    if (memTypeIndex == (uint32_t)-1)
-    {
-        vkDestroyBuffer(pDevice, pMaskEraseBatchVertexBuffer, 0);
-        pMaskEraseBatchVertexBuffer = VK_NULL_HANDLE;
-        return false;
-    }
-    VkMemoryAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memReq.size;
-    allocInfo.memoryTypeIndex = memTypeIndex;
-    if (vkAllocateMemory(pDevice, &allocInfo, 0, &MaskEraseBatchVertexMemory) != VK_SUCCESS)
-    {
-        vkDestroyBuffer(pDevice, pMaskEraseBatchVertexBuffer, 0);
-        pMaskEraseBatchVertexBuffer = VK_NULL_HANDLE;
-        return false;
-    }
-    vkBindBufferMemory(pDevice, pMaskEraseBatchVertexBuffer, MaskEraseBatchVertexMemory, 0);
-    void* pMapped = 0;
-    if (vkMapMemory(pDevice, MaskEraseBatchVertexMemory, 0, bufferSize, 0, &pMapped) != VK_SUCCESS)
-    {
-        vkFreeMemory(pDevice, MaskEraseBatchVertexMemory, 0);
-        vkDestroyBuffer(pDevice, pMaskEraseBatchVertexBuffer, 0);
-        pMaskEraseBatchVertexBuffer = VK_NULL_HANDLE;
-        MaskEraseBatchVertexMemory = VK_NULL_HANDLE;
-        return false;
-    }
-    fillMaskEraseVertexBuffer<VertexXY32fAlpha>((VertexXY32fAlpha*)pMapped, SF_RENDER_MAX_BATCHES);
-    vkUnmapMemory(pDevice, MaskEraseBatchVertexMemory);
-    return true;
+    SF_UNUSED(pallocator);
+    MeshCacheItem* pitem = (MeshCacheItem*)p;
+    UPInt freedSize = pitem->VBAllocSize + pitem->IBAllocSize;
+
+    // With suballocation, multiple items share the same buffer.
+    // We cannot destroy the buffer until all items in it are gone.
+    // Buffers are cleaned up in Reset() / ClearCache() instead.
+    pitem->pVertexBuffer = 0;
+    pitem->pIndexBuffer = 0;
+
+    pitem->Destroy(pskipMesh, true);
+    return freedSize;
 }
 
 void MeshCache::ClearCache()
 {
     CacheList.EvictAll();
-    // Release dynamically allocated chunks; keep reserve
-    VulkanMeshBuffer* pbuffer = (VulkanMeshBuffer*)Buffers.GetFirst();
-    while (!Buffers.IsNull(pbuffer))
-    {
-        VulkanMeshBuffer* p = pbuffer;
-        pbuffer = (VulkanMeshBuffer*)pbuffer->pNext;
-        if (p->GetType() == MeshBuffer::AT_Chunk)
-            releaseMeshBuffer(p);
-    }
-    SF_ASSERT(BatchCacheItemHash.GetSize() == 0);
+
+    pCurrentVB = nullptr;
+    CurrentVBFreeOffset = 0;
+    pCurrentIB = nullptr;
+    CurrentIBFreeOffset = 0;
+
+    if (pDevice != VK_NULL_HANDLE)
+        vkDeviceWaitIdle(pDevice);
+    destroyAllPendingBuffers();
+
+    for (unsigned i = 0; i < VertexBuffers.Buffers.GetSize(); i++)
+        VertexBuffers.Buffers[i]->Destroy(pDevice);
+    VertexBuffers.DestroyAll();
+
+    for (unsigned i = 0; i < IndexBuffers.Buffers.GetSize(); i++)
+        IndexBuffers.Buffers[i]->Destroy(pDevice);
+    IndexBuffers.DestroyAll();
 }
 
-bool MeshCache::SetParams(const MeshCacheParams& params)
+void MeshCache::destroyReadyPendingBuffers()
 {
-    Params = params;
+    // Walk backwards so RemoveAt doesn't skip entries.
+    for (int i = (int)PendingDestroyBuffers.GetSize() - 1; i >= 0; i--)
+    {
+        if (PendingDestroyBuffers[i].SafeAfterFrame <= DestroyFrameCount)
+        {
+            PendingDestroyBuffers[i].pBuffer->Destroy(pDevice);
+            delete PendingDestroyBuffers[i].pBuffer;
+            PendingDestroyBuffers.RemoveAt(i);
+        }
+    }
+}
+
+void MeshCache::destroyAllPendingBuffers()
+{
+    // Caller must ensure the GPU is idle (e.g. vkDeviceWaitIdle was called).
+    for (UPInt i = 0; i < PendingDestroyBuffers.GetSize(); i++)
+    {
+        PendingDestroyBuffers[i].pBuffer->Destroy(pDevice);
+        delete PendingDestroyBuffers[i].pBuffer;
+    }
+    PendingDestroyBuffers.Clear();
+}
+
+bool MeshCache::createMaskEraseBatchVertexBuffer()
+{
+    unsigned vertexCount = 6 * MaxEraseBatchCount;
+    UPInt bufSize = vertexCount * sizeof(VertexXY16iAlpha);
+
+    VkBufferCreateInfo bufCI = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    bufCI.size  = bufSize;
+    bufCI.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    bufCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    SF_VK_CHECK_RETURN(vkCreateBuffer(pDevice, &bufCI, nullptr, &MaskEraseBatchVertexBuffer), false);
+
+    VkMemoryRequirements memReqs;
+    vkGetBufferMemoryRequirements(pDevice, MaskEraseBatchVertexBuffer, &memReqs);
+
+    VkMemoryAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+    allocInfo.allocationSize = memReqs.size;
+    allocInfo.memoryTypeIndex = FindMemoryType(pPhysicalDevice, memReqs.memoryTypeBits,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    if (allocInfo.memoryTypeIndex == UINT32_MAX)
+    {
+        SF_DEBUG_WARNING(1, "Vulkan: No suitable memory type for mask erase batch VB");
+        return false;
+    }
+    SF_VK_CHECK_RETURN(vkAllocateMemory(pDevice, &allocInfo, nullptr, &MaskEraseBatchVertexMemory), false);
+    SF_VK_CHECK_RETURN(vkBindBufferMemory(pDevice, MaskEraseBatchVertexBuffer, MaskEraseBatchVertexMemory, 0), false);
+
+    void* pdata = nullptr;
+    SF_VK_CHECK_RETURN(vkMapMemory(pDevice, MaskEraseBatchVertexMemory, 0, bufSize, 0, &pdata), false);
+
+    VertexXY16iAlpha* pv = (VertexXY16iAlpha*)pdata;
+    for (unsigned i = 0; i < MaxEraseBatchCount; i++)
+    {
+        pv[i*6+0].x = 0;  pv[i*6+0].y = 0;  memset(pv[i*6+0].Alpha, 255, sizeof(pv[i*6+0].Alpha));
+        pv[i*6+1].x = 1;  pv[i*6+1].y = 0;  memset(pv[i*6+1].Alpha, 255, sizeof(pv[i*6+1].Alpha));
+        pv[i*6+2].x = 0;  pv[i*6+2].y = 1;  memset(pv[i*6+2].Alpha, 255, sizeof(pv[i*6+2].Alpha));
+        pv[i*6+3].x = 0;  pv[i*6+3].y = 1;  memset(pv[i*6+3].Alpha, 255, sizeof(pv[i*6+3].Alpha));
+        pv[i*6+4].x = 1;  pv[i*6+4].y = 0;  memset(pv[i*6+4].Alpha, 255, sizeof(pv[i*6+4].Alpha));
+        pv[i*6+5].x = 1;  pv[i*6+5].y = 1;  memset(pv[i*6+5].Alpha, 255, sizeof(pv[i*6+5].Alpha));
+    }
+    vkUnmapMemory(pDevice, MaskEraseBatchVertexMemory);
+
     return true;
+}
+
+void MeshCache::destroyMaskEraseBatchVertexBuffer()
+{
+    if (MaskEraseBatchVertexBuffer != VK_NULL_HANDLE)
+    {
+        vkDestroyBuffer(pDevice, MaskEraseBatchVertexBuffer, nullptr);
+        MaskEraseBatchVertexBuffer = VK_NULL_HANDLE;
+    }
+    if (MaskEraseBatchVertexMemory != VK_NULL_HANDLE)
+    {
+        vkFreeMemory(pDevice, MaskEraseBatchVertexMemory, nullptr);
+        MaskEraseBatchVertexMemory = VK_NULL_HANDLE;
+    }
+}
+
+MeshCache::AllocResult MeshCache::AllocCacheItem(
+    Render::MeshCacheItem** pdata,
+    UByte** pvertexDataStart, IndexType** pindexDataStart,
+    MeshCacheItem::MeshType meshType,
+    MeshCacheItem::MeshBaseContent& mc,
+    UPInt vertexBufferSize,
+    unsigned vertexCount, unsigned indexCount,
+    bool waitForCache, const VertexFormat* pDestFormat)
+{
+    SF_UNUSED(waitForCache);
+
+    if (!pDevice)
+        return Alloc_StateError;
+
+    UPInt vbSize = vertexBufferSize;
+    UPInt ibSize = indexCount * sizeof(IndexType);
+
+    // Align VB to 16 bytes, IB to sizeof(IndexType)
+    UPInt vbAligned = (vbSize + 15) & ~(UPInt)15;
+    UPInt ibAligned = (ibSize + (sizeof(IndexType) - 1)) & ~(UPInt)(sizeof(IndexType) - 1);
+
+    // Suballocate from current buffers; create a new one only when full.
+    VertexBuffer* pvb = nullptr;
+    IndexBuffer* pib = nullptr;
+    UPInt vbOffset = 0, ibOffset = 0;
+
+    if (!pCurrentVB || CurrentVBFreeOffset + vbAligned > pCurrentVB->GetSize())
+    {
+        UPInt newBufSize = Alg::Max<UPInt>(Params.MemGranularity, vbAligned);
+        MeshBuffer* nb = VertexBuffers.CreateBuffer(pDevice, pPhysicalDevice, newBufSize, MeshBuffer::AT_Chunk);
+        if (!nb) return Alloc_Fail;
+        pCurrentVB = (VertexBuffer*)nb;
+        CurrentVBFreeOffset = 0;
+    }
+
+    if (!pCurrentIB || CurrentIBFreeOffset + ibAligned > pCurrentIB->GetSize())
+    {
+        UPInt newBufSize = Alg::Max<UPInt>(Params.MemGranularity, ibAligned);
+        MeshBuffer* nb = IndexBuffers.CreateBuffer(pDevice, pPhysicalDevice, newBufSize, MeshBuffer::AT_Chunk);
+        if (!nb) return Alloc_Fail;
+        pCurrentIB = (IndexBuffer*)nb;
+        CurrentIBFreeOffset = 0;
+    }
+
+    pvb = pCurrentVB;
+    vbOffset = CurrentVBFreeOffset;
+    CurrentVBFreeOffset += vbAligned;
+
+    pib = pCurrentIB;
+    ibOffset = CurrentIBFreeOffset;
+    CurrentIBFreeOffset += ibAligned;
+
+    MeshCacheItem* pitem = (MeshCacheItem*)
+        MeshCacheItem::Create(meshType, &CacheList, sizeof(MeshCacheItem), mc, vertexBufferSize + ibSize, vertexCount, indexCount);
+    if (!pitem)
+        return Alloc_Fail;
+
+    pitem->pVertexBuffer = pvb;
+    pitem->pIndexBuffer  = pib;
+    pitem->VBAllocOffset = vbOffset;
+    pitem->VBAllocSize   = vbSize;
+    pitem->IBAllocOffset = ibOffset;
+    pitem->IBAllocSize   = ibSize;
+
+    *pvertexDataStart = pvb->pData + vbOffset;
+    *pindexDataStart  = (IndexType*)(pib->pData + ibOffset);
+    *pdata = pitem;
+
+    return Alloc_Success;
+}
+
+bool MeshCache::LockBuffers()
+{
+    // Buffers are persistently mapped - nothing to do
+    Mapped = true;
+    return true;
+}
+
+void MeshCache::UnlockBuffers()
+{
+    Mapped = false;
+}
+
+void MeshCache::BeginFrame()
+{
+    // Advance the frame counter first so that the threshold comparison in
+    // destroyReadyPendingBuffers() uses the updated count. By the time BeginFrame
+    // is called, the main loop has already called vkWaitForFences for the oldest
+    // in-flight frame, so buffers tagged SafeAfterFrame <= DestroyFrameCount are
+    // guaranteed to no longer be referenced by any submitted command buffer.
+    DestroyFrameCount++;
+    destroyReadyPendingBuffers();
+    RSync.BeginFrame();
 }
 
 void MeshCache::EndFrame()
 {
+    RSync.EndFrame();
     CacheList.EndFrame();
-    CacheList.EvictPendingFree(Allocator);
-    destroyPendingBuffers();
-
-    UPInt totalFrameSize = CacheList.GetSlotSize(MCL_PrevFrame);
-    UPInt lruTailSize    = CacheList.GetSlotSize(MCL_LRUTail);
-    UPInt expectedSize   = totalFrameSize + Alg::PMin(lruTailSize, Params.LRUTailSize);
-    expectedSize += expectedSize / 4;
-
-    SPInt extraSpace = (SPInt)TotalSize - (SPInt)expectedSize;
-    if (extraSpace > (SPInt)Params.MemGranularity)
-    {
-        VulkanMeshBuffer* pb = (VulkanMeshBuffer*)Buffers.GetLast();
-        while (!Buffers.IsNull(pb) && (extraSpace > (SPInt)Params.MemGranularity))
-        {
-            VulkanMeshBuffer* prev = (VulkanMeshBuffer*)pb->pPrev;
-            if (pb->GetType() == MeshBuffer::AT_Chunk)
-            {
-                extraSpace -= (SPInt)pb->GetSize();
-                bool allEvicted = evictMeshesInBuffer(CacheList.GetSlots(), MCL_ItemCount, pb);
-                if (allEvicted)
-                {
-                    pb->RemoveNode();
-                    releaseMeshBuffer(pb);
-                }
-                else
-                {
-                    pb->RemoveNode();
-                    PendingDestructionBuffers.PushBack(pb);
-                }
-            }
-            pb = prev;
-        }
-    }
+    // Buffer destruction is now deferred to BeginFrame (after GPU fence wait).
+    // Do NOT call destroyAllPendingBuffers() here.
 }
 
-void MeshCache::destroyPendingBuffers()
+void MeshCache::EvictAll()
 {
-    VulkanMeshBuffer* p = (VulkanMeshBuffer*)PendingDestructionBuffers.GetFirst();
-    while (!PendingDestructionBuffers.IsNull(p))
-    {
-        VulkanMeshBuffer* pNext = (VulkanMeshBuffer*)p->pNext;
-        MeshCacheListSet::ListSlot& pendingFreeList = CacheList.GetSlot(MCL_PendingFree);
-        MeshCacheItem* pitem = (MeshCacheItem*)pendingFreeList.GetFirst();
-        bool itemsRemaining = false;
-        while (!pendingFreeList.IsNull(pitem))
-        {
-            if (pitem->pVertexBuffer == p->Buffer || pitem->pIndexBuffer == p->Buffer)
-            {
-                itemsRemaining = true;
-                break;
-            }
-            pitem = (MeshCacheItem*)pitem->pNext;
-        }
-        if (!itemsRemaining)
-        {
-            p->RemoveNode();
-            releaseMeshBuffer(p);
-        }
-        p = pNext;
-    }
-}
-
-bool MeshCache::evictMeshesInBuffer(MeshCacheListSet::ListSlot* slots, unsigned slotCount, VulkanMeshBuffer* pbuffer)
-{
-    bool allEvicted = true;
-    for (unsigned s = 0; s < slotCount; s++)
-    {
-        MeshCacheItem* pitem = (MeshCacheItem*)slots[s].GetFirst();
-        while (!slots[s].IsNull(pitem))
-        {
-            MeshCacheItem* pnext = (MeshCacheItem*)pitem->pNext;
-            if (pitem->pVertexBuffer == pbuffer->Buffer || pitem->pIndexBuffer == pbuffer->Buffer)
-            {
-                Evict(pitem, &Allocator);
-            }
-            pitem = pnext;
-        }
-    }
-    return allEvicted;
-}
-
-UPInt MeshCache::Evict(Render::MeshCacheItem* pbatch, AllocAddr* pallocator, MeshBase* pskipMesh)
-{
-    MeshCacheItem* p = (MeshCacheItem*)pbatch;
-
-    UPInt freedSize = pallocator ? pallocator->Free(p->AllocAddress, p->AllocSize) : Allocator.Free(p->AllocAddress, p->AllocSize);
-    p->Destroy(pskipMesh, true);
-    return freedSize;
+    CacheList.EvictAll();
 }
 
 bool MeshCache::PreparePrimitive(PrimitiveBatch* pbatch,
-                                 MeshCacheItem::MeshContent& mc, bool waitForCache)
+                                  MeshCacheItem::MeshContent& mc, bool waitForCache)
 {
+    Render::MeshCacheItem* pmesh = (Render::MeshCacheItem*)pbatch->GetCacheItem();
+    if (pmesh)
+    {
+        pmesh->MoveToCacheListFront(MCL_ThisFrame);
+        return true;
+    }
+
     Primitive* prim = pbatch->GetPrimitive();
 
     if (mc.IsLargeMesh())
@@ -493,7 +412,6 @@ bool MeshCache::PreparePrimitive(PrimitiveBatch* pbatch,
         SF_ASSERT(mc.GetMeshCount() == 1);
         MeshResult mr = GenerateMesh(mc[0], prim->GetVertexFormat(),
                                      pbatch->pFormat, 0, waitForCache);
-
         if (mr.Succeded())
             pbatch->SetCacheItem(mc[0]->CacheItems[0]);
         if (mr == MeshResult::Fail_LargeMesh_NeedCache)
@@ -503,101 +421,52 @@ bool MeshCache::PreparePrimitive(PrimitiveBatch* pbatch,
 
     unsigned totalVertexCount, totalIndexCount;
     pbatch->CalcMeshSizes(&totalVertexCount, &totalIndexCount);
-    if (!pbatch->pFormat)
-        return false;
+
+    SF_ASSERT(pbatch->pFormat);
 
     Render::MeshCacheItem* batchData = 0;
-    unsigned destVertexSize = pbatch->pFormat->Size;
-    UByte* pvertexDataStart = 0;
-    IndexType* pindexDataStart = 0;
-    AllocResult allocResult = AllocCacheItem(&batchData, &pvertexDataStart, &pindexDataStart,
-        MeshCacheItem::Mesh_Regular, mc,
-        totalVertexCount * destVertexSize,
-        totalVertexCount, totalIndexCount, waitForCache, 0);
+    unsigned       destVertexSize = pbatch->pFormat->Size;
+    UByte*         pvertexDataStart;
+    IndexType*     pindexDataStart;
+    AllocResult    allocResult;
+
+    allocResult = AllocCacheItem(&batchData, &pvertexDataStart, &pindexDataStart,
+                                MeshCacheItem::Mesh_Regular, mc,
+                                totalVertexCount * destVertexSize,
+                                totalVertexCount, totalIndexCount, waitForCache, 0);
     if (allocResult != Alloc_Success)
         return (allocResult == Alloc_Fail) ? false : true;
 
     pbatch->SetCacheItem(batchData);
 
     StagingBufferPrep meshPrep(this, mc, prim->GetVertexFormat(), false);
-    UByte* pstagingBuffer = StagingBuffer.GetBuffer();
-    const VertexFormat* pvf = prim->GetVertexFormat();
-    const VertexFormat* pdvf = pbatch->pFormat;
-    unsigned indexStart = 0;
-    for (unsigned i = 0; i < mc.GetMeshCount(); i++)
+
+    UByte*      pstagingBuffer   = StagingBuffer.GetBuffer();
+    const VertexFormat* pvf      = prim->GetVertexFormat();
+    const VertexFormat* pdvf     = pbatch->pFormat;
+
+    unsigned    i;
+    unsigned    indexStart = 0;
+
+    for(i = 0; i < mc.GetMeshCount(); i++)
     {
-        Mesh* pmesh = mc[i];
-        if (pmesh->StagingBufferSize == 0)
-            continue;
-        void* convertArgArray[1] = { &i };
-        ConvertVertices_Buffered(*pvf, pstagingBuffer + pmesh->StagingBufferOffset,
-            *pdvf, pvertexDataStart, pmesh->VertexCount, &convertArgArray[0]);
+        Mesh* pmesh2 = mc[i];
+        SF_ASSERT(pmesh2->StagingBufferSize != 0);
+
+        void*   convertArgArray[1] = { &i };
+        ConvertVertices_Buffered(*pvf, pstagingBuffer + pmesh2->StagingBufferOffset,
+                                 *pdvf, pvertexDataStart,
+                                 pmesh2->VertexCount, &convertArgArray[0]);
         ConvertIndices(pindexDataStart,
-            (IndexType*)(pstagingBuffer + pmesh->StagingBufferIndexOffset),
-            pmesh->IndexCount, (IndexType)indexStart);
-        pvertexDataStart += pmesh->VertexCount * destVertexSize;
-        pindexDataStart += pmesh->IndexCount;
-        indexStart += pmesh->VertexCount;
+                       (IndexType*)(pstagingBuffer + pmesh2->StagingBufferIndexOffset),
+                       pmesh2->IndexCount, (IndexType)indexStart);
+
+        pvertexDataStart += pmesh2->VertexCount * destVertexSize;
+        pindexDataStart  += pmesh2->IndexCount;
+        indexStart       += pmesh2->VertexCount;
     }
+
     return true;
-}
-
-MeshCache::AllocResult MeshCache::AllocCacheItem(Render::MeshCacheItem** pdata,
-                                                  UByte** pvertexDataStart, IndexType** pindexDataStart,
-                                                  MeshCacheItem::MeshType meshType,
-                                                  MeshCacheItem::MeshBaseContent& mc,
-                                                  UPInt vertexBufferSize,
-                                                  unsigned vertexCount, unsigned indexCount,
-                                                  bool waitForCache,
-                                                  const VertexFormat* pDestFormat)
-{
-    (void)pDestFormat;
-
-    UPInt vertexAligned = Alg::Align(vertexBufferSize, VBAlignment);
-    UPInt indexAligned = Alg::Align((UPInt)indexCount * sizeof(IndexType), IBAlignment);
-    UPInt allocSize = Alg::Align(vertexAligned + indexAligned, BufferAlignment);
-
-    if (allocSize == 0)
-        return Alloc_Success;
-
-    UPInt allocAddress;
-    if (!allocBuffer(&allocAddress, allocSize, waitForCache))
-        return Alloc_Fail;
-
-    VulkanMeshBuffer* pbuffer = findBuffer(allocAddress);
-    if (!pbuffer)
-        return Alloc_StateError;
-
-    UPInt vbOffset = allocAddress - (UPInt)pbuffer->pData;
-    UPInt ibOffset = vbOffset + vertexAligned;
-
-    MeshCacheItem* p = MeshCacheItem::Create(meshType, &CacheList, mc,
-        pbuffer->Buffer, pbuffer->Buffer,
-        vbOffset, vertexBufferSize, vertexCount,
-        ibOffset, indexAligned, indexCount,
-        allocAddress, allocSize);
-    if (!p)
-    {
-        Allocator.Free(allocAddress, allocSize);
-        return Alloc_StateError;
-    }
-
-    *pdata = p;
-    *pvertexDataStart = (UByte*)allocAddress;
-    *pindexDataStart = (IndexType*)(allocAddress + vertexAligned);
-    return Alloc_Success;
-}
-
-void MeshCache::GetStats(Stats* stats)
-{
-    if (!stats)
-        return;
-    *stats = Stats();
-    stats->TotalSize[MeshBuffer_Common] = TotalSize;
-    UPInt usedSize = 0;
-    for (unsigned i = 0; i < MCL_ItemCount; i++)
-        usedSize += CacheList.GetSlotSize((MeshCacheListType)i);
-    stats->UsedSize[MeshBuffer_Common] = usedSize;
 }
 
 }}} // Scaleform::Render::Vulkan

@@ -1,18 +1,22 @@
 /**************************************************************************
 
 Filename    :   Vulkan_Events.h
-Content     :   Vulkan render events for profiling (optional stub).
-Created     :   2025
-Authors     :   Vulkan backend
+Content     :   Vulkan GPU debug markers via VK_EXT_debug_utils.
+Created     :   2026
+Authors     :   Scaleform Vulkan Backend
 
-Copyright   :   Copyright 2011 Autodesk, Inc. All Rights reserved.
+Copyright   :   Copyright 2026 Autodesk, Inc. All Rights reserved.
+
+Use of this software is subject to the terms of the Autodesk license
+agreement provided at the time of installation or download, or which
+otherwise accompanies this software in either electronic or hard copy form.
 
 **************************************************************************/
 
-#ifndef INC_SF_VULKAN_EVENTS_H
-#define INC_SF_VULKAN_EVENTS_H
-#pragma once
+#ifndef INC_SF_Vulkan_Events_H
+#define INC_SF_Vulkan_Events_H
 
+#include "Kernel/SF_String.h"
 #include "Render/Vulkan/Vulkan_Config.h"
 #include "Render/Render_Events.h"
 
@@ -21,11 +25,59 @@ namespace Scaleform { namespace Render { namespace Vulkan {
 class RenderEvent : public Render::RenderEvent
 {
 public:
-    static void InitializeEvents(VkDevice device) { (void)device; }
-    virtual void Begin(const char* name) { (void)name; }
-    virtual void End() {}
+    static void InitializeEvents(VkInstance instance, VkCommandBuffer cmdBuf)
+    {
+        pCmdBuf = cmdBuf;
+        pfnBegin = (PFN_vkCmdBeginDebugUtilsLabelEXT)
+            vkGetInstanceProcAddr(instance, "vkCmdBeginDebugUtilsLabelEXT");
+        pfnEnd = (PFN_vkCmdEndDebugUtilsLabelEXT)
+            vkGetInstanceProcAddr(instance, "vkCmdEndDebugUtilsLabelEXT");
+    }
+
+    static void UpdateCommandBuffer(VkCommandBuffer cmdBuf)
+    {
+        pCmdBuf = cmdBuf;
+    }
+
+    static void ShutdownEvents()
+    {
+        pfnBegin = nullptr;
+        pfnEnd   = nullptr;
+        pCmdBuf  = VK_NULL_HANDLE;
+    }
+
+    virtual void Begin(String eventName)
+    {
+#if !defined(SF_BUILD_SHIPPING)
+        if (!pfnBegin || pCmdBuf == VK_NULL_HANDLE) return;
+        VkDebugUtilsLabelEXT label = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+        label.pLabelName = eventName.ToCStr();
+        label.color[0] = 0.0f;
+        label.color[1] = 0.0f;
+        label.color[2] = 0.0f;
+        label.color[3] = 1.0f;
+        pfnBegin(pCmdBuf, &label);
+#else
+        SF_UNUSED(eventName);
+#endif
+    }
+
+    virtual void End()
+    {
+#if !defined(SF_BUILD_SHIPPING)
+        if (!pfnEnd || pCmdBuf == VK_NULL_HANDLE) return;
+        pfnEnd(pCmdBuf);
+#endif
+    }
+
+    // NOTE: static state limits the system to a single HAL instance.
+    // If multiple HAL instances are needed, these should be moved to
+    // per-instance storage or passed via the HAL.
+    static PFN_vkCmdBeginDebugUtilsLabelEXT  pfnBegin;
+    static PFN_vkCmdEndDebugUtilsLabelEXT    pfnEnd;
+    static VkCommandBuffer                    pCmdBuf;
 };
 
 }}} // Scaleform::Render::Vulkan
 
-#endif // INC_SF_VULKAN_EVENTS_H
+#endif // INC_SF_Vulkan_Events_H

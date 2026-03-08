@@ -1,11 +1,15 @@
 /**************************************************************************
 
 Filename    :   Vulkan_MeshCache.h
-Content     :   Vulkan mesh cache (scaffold).
-Created     :   2025
-Authors     :   Vulkan backend
+Content     :   Vulkan mesh cache - vertex/index buffer management.
+Created     :   2026
+Authors     :   Scaleform Vulkan Backend
 
-Copyright   :   Copyright 2011 Autodesk, Inc. All Rights reserved.
+Copyright   :   Copyright 2026 Autodesk, Inc. All Rights reserved.
+
+Use of this software is subject to the terms of the Autodesk license
+agreement provided at the time of installation or download, or which
+otherwise accompanies this software in either electronic or hard copy form.
 
 **************************************************************************/
 
@@ -14,112 +18,186 @@ Copyright   :   Copyright 2011 Autodesk, Inc. All Rights reserved.
 #pragma once
 
 #include "Render/Vulkan/Vulkan_Config.h"
+#include "Render/Vulkan/Vulkan_ShaderDescs.h"
 #include "Render/Render_MeshCache.h"
+#include "Render/Vulkan/Vulkan_Sync.h"
 #include "Kernel/SF_Array.h"
-#include "Kernel/SF_AllocAddr.h"
-#include "Kernel/SF_Alg.h"
+#include "Kernel/SF_Debug.h"
+#include "Kernel/SF_HeapNew.h"
 
 namespace Scaleform { namespace Render { namespace Vulkan {
 
 class HAL;
 class MeshCache;
-class ShaderManager;
+class MeshBuffer;
+class MeshBufferSet;
 
-// Chunk buffer holding both vertex and index data (unified allocation).
-class VulkanMeshBuffer : public Render::MeshBuffer
+class MeshBuffer : public Render::MeshBuffer
 {
 public:
     VkBuffer        Buffer;
     VkDeviceMemory  Memory;
-    VkDevice        Device;
+    UByte*          pData;
+    VkBufferUsageFlags Usage;
 
-    VulkanMeshBuffer(UPInt size, AllocType type, unsigned arena);
-    virtual ~VulkanMeshBuffer();
+    MeshBuffer(UPInt size, AllocType type, unsigned arena, VkBufferUsageFlags usage)
+        : Render::MeshBuffer(size, type, arena),
+          Buffer(VK_NULL_HANDLE), Memory(VK_NULL_HANDLE), pData(0), Usage(usage) {}
+    ~MeshBuffer();
 
-    bool Create(VkDevice device, VkPhysicalDevice physicalDevice);
-    void Destroy();
+    bool    Create(VkDevice device, VkPhysicalDevice physDevice);
+    void    Destroy(VkDevice device);
+
+    inline  UByte* Lock() { return pData; }
+    inline  void   Unlock() {}
+    VkBuffer GetHWBuffer() const { return Buffer; }
 };
+
+class VertexBuffer : public MeshBuffer
+{
+public:
+    VertexBuffer(UPInt size, AllocType type, unsigned arena)
+        : MeshBuffer(size, type, arena, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) {}
+};
+
+class IndexBuffer : public MeshBuffer
+{
+public:
+    IndexBuffer(UPInt size, AllocType type, unsigned arena)
+        : MeshBuffer(size, type, arena, VK_BUFFER_USAGE_INDEX_BUFFER_BIT) {}
+};
+
+
+class MeshBufferSet
+{
+public:
+    typedef MeshBuffer::AllocType AllocType;
+
+    VkBufferUsageFlags  Usage;
+    unsigned            Granularity;
+    unsigned            Arena;
+    ArrayLH<MeshBuffer*> Buffers;
+
+    MeshBufferSet(VkBufferUsageFlags usage, unsigned granularity, unsigned arena)
+        : Usage(usage), Granularity(granularity), Arena(arena) {}
+    ~MeshBufferSet() { DestroyAll(); }
+
+    MeshBuffer* CreateBuffer(VkDevice device, VkPhysicalDevice physDevice,
+                             UPInt size, AllocType type);
+    void        DestroyAll();
+
+    inline UPInt GetTotalSize() const
+    {
+        UPInt total = 0;
+        for (unsigned i = 0; i < Buffers.GetSize(); i++)
+            total += Buffers[i]->GetSize();
+        return total;
+    }
+};
+
 
 class MeshCacheItem : public Render::MeshCacheItem
 {
     friend class MeshCache;
-    friend class HAL;
-
-    VkBuffer    pVertexBuffer;
-    VkBuffer    pIndexBuffer;
-    UPInt       VBAllocOffset, VBAllocSize;
-    UPInt       IBAllocOffset, IBAllocSize;
 
 public:
-    UPInt       AllocAddress;   // CPU address for AllocAddr eviction
-    UPInt       AllocSize;      // Total allocation size for Evict
+    VertexBuffer*   pVertexBuffer;
+    IndexBuffer*    pIndexBuffer;
+    UPInt           VBAllocOffset;
+    UPInt           VBAllocSize;
+    UPInt           IBAllocOffset;
+    UPInt           IBAllocSize;
 
-    static MeshCacheItem* Create(MeshType type, MeshCacheListSet* pcacheList, MeshBaseContent& mc,
-                                 VkBuffer pvb, VkBuffer pib,
-                                 UPInt vertexOffset, UPInt vertexAllocSize, unsigned vertexCount,
-                                 UPInt indexOffset, UPInt indexAllocSize, unsigned indexCount,
-                                 UPInt allocAddress, UPInt allocSize);
+    MeshCacheItem()
+        : pVertexBuffer(0), pIndexBuffer(0),
+          VBAllocOffset(0), VBAllocSize(0),
+          IBAllocOffset(0), IBAllocSize(0) {}
 };
+
 
 class MeshCache : public Render::MeshCache
 {
     friend class HAL;
 
+    RenderSync          RSync;
+    MeshCacheListSet    CacheList;
+    MeshBufferSet       VertexBuffers;
+    MeshBufferSet       IndexBuffers;
+    bool                Mapped;
+
+    // Suballocation state: bump-allocate from the current buffer, create
+    // a new one only when it fills up.
+    VertexBuffer*       pCurrentVB;
+    UPInt               CurrentVBFreeOffset;
+    IndexBuffer*        pCurrentIB;
+    UPInt               CurrentIBFreeOffset;
+
     VkDevice            pDevice;
     VkPhysicalDevice    pPhysicalDevice;
-    MeshCacheListSet    CacheList;
-    AllocAddr           Allocator;
-    UPInt               TotalSize;
-    List<Render::MeshBuffer> Buffers;
 
-    static const unsigned VBAlignment = 16;
-    static const unsigned IBAlignment = 16;
-    static const unsigned BufferAlignment = 16;
-    static const UPInt MinGranularity = 64 * 1024;
+    // Deferred buffer destruction: buffers are tagged with the frame after which it is
+    // safe to destroy them (GPU has finished all submitted work that references them).
+    struct PendingDestroyEntry
+    {
+        MeshBuffer* pBuffer;
+        unsigned    SafeAfterFrame; // destroy when DestroyFrameCount >= SafeAfterFrame
+    };
+    ArrayLH<PendingDestroyEntry> PendingDestroyBuffers;
+    unsigned            DestroyFrameCount; // monotonically incrementing, advances in BeginFrame
 
-    VkBuffer        pMaskEraseBatchVertexBuffer;
-    VkDeviceMemory  MaskEraseBatchVertexMemory;
-    List<Render::MeshBuffer> PendingDestructionBuffers;
-
-    bool createMaskEraseBatchVertexBuffer(VkPhysicalDevice physicalDevice);
-    VulkanMeshBuffer* allocMeshBuffer(UPInt size, MeshBuffer::AllocType atype, unsigned arena = 0);
-    void releaseMeshBuffer(VulkanMeshBuffer* pbuffer);
-    bool allocBuffer(UPInt* pallocAddress, UPInt size, bool waitForCache);
-    VulkanMeshBuffer* findBuffer(UPInt address);
-    void destroyPendingBuffers();
-    bool evictMeshesInBuffer(MeshCacheListSet::ListSlot* slots, unsigned slotCount, VulkanMeshBuffer* pbuffer);
+    VkBuffer            MaskEraseBatchVertexBuffer;
+    VkDeviceMemory      MaskEraseBatchVertexMemory;
 
     inline MeshCache* getThis() { return this; }
 
+    enum {
+        MaxEraseBatchCount = SF_RENDER_MAX_BATCHES
+    };
+
+    bool                createMaskEraseBatchVertexBuffer();
+    void                destroyMaskEraseBatchVertexBuffer();
+    // Destroy all pending entries whose SafeAfterFrame <= DestroyFrameCount.
+    void                destroyReadyPendingBuffers();
+    // Destroy ALL pending entries unconditionally (caller must ensure GPU is idle).
+    void                destroyAllPendingBuffers();
+
 public:
     MeshCache(MemoryHeap* pheap, const MeshCacheParams& params);
-    virtual ~MeshCache();
+    ~MeshCache();
 
-    bool Initialize(VkDevice device, VkPhysicalDevice physicalDevice);
-    void Reset();
+    bool        Initialize(VkDevice device, VkPhysicalDevice physDevice, RenderSync* psync);
+    void        Reset();
 
-    virtual QueueMode GetQueueMode() const override { return QM_ExtendLocks; }
-    virtual bool    LockBuffers() override { return true; }
-    virtual void    UnlockBuffers() override { }
-    virtual bool    AreBuffersLocked() const override { return false; }
-    virtual void    ClearCache() override;
-    virtual bool    SetParams(const MeshCacheParams& params) override;
-    virtual void    EndFrame() override;
-    virtual UPInt   Evict(Render::MeshCacheItem* p, AllocAddr* pallocator = 0, MeshBase* pskipMesh = 0) override;
-    virtual bool    PreparePrimitive(PrimitiveBatch* pbatch,
-                                     MeshCacheItem::MeshContent& mc, bool waitForCache) override;
+    virtual QueueMode   GetQueueMode() const { return QM_WaitForFences; }
+
+    virtual bool        SetParams(const MeshCacheParams& params);
+
     virtual AllocResult AllocCacheItem(Render::MeshCacheItem** pdata,
-                                      UByte** pvertexDataStart, IndexType** pindexDataStart,
-                                      MeshCacheItem::MeshType meshType,
-                                      MeshCacheItem::MeshBaseContent& mc,
-                                      UPInt vertexBufferSize,
-                                      unsigned vertexCount, unsigned indexCount,
-                                      bool waitForCache,
-                                      const VertexFormat* pDestFormat) override;
+                                        UByte** pvertexDataStart, IndexType** pindexDataStart,
+                                        MeshCacheItem::MeshType meshType,
+                                        MeshCacheItem::MeshBaseContent& mc,
+                                        UPInt vertexBufferSize,
+                                        unsigned vertexCount, unsigned indexCount,
+                                        bool waitForCache, const VertexFormat* pDestFormat);
 
-    virtual void    GetStats(Stats* stats) override;
-    MeshCacheListSet& GetCacheList() { return CacheList; }
+    virtual bool        LockBuffers();
+    virtual void        UnlockBuffers();
+    virtual bool        AreBuffersLocked() const { return Mapped; }
+
+    virtual void        BeginFrame();
+    virtual void        EndFrame();
+    virtual void        EvictAll();
+    virtual bool        PreparePrimitive(PrimitiveBatch* pbatch,
+                                          MeshCacheItem::MeshContent &mc, bool waitForCache);
+
+    RenderSync*         GetRenderSync()   { return &RSync; }
+
+    virtual UPInt       Evict(Render::MeshCacheItem* p, AllocAddr* pallocator = 0, MeshBase* pskipMesh = 0);
+    virtual void        ClearCache();
+
+    VkBuffer            GetMaskEraseBatchVB() const { return MaskEraseBatchVertexBuffer; }
 };
+
 
 }}} // Scaleform::Render::Vulkan
 

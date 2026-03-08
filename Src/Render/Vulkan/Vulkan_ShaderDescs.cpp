@@ -3,7 +3,7 @@
     PublicHeader:   Render
     Filename    :   Vulkan_ShaderDescs.cpp
     Content     :   Vulkan Shader descriptors
-    Created     :   04.03.2026
+    Created     :   05.03.2026
     Authors     :   Automatically generated.
 
     Copyright   :   Copyright 2026 Autodesk, Inc. All Rights reserved.
@@ -6086,7 +6086,7 @@ extern unsigned pBinary_Vulkan_SPIRV_VDrawableCopyPixels_size;
 extern const unsigned char pBinary_Vulkan_SPIRV_VDrawableCopyPixelsAlpha[];
 extern unsigned pBinary_Vulkan_SPIRV_VDrawableCopyPixelsAlpha_size;
 
-UniformVar Uniforms_4834520059[Uniform::SU_Count] = 
+UniformVar Uniforms_2780332284[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -6105,7 +6105,7 @@ UniformVar Uniforms_4834520059[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-BatchVar BatchUniforms_5760312302[Uniform::SU_Count] = 
+BatchVar BatchUniforms_4719444725[Uniform::SU_Count] = 
 {
     /* cxadd*/       {Uniform::SU_Count, -1, 0},
     /* cxmul*/       {Uniform::SU_Count, -1, 0},
@@ -6124,7 +6124,7 @@ BatchVar BatchUniforms_5760312302[Uniform::SU_Count] =
     /* vfuniforms*/  {Uniform::SU_Count, -1, 0},
 };
 
-UniformVar Uniforms_4798601671[Uniform::SU_Count] = 
+UniformVar Uniforms_4662830587[Uniform::SU_Count] = 
 {
     /* cxadd*/      {0, 0, 4, 4, 4, 0 },
     /* cxmul*/      {1, 4, 4, 4, 4, 0 },
@@ -6143,7 +6143,7 @@ UniformVar Uniforms_4798601671[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_4910843176[Uniform::SU_Count] = 
+UniformVar Uniforms_2481194896[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -6162,7 +6162,7 @@ UniformVar Uniforms_4910843176[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_2165884133[Uniform::SU_Count] = 
+UniformVar Uniforms_2177498399[Uniform::SU_Count] = 
 {
     /* cxadd*/      {0, 0, 4, 4, 4, 0 },
     /* cxmul*/      {1, 4, 4, 4, 4, 0 },
@@ -6181,7 +6181,7 @@ UniformVar Uniforms_2165884133[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_5005424478[Uniform::SU_Count] = 
+UniformVar Uniforms_4987230841[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -6200,7 +6200,7 @@ UniformVar Uniforms_5005424478[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_5693773741[Uniform::SU_Count] = 
+UniformVar Uniforms_6384432523[Uniform::SU_Count] = 
 {
     /* cxadd*/      {0, 0, 4, 4, 4, 0 },
     /* cxmul*/      {1, 4, 4, 4, 4, 0 },
@@ -6219,7 +6219,7 @@ UniformVar Uniforms_5693773741[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_5966751480[Uniform::SU_Count] = 
+UniformVar Uniforms_4205210391[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -6238,7 +6238,7 @@ UniformVar Uniforms_5966751480[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_2839550548[Uniform::SU_Count] = 
+UniformVar Uniforms_3431474461[Uniform::SU_Count] = 
 {
     /* cxadd*/      {0, 0, 4, 4, 4, 0 },
     /* cxmul*/      {1, 4, 4, 4, 4, 0 },
@@ -6257,7 +6257,7 @@ UniformVar Uniforms_2839550548[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_4126105233[Uniform::SU_Count] = 
+UniformVar Uniforms_4654060917[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -6276,7 +6276,7 @@ UniformVar Uniforms_4126105233[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_2694611255[Uniform::SU_Count] = 
+UniformVar Uniforms_3507791593[Uniform::SU_Count] = 
 {
     /* cxadd*/      {0, 0, 4, 4, 4, 0 },
     /* cxmul*/      {1, 4, 4, 4, 4, 0 },
@@ -6295,7 +6295,7 @@ UniformVar Uniforms_2694611255[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_2757169187[Uniform::SU_Count] = 
+UniformVar Uniforms_4713473801[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -6314,7 +6314,7 @@ UniformVar Uniforms_2757169187[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_4879531607[Uniform::SU_Count] = 
+UniformVar Uniforms_6349526844[Uniform::SU_Count] = 
 {
     /* cxadd*/      {0, 0, 4, 4, 4, 0 },
     /* cxmul*/      {1, 4, 4, 4, 4, 0 },
@@ -6333,7 +6333,7 @@ UniformVar Uniforms_4879531607[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_5641797269[Uniform::SU_Count] = 
+UniformVar Uniforms_2787754509[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -6352,7 +6352,7 @@ UniformVar Uniforms_5641797269[Uniform::SU_Count] =
     /* vfuniforms*/ {0, 0, 4, 384, 4, 4 },
 };
 
-BatchVar BatchUniforms_3174165922[Uniform::SU_Count] = 
+BatchVar BatchUniforms_3916989370[Uniform::SU_Count] = 
 {
     /* cxadd*/       {Uniform::SU_Count, -1, 0},
     /* cxmul*/       {Uniform::SU_Count, -1, 0},
@@ -6371,7 +6371,7 @@ BatchVar BatchUniforms_3174165922[Uniform::SU_Count] =
     /* vfuniforms*/  {Uniform::SU_Count, -1, 0},
 };
 
-UniformVar Uniforms_3934214817[Uniform::SU_Count] = 
+UniformVar Uniforms_2525643933[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -6390,7 +6390,7 @@ UniformVar Uniforms_3934214817[Uniform::SU_Count] =
     /* vfuniforms*/ {0, 0, 4, 576, 4, 6 },
 };
 
-BatchVar BatchUniforms_2370119729[Uniform::SU_Count] = 
+BatchVar BatchUniforms_4684817945[Uniform::SU_Count] = 
 {
     /* cxadd*/       {Uniform::SU_vfuniforms, 0, 1},
     /* cxmul*/       {Uniform::SU_vfuniforms, 1, 1},
@@ -6409,7 +6409,7 @@ BatchVar BatchUniforms_2370119729[Uniform::SU_Count] =
     /* vfuniforms*/  {Uniform::SU_Count, -1, 0},
 };
 
-UniformVar Uniforms_3528194288[Uniform::SU_Count] = 
+UniformVar Uniforms_4621301713[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -6428,7 +6428,7 @@ UniformVar Uniforms_3528194288[Uniform::SU_Count] =
     /* vfuniforms*/ {0, 0, 4, 192, 4, 2 },
 };
 
-BatchVar BatchUniforms_3278392193[Uniform::SU_Count] = 
+BatchVar BatchUniforms_4490697331[Uniform::SU_Count] = 
 {
     /* cxadd*/       {Uniform::SU_Count, -1, 0},
     /* cxmul*/       {Uniform::SU_Count, -1, 0},
@@ -6447,7 +6447,7 @@ BatchVar BatchUniforms_3278392193[Uniform::SU_Count] =
     /* vfuniforms*/  {Uniform::SU_Count, -1, 0},
 };
 
-BatchVar BatchUniforms_2201785903[Uniform::SU_Count] = 
+BatchVar BatchUniforms_6396933236[Uniform::SU_Count] = 
 {
     /* cxadd*/       {Uniform::SU_vfuniforms, 0, 1},
     /* cxmul*/       {Uniform::SU_vfuniforms, 1, 1},
@@ -6466,7 +6466,7 @@ BatchVar BatchUniforms_2201785903[Uniform::SU_Count] =
     /* vfuniforms*/  {Uniform::SU_Count, -1, 0},
 };
 
-BatchVar BatchUniforms_4516612420[Uniform::SU_Count] = 
+BatchVar BatchUniforms_3397947684[Uniform::SU_Count] = 
 {
     /* cxadd*/       {Uniform::SU_Count, -1, 0},
     /* cxmul*/       {Uniform::SU_Count, -1, 0},
@@ -6485,7 +6485,7 @@ BatchVar BatchUniforms_4516612420[Uniform::SU_Count] =
     /* vfuniforms*/  {Uniform::SU_Count, -1, 0},
 };
 
-UniformVar Uniforms_4095865075[Uniform::SU_Count] = 
+UniformVar Uniforms_5169460707[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -6504,7 +6504,7 @@ UniformVar Uniforms_4095865075[Uniform::SU_Count] =
     /* vfuniforms*/ {0, 0, 4, 768, 4, 8 },
 };
 
-BatchVar BatchUniforms_4647725012[Uniform::SU_Count] = 
+BatchVar BatchUniforms_6281217290[Uniform::SU_Count] = 
 {
     /* cxadd*/       {Uniform::SU_vfuniforms, 0, 1},
     /* cxmul*/       {Uniform::SU_vfuniforms, 1, 1},
@@ -6523,7 +6523,7 @@ BatchVar BatchUniforms_4647725012[Uniform::SU_Count] =
     /* vfuniforms*/  {Uniform::SU_Count, -1, 0},
 };
 
-UniformVar Uniforms_4481420780[Uniform::SU_Count] = 
+UniformVar Uniforms_3466201300[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -6542,7 +6542,7 @@ UniformVar Uniforms_4481420780[Uniform::SU_Count] =
     /* vfuniforms*/ {96, 384, 4, 192, 4, 2 },
 };
 
-BatchVar BatchUniforms_3714320287[Uniform::SU_Count] = 
+BatchVar BatchUniforms_3849802337[Uniform::SU_Count] = 
 {
     /* cxadd*/       {Uniform::SU_Count, -1, 0},
     /* cxmul*/       {Uniform::SU_Count, -1, 0},
@@ -6561,7 +6561,7 @@ BatchVar BatchUniforms_3714320287[Uniform::SU_Count] =
     /* vfuniforms*/  {Uniform::SU_Count, -1, 0},
 };
 
-UniformVar Uniforms_5783854052[Uniform::SU_Count] = 
+UniformVar Uniforms_2165853831[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -6580,7 +6580,7 @@ UniformVar Uniforms_5783854052[Uniform::SU_Count] =
     /* vfuniforms*/ {96, 384, 4, 384, 4, 4 },
 };
 
-BatchVar BatchUniforms_3271918611[Uniform::SU_Count] = 
+BatchVar BatchUniforms_5776575637[Uniform::SU_Count] = 
 {
     /* cxadd*/       {Uniform::SU_vfuniforms, 0, 1},
     /* cxmul*/       {Uniform::SU_vfuniforms, 1, 1},
@@ -6599,7 +6599,7 @@ BatchVar BatchUniforms_3271918611[Uniform::SU_Count] =
     /* vfuniforms*/  {Uniform::SU_Count, -1, 0},
 };
 
-UniformVar Uniforms_3547624466[Uniform::SU_Count] = 
+UniformVar Uniforms_4547489696[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -6618,7 +6618,7 @@ UniformVar Uniforms_3547624466[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-BatchVar BatchUniforms_6337609321[Uniform::SU_Count] = 
+BatchVar BatchUniforms_2297567160[Uniform::SU_Count] = 
 {
     /* cxadd*/       {Uniform::SU_Count, -1, 0},
     /* cxmul*/       {Uniform::SU_Count, -1, 0},
@@ -6637,7 +6637,7 @@ BatchVar BatchUniforms_6337609321[Uniform::SU_Count] =
     /* vfuniforms*/  {Uniform::SU_Count, -1, 0},
 };
 
-BatchVar BatchUniforms_6217350677[Uniform::SU_Count] = 
+BatchVar BatchUniforms_5838561979[Uniform::SU_Count] = 
 {
     /* cxadd*/       {Uniform::SU_vfuniforms, 0, 1},
     /* cxmul*/       {Uniform::SU_vfuniforms, 1, 1},
@@ -6656,7 +6656,7 @@ BatchVar BatchUniforms_6217350677[Uniform::SU_Count] =
     /* vfuniforms*/  {Uniform::SU_Count, -1, 0},
 };
 
-BatchVar BatchUniforms_5466834846[Uniform::SU_Count] = 
+BatchVar BatchUniforms_3558668509[Uniform::SU_Count] = 
 {
     /* cxadd*/       {Uniform::SU_Count, -1, 0},
     /* cxmul*/       {Uniform::SU_Count, -1, 0},
@@ -6675,7 +6675,7 @@ BatchVar BatchUniforms_5466834846[Uniform::SU_Count] =
     /* vfuniforms*/  {Uniform::SU_Count, -1, 0},
 };
 
-UniformVar Uniforms_3555133962[Uniform::SU_Count] = 
+UniformVar Uniforms_5986946552[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -6694,7 +6694,7 @@ UniformVar Uniforms_3555133962[Uniform::SU_Count] =
     /* vfuniforms*/ {96, 384, 4, 576, 4, 6 },
 };
 
-BatchVar BatchUniforms_3343117772[Uniform::SU_Count] = 
+BatchVar BatchUniforms_3608031726[Uniform::SU_Count] = 
 {
     /* cxadd*/       {Uniform::SU_vfuniforms, 0, 1},
     /* cxmul*/       {Uniform::SU_vfuniforms, 1, 1},
@@ -6713,7 +6713,7 @@ BatchVar BatchUniforms_3343117772[Uniform::SU_Count] =
     /* vfuniforms*/  {Uniform::SU_Count, -1, 0},
 };
 
-UniformVar Uniforms_4414783507[Uniform::SU_Count] = 
+UniformVar Uniforms_3328250060[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -6739,8 +6739,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VTexTG =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTexTG,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTexTG_size,
-    /* Uniforms */      Uniforms_4834520059,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2780332284,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    1,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -6755,8 +6755,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VTexTGEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTexTGEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTexTGEAlpha_size,
-    /* Uniforms */      Uniforms_4834520059,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2780332284,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -6772,8 +6772,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VTexTGCxform =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTexTGCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTexTGCxform_size,
-    /* Uniforms */      Uniforms_4798601671,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4662830587,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    1,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -6788,8 +6788,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VTexTGCxformEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTexTGCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTexTGCxformEAlpha_size,
-    /* Uniforms */      Uniforms_4798601671,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4662830587,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -6805,8 +6805,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VVertex =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VVertex,
     /* pBinary */       pBinary_Vulkan_SPIRV_VVertex_size,
-    /* Uniforms */      Uniforms_4910843176,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2481194896,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -6822,8 +6822,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VVertexEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VVertexEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VVertexEAlpha_size,
-    /* Uniforms */      Uniforms_4910843176,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2481194896,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -6840,8 +6840,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VVertexCxform =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VVertexCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VVertexCxform_size,
-    /* Uniforms */      Uniforms_2165884133,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2177498399,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -6857,8 +6857,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VVertexCxformEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VVertexCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VVertexCxformEAlpha_size,
-    /* Uniforms */      Uniforms_2165884133,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2177498399,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -6875,8 +6875,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VTexTGTexTG =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTexTGTexTG,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTexTGTexTG_size,
-    /* Uniforms */      Uniforms_5005424478,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4987230841,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -6892,8 +6892,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VTexTGTexTGCxform =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTexTGTexTGCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTexTGTexTGCxform_size,
-    /* Uniforms */      Uniforms_5693773741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_6384432523,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -6909,8 +6909,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VTexTGVertex =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTexTGVertex,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTexTGVertex_size,
-    /* Uniforms */      Uniforms_4834520059,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2780332284,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -6927,8 +6927,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VTexTGVertexCxform =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTexTGVertexCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTexTGVertexCxform_size,
-    /* Uniforms */      Uniforms_4798601671,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4662830587,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -6945,8 +6945,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VPosition3dTexTG =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTexTG,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTexTG_size,
-    /* Uniforms */      Uniforms_5966751480,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4205210391,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    1,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -6961,8 +6961,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VPosition3dTexTGEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTexTGEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTexTGEAlpha_size,
-    /* Uniforms */      Uniforms_5966751480,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4205210391,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -6978,8 +6978,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VPosition3dTexTGCxform =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTexTGCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTexTGCxform_size,
-    /* Uniforms */      Uniforms_2839550548,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3431474461,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    1,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -6994,8 +6994,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VPosition3dTexTGCxformEAlpha 
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTexTGCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTexTGCxformEAlpha_size,
-    /* Uniforms */      Uniforms_2839550548,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3431474461,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -7011,8 +7011,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VPosition3dVertex =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dVertex,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dVertex_size,
-    /* Uniforms */      Uniforms_4126105233,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4654060917,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7028,8 +7028,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VPosition3dVertexEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dVertexEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dVertexEAlpha_size,
-    /* Uniforms */      Uniforms_4126105233,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4654060917,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7046,8 +7046,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VPosition3dVertexCxform =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dVertexCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dVertexCxform_size,
-    /* Uniforms */      Uniforms_2694611255,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3507791593,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7063,8 +7063,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VPosition3dVertexCxformEAlpha
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dVertexCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dVertexCxformEAlpha_size,
-    /* Uniforms */      Uniforms_2694611255,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3507791593,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7081,8 +7081,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VPosition3dTexTGTexTG =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTexTGTexTG,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTexTGTexTG_size,
-    /* Uniforms */      Uniforms_2757169187,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4713473801,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -7098,8 +7098,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VPosition3dTexTGTexTGCxform =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTexTGTexTGCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTexTGTexTGCxform_size,
-    /* Uniforms */      Uniforms_4879531607,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_6349526844,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -7115,8 +7115,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VPosition3dTexTGVertex =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTexTGVertex,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTexTGVertex_size,
-    /* Uniforms */      Uniforms_5966751480,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4205210391,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7133,8 +7133,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VPosition3dTexTGVertexCxform 
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTexTGVertexCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTexTGVertexCxform_size,
-    /* Uniforms */      Uniforms_2839550548,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3431474461,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7151,8 +7151,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchTexTG =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTexTG,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTexTG_size,
-    /* Uniforms */      Uniforms_5641797269,
-    /* BatchUniforms */ BatchUniforms_3174165922,
+    /* Uniforms */      Uniforms_2787754509,
+    /* BatchUniforms */ BatchUniforms_3916989370,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -7168,8 +7168,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchTexTGEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTexTGEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTexTGEAlpha_size,
-    /* Uniforms */      Uniforms_5641797269,
-    /* BatchUniforms */ BatchUniforms_3174165922,
+    /* Uniforms */      Uniforms_2787754509,
+    /* BatchUniforms */ BatchUniforms_3916989370,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -7185,8 +7185,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchTexTGCxform =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTexTGCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTexTGCxform_size,
-    /* Uniforms */      Uniforms_3934214817,
-    /* BatchUniforms */ BatchUniforms_2370119729,
+    /* Uniforms */      Uniforms_2525643933,
+    /* BatchUniforms */ BatchUniforms_4684817945,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -7202,8 +7202,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchTexTGCxformEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTexTGCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTexTGCxformEAlpha_size,
-    /* Uniforms */      Uniforms_3934214817,
-    /* BatchUniforms */ BatchUniforms_2370119729,
+    /* Uniforms */      Uniforms_2525643933,
+    /* BatchUniforms */ BatchUniforms_4684817945,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -7219,8 +7219,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchVertex =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchVertex,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchVertex_size,
-    /* Uniforms */      Uniforms_3528194288,
-    /* BatchUniforms */ BatchUniforms_3278392193,
+    /* Uniforms */      Uniforms_4621301713,
+    /* BatchUniforms */ BatchUniforms_4490697331,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7237,8 +7237,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchVertexEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchVertexEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchVertexEAlpha_size,
-    /* Uniforms */      Uniforms_3528194288,
-    /* BatchUniforms */ BatchUniforms_3278392193,
+    /* Uniforms */      Uniforms_4621301713,
+    /* BatchUniforms */ BatchUniforms_4490697331,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7255,8 +7255,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchVertexCxform =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchVertexCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchVertexCxform_size,
-    /* Uniforms */      Uniforms_5641797269,
-    /* BatchUniforms */ BatchUniforms_2201785903,
+    /* Uniforms */      Uniforms_2787754509,
+    /* BatchUniforms */ BatchUniforms_6396933236,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7273,8 +7273,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchVertexCxformEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchVertexCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchVertexCxformEAlpha_size,
-    /* Uniforms */      Uniforms_5641797269,
-    /* BatchUniforms */ BatchUniforms_2201785903,
+    /* Uniforms */      Uniforms_2787754509,
+    /* BatchUniforms */ BatchUniforms_6396933236,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7291,8 +7291,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchTexTGTexTG =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTexTGTexTG,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTexTGTexTG_size,
-    /* Uniforms */      Uniforms_3934214817,
-    /* BatchUniforms */ BatchUniforms_4516612420,
+    /* Uniforms */      Uniforms_2525643933,
+    /* BatchUniforms */ BatchUniforms_3397947684,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -7308,8 +7308,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchTexTGTexTGCxform =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTexTGTexTGCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTexTGTexTGCxform_size,
-    /* Uniforms */      Uniforms_4095865075,
-    /* BatchUniforms */ BatchUniforms_4647725012,
+    /* Uniforms */      Uniforms_5169460707,
+    /* BatchUniforms */ BatchUniforms_6281217290,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -7325,8 +7325,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchTexTGVertex =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTexTGVertex,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTexTGVertex_size,
-    /* Uniforms */      Uniforms_5641797269,
-    /* BatchUniforms */ BatchUniforms_3174165922,
+    /* Uniforms */      Uniforms_2787754509,
+    /* BatchUniforms */ BatchUniforms_3916989370,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7343,8 +7343,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchTexTGVertexCxform =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTexTGVertexCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTexTGVertexCxform_size,
-    /* Uniforms */      Uniforms_3934214817,
-    /* BatchUniforms */ BatchUniforms_2370119729,
+    /* Uniforms */      Uniforms_2525643933,
+    /* BatchUniforms */ BatchUniforms_4684817945,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7361,8 +7361,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchPosition3dTexTG =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTexTG,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTexTG_size,
-    /* Uniforms */      Uniforms_4481420780,
-    /* BatchUniforms */ BatchUniforms_3714320287,
+    /* Uniforms */      Uniforms_3466201300,
+    /* BatchUniforms */ BatchUniforms_3849802337,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -7378,8 +7378,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchPosition3dTexTGEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTexTGEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTexTGEAlpha_size,
-    /* Uniforms */      Uniforms_4481420780,
-    /* BatchUniforms */ BatchUniforms_3714320287,
+    /* Uniforms */      Uniforms_3466201300,
+    /* BatchUniforms */ BatchUniforms_3849802337,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -7395,8 +7395,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchPosition3dTexTGCxform =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTexTGCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTexTGCxform_size,
-    /* Uniforms */      Uniforms_5783854052,
-    /* BatchUniforms */ BatchUniforms_3271918611,
+    /* Uniforms */      Uniforms_2165853831,
+    /* BatchUniforms */ BatchUniforms_5776575637,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -7412,8 +7412,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchPosition3dTexTGCxformEA
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTexTGCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTexTGCxformEAlpha_size,
-    /* Uniforms */      Uniforms_5783854052,
-    /* BatchUniforms */ BatchUniforms_3271918611,
+    /* Uniforms */      Uniforms_2165853831,
+    /* BatchUniforms */ BatchUniforms_5776575637,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -7429,8 +7429,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchPosition3dVertex =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dVertex,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dVertex_size,
-    /* Uniforms */      Uniforms_3547624466,
-    /* BatchUniforms */ BatchUniforms_6337609321,
+    /* Uniforms */      Uniforms_4547489696,
+    /* BatchUniforms */ BatchUniforms_2297567160,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7447,8 +7447,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchPosition3dVertexEAlpha 
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dVertexEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dVertexEAlpha_size,
-    /* Uniforms */      Uniforms_3547624466,
-    /* BatchUniforms */ BatchUniforms_6337609321,
+    /* Uniforms */      Uniforms_4547489696,
+    /* BatchUniforms */ BatchUniforms_2297567160,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7465,8 +7465,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchPosition3dVertexCxform 
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dVertexCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dVertexCxform_size,
-    /* Uniforms */      Uniforms_4481420780,
-    /* BatchUniforms */ BatchUniforms_6217350677,
+    /* Uniforms */      Uniforms_3466201300,
+    /* BatchUniforms */ BatchUniforms_5838561979,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7483,8 +7483,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchPosition3dVertexCxformE
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dVertexCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dVertexCxformEAlpha_size,
-    /* Uniforms */      Uniforms_4481420780,
-    /* BatchUniforms */ BatchUniforms_6217350677,
+    /* Uniforms */      Uniforms_3466201300,
+    /* BatchUniforms */ BatchUniforms_5838561979,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7501,8 +7501,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchPosition3dTexTGTexTG =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTexTGTexTG,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTexTGTexTG_size,
-    /* Uniforms */      Uniforms_5783854052,
-    /* BatchUniforms */ BatchUniforms_5466834846,
+    /* Uniforms */      Uniforms_2165853831,
+    /* BatchUniforms */ BatchUniforms_3558668509,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -7518,8 +7518,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchPosition3dTexTGTexTGCxf
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTexTGTexTGCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTexTGTexTGCxform_size,
-    /* Uniforms */      Uniforms_3555133962,
-    /* BatchUniforms */ BatchUniforms_3343117772,
+    /* Uniforms */      Uniforms_5986946552,
+    /* BatchUniforms */ BatchUniforms_3608031726,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -7535,8 +7535,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchPosition3dTexTGVertex =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTexTGVertex,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTexTGVertex_size,
-    /* Uniforms */      Uniforms_4481420780,
-    /* BatchUniforms */ BatchUniforms_3714320287,
+    /* Uniforms */      Uniforms_3466201300,
+    /* BatchUniforms */ BatchUniforms_3849802337,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7553,8 +7553,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchPosition3dTexTGVertexCx
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTexTGVertexCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTexTGVertexCxform_size,
-    /* Uniforms */      Uniforms_5783854052,
-    /* BatchUniforms */ BatchUniforms_3271918611,
+    /* Uniforms */      Uniforms_2165853831,
+    /* BatchUniforms */ BatchUniforms_5776575637,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7571,8 +7571,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedTexTG =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTexTG,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTexTG_size,
-    /* Uniforms */      Uniforms_5641797269,
-    /* BatchUniforms */ BatchUniforms_3174165922,
+    /* Uniforms */      Uniforms_2787754509,
+    /* BatchUniforms */ BatchUniforms_3916989370,
     /* NumAttribs */    1,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -7587,8 +7587,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedTexTGEAlpha =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTexTGEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTexTGEAlpha_size,
-    /* Uniforms */      Uniforms_5641797269,
-    /* BatchUniforms */ BatchUniforms_3174165922,
+    /* Uniforms */      Uniforms_2787754509,
+    /* BatchUniforms */ BatchUniforms_3916989370,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -7604,8 +7604,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedTexTGCxform =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTexTGCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTexTGCxform_size,
-    /* Uniforms */      Uniforms_3934214817,
-    /* BatchUniforms */ BatchUniforms_2370119729,
+    /* Uniforms */      Uniforms_2525643933,
+    /* BatchUniforms */ BatchUniforms_4684817945,
     /* NumAttribs */    1,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -7620,8 +7620,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedTexTGCxformEAlpha =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTexTGCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTexTGCxformEAlpha_size,
-    /* Uniforms */      Uniforms_3934214817,
-    /* BatchUniforms */ BatchUniforms_2370119729,
+    /* Uniforms */      Uniforms_2525643933,
+    /* BatchUniforms */ BatchUniforms_4684817945,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -7637,8 +7637,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedVertex =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedVertex,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedVertex_size,
-    /* Uniforms */      Uniforms_3528194288,
-    /* BatchUniforms */ BatchUniforms_3278392193,
+    /* Uniforms */      Uniforms_4621301713,
+    /* BatchUniforms */ BatchUniforms_4490697331,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7654,8 +7654,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedVertexEAlpha =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedVertexEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedVertexEAlpha_size,
-    /* Uniforms */      Uniforms_3528194288,
-    /* BatchUniforms */ BatchUniforms_3278392193,
+    /* Uniforms */      Uniforms_4621301713,
+    /* BatchUniforms */ BatchUniforms_4490697331,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7672,8 +7672,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedVertexCxform =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedVertexCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedVertexCxform_size,
-    /* Uniforms */      Uniforms_5641797269,
-    /* BatchUniforms */ BatchUniforms_2201785903,
+    /* Uniforms */      Uniforms_2787754509,
+    /* BatchUniforms */ BatchUniforms_6396933236,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7689,8 +7689,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedVertexCxformEAlpha 
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedVertexCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedVertexCxformEAlpha_size,
-    /* Uniforms */      Uniforms_5641797269,
-    /* BatchUniforms */ BatchUniforms_2201785903,
+    /* Uniforms */      Uniforms_2787754509,
+    /* BatchUniforms */ BatchUniforms_6396933236,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7707,8 +7707,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedTexTGTexTG =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTexTGTexTG,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTexTGTexTG_size,
-    /* Uniforms */      Uniforms_3934214817,
-    /* BatchUniforms */ BatchUniforms_4516612420,
+    /* Uniforms */      Uniforms_2525643933,
+    /* BatchUniforms */ BatchUniforms_3397947684,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -7724,8 +7724,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedTexTGTexTGCxform =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTexTGTexTGCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTexTGTexTGCxform_size,
-    /* Uniforms */      Uniforms_4095865075,
-    /* BatchUniforms */ BatchUniforms_4647725012,
+    /* Uniforms */      Uniforms_5169460707,
+    /* BatchUniforms */ BatchUniforms_6281217290,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -7741,8 +7741,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedTexTGVertex =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTexTGVertex,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTexTGVertex_size,
-    /* Uniforms */      Uniforms_5641797269,
-    /* BatchUniforms */ BatchUniforms_3174165922,
+    /* Uniforms */      Uniforms_2787754509,
+    /* BatchUniforms */ BatchUniforms_3916989370,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7759,8 +7759,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedTexTGVertexCxform =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTexTGVertexCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTexTGVertexCxform_size,
-    /* Uniforms */      Uniforms_3934214817,
-    /* BatchUniforms */ BatchUniforms_2370119729,
+    /* Uniforms */      Uniforms_2525643933,
+    /* BatchUniforms */ BatchUniforms_4684817945,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7777,8 +7777,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedPosition3dTexTG =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTexTG,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTexTG_size,
-    /* Uniforms */      Uniforms_4481420780,
-    /* BatchUniforms */ BatchUniforms_3714320287,
+    /* Uniforms */      Uniforms_3466201300,
+    /* BatchUniforms */ BatchUniforms_3849802337,
     /* NumAttribs */    1,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -7793,8 +7793,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedPosition3dTexTGEAlp
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTexTGEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTexTGEAlpha_size,
-    /* Uniforms */      Uniforms_4481420780,
-    /* BatchUniforms */ BatchUniforms_3714320287,
+    /* Uniforms */      Uniforms_3466201300,
+    /* BatchUniforms */ BatchUniforms_3849802337,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -7810,8 +7810,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedPosition3dTexTGCxfo
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTexTGCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTexTGCxform_size,
-    /* Uniforms */      Uniforms_5783854052,
-    /* BatchUniforms */ BatchUniforms_3271918611,
+    /* Uniforms */      Uniforms_2165853831,
+    /* BatchUniforms */ BatchUniforms_5776575637,
     /* NumAttribs */    1,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -7826,8 +7826,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedPosition3dTexTGCxfo
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTexTGCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTexTGCxformEAlpha_size,
-    /* Uniforms */      Uniforms_5783854052,
-    /* BatchUniforms */ BatchUniforms_3271918611,
+    /* Uniforms */      Uniforms_2165853831,
+    /* BatchUniforms */ BatchUniforms_5776575637,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -7843,8 +7843,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedPosition3dVertex =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dVertex,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dVertex_size,
-    /* Uniforms */      Uniforms_3547624466,
-    /* BatchUniforms */ BatchUniforms_6337609321,
+    /* Uniforms */      Uniforms_4547489696,
+    /* BatchUniforms */ BatchUniforms_2297567160,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7860,8 +7860,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedPosition3dVertexEAl
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dVertexEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dVertexEAlpha_size,
-    /* Uniforms */      Uniforms_3547624466,
-    /* BatchUniforms */ BatchUniforms_6337609321,
+    /* Uniforms */      Uniforms_4547489696,
+    /* BatchUniforms */ BatchUniforms_2297567160,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7878,8 +7878,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedPosition3dVertexCxf
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dVertexCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dVertexCxform_size,
-    /* Uniforms */      Uniforms_4481420780,
-    /* BatchUniforms */ BatchUniforms_6217350677,
+    /* Uniforms */      Uniforms_3466201300,
+    /* BatchUniforms */ BatchUniforms_5838561979,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7895,8 +7895,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedPosition3dVertexCxf
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dVertexCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dVertexCxformEAlpha_size,
-    /* Uniforms */      Uniforms_4481420780,
-    /* BatchUniforms */ BatchUniforms_6217350677,
+    /* Uniforms */      Uniforms_3466201300,
+    /* BatchUniforms */ BatchUniforms_5838561979,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7913,8 +7913,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedPosition3dTexTGTexT
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTexTGTexTG,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTexTGTexTG_size,
-    /* Uniforms */      Uniforms_5783854052,
-    /* BatchUniforms */ BatchUniforms_5466834846,
+    /* Uniforms */      Uniforms_2165853831,
+    /* BatchUniforms */ BatchUniforms_3558668509,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -7930,8 +7930,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedPosition3dTexTGTexT
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTexTGTexTGCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTexTGTexTGCxform_size,
-    /* Uniforms */      Uniforms_3555133962,
-    /* BatchUniforms */ BatchUniforms_3343117772,
+    /* Uniforms */      Uniforms_5986946552,
+    /* BatchUniforms */ BatchUniforms_3608031726,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "afactor",    4 | VET_Color | (1 << VET_Index_Shift)},
@@ -7947,8 +7947,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedPosition3dTexTGVert
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTexTGVertex,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTexTGVertex_size,
-    /* Uniforms */      Uniforms_4481420780,
-    /* BatchUniforms */ BatchUniforms_3714320287,
+    /* Uniforms */      Uniforms_3466201300,
+    /* BatchUniforms */ BatchUniforms_3849802337,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7965,8 +7965,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedPosition3dTexTGVert
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTexTGVertexCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTexTGVertexCxform_size,
-    /* Uniforms */      Uniforms_5783854052,
-    /* BatchUniforms */ BatchUniforms_3271918611,
+    /* Uniforms */      Uniforms_2165853831,
+    /* BatchUniforms */ BatchUniforms_5776575637,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -7983,8 +7983,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VSolid =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VSolid,
     /* pBinary */       pBinary_Vulkan_SPIRV_VSolid_size,
-    /* Uniforms */      Uniforms_4910843176,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2481194896,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    1,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -7999,8 +7999,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VText =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VText,
     /* pBinary */       pBinary_Vulkan_SPIRV_VText_size,
-    /* Uniforms */      Uniforms_2165884133,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2177498399,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -8017,8 +8017,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VTextColor =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTextColor,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTextColor_size,
-    /* Uniforms */      Uniforms_4910843176,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2481194896,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "atc",        2 | VET_TexCoord},
@@ -8034,8 +8034,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VTextColorCxform =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTextColorCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTextColorCxform_size,
-    /* Uniforms */      Uniforms_2165884133,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2177498399,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "atc",        2 | VET_TexCoord},
@@ -8051,8 +8051,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VPosition3dSolid =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dSolid,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dSolid_size,
-    /* Uniforms */      Uniforms_4126105233,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4654060917,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    1,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -8067,8 +8067,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VPosition3dText =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dText,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dText_size,
-    /* Uniforms */      Uniforms_2694611255,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3507791593,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -8085,8 +8085,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VPosition3dTextColor =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTextColor,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTextColor_size,
-    /* Uniforms */      Uniforms_4126105233,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4654060917,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "atc",        2 | VET_TexCoord},
@@ -8102,8 +8102,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VPosition3dTextColorCxform =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTextColorCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VPosition3dTextColorCxform_size,
-    /* Uniforms */      Uniforms_2694611255,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3507791593,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "atc",        2 | VET_TexCoord},
@@ -8119,8 +8119,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchSolid =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchSolid,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchSolid_size,
-    /* Uniforms */      Uniforms_3528194288,
-    /* BatchUniforms */ BatchUniforms_3278392193,
+    /* Uniforms */      Uniforms_4621301713,
+    /* BatchUniforms */ BatchUniforms_4490697331,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -8136,8 +8136,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchText =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchText,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchText_size,
-    /* Uniforms */      Uniforms_5641797269,
-    /* BatchUniforms */ BatchUniforms_2201785903,
+    /* Uniforms */      Uniforms_2787754509,
+    /* BatchUniforms */ BatchUniforms_6396933236,
     /* NumAttribs */    4,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -8155,8 +8155,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchTextColor =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTextColor,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTextColor_size,
-    /* Uniforms */      Uniforms_3528194288,
-    /* BatchUniforms */ BatchUniforms_3278392193,
+    /* Uniforms */      Uniforms_4621301713,
+    /* BatchUniforms */ BatchUniforms_4490697331,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "atc",        2 | VET_TexCoord},
@@ -8173,8 +8173,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchTextColorCxform =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTextColorCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchTextColorCxform_size,
-    /* Uniforms */      Uniforms_5641797269,
-    /* BatchUniforms */ BatchUniforms_2201785903,
+    /* Uniforms */      Uniforms_2787754509,
+    /* BatchUniforms */ BatchUniforms_6396933236,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "atc",        2 | VET_TexCoord},
@@ -8191,8 +8191,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchPosition3dSolid =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dSolid,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dSolid_size,
-    /* Uniforms */      Uniforms_3547624466,
-    /* BatchUniforms */ BatchUniforms_6337609321,
+    /* Uniforms */      Uniforms_4547489696,
+    /* BatchUniforms */ BatchUniforms_2297567160,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -8208,8 +8208,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchPosition3dText =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dText,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dText_size,
-    /* Uniforms */      Uniforms_4481420780,
-    /* BatchUniforms */ BatchUniforms_6217350677,
+    /* Uniforms */      Uniforms_3466201300,
+    /* BatchUniforms */ BatchUniforms_5838561979,
     /* NumAttribs */    4,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -8227,8 +8227,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchPosition3dTextColor =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTextColor,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTextColor_size,
-    /* Uniforms */      Uniforms_3547624466,
-    /* BatchUniforms */ BatchUniforms_6337609321,
+    /* Uniforms */      Uniforms_4547489696,
+    /* BatchUniforms */ BatchUniforms_2297567160,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "atc",        2 | VET_TexCoord},
@@ -8245,8 +8245,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBatchPosition3dTextColorCxfo
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTextColorCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VBatchPosition3dTextColorCxform_size,
-    /* Uniforms */      Uniforms_4481420780,
-    /* BatchUniforms */ BatchUniforms_6217350677,
+    /* Uniforms */      Uniforms_3466201300,
+    /* BatchUniforms */ BatchUniforms_5838561979,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "atc",        2 | VET_TexCoord},
@@ -8263,8 +8263,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedSolid =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedSolid,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedSolid_size,
-    /* Uniforms */      Uniforms_3528194288,
-    /* BatchUniforms */ BatchUniforms_3278392193,
+    /* Uniforms */      Uniforms_4621301713,
+    /* BatchUniforms */ BatchUniforms_4490697331,
     /* NumAttribs */    1,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -8279,8 +8279,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedText =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedText,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedText_size,
-    /* Uniforms */      Uniforms_5641797269,
-    /* BatchUniforms */ BatchUniforms_2201785903,
+    /* Uniforms */      Uniforms_2787754509,
+    /* BatchUniforms */ BatchUniforms_6396933236,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -8297,8 +8297,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedTextColor =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTextColor,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTextColor_size,
-    /* Uniforms */      Uniforms_3528194288,
-    /* BatchUniforms */ BatchUniforms_3278392193,
+    /* Uniforms */      Uniforms_4621301713,
+    /* BatchUniforms */ BatchUniforms_4490697331,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "atc",        2 | VET_TexCoord},
@@ -8314,8 +8314,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedTextColorCxform =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTextColorCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedTextColorCxform_size,
-    /* Uniforms */      Uniforms_5641797269,
-    /* BatchUniforms */ BatchUniforms_2201785903,
+    /* Uniforms */      Uniforms_2787754509,
+    /* BatchUniforms */ BatchUniforms_6396933236,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "atc",        2 | VET_TexCoord},
@@ -8331,8 +8331,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedPosition3dSolid =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dSolid,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dSolid_size,
-    /* Uniforms */      Uniforms_3547624466,
-    /* BatchUniforms */ BatchUniforms_6337609321,
+    /* Uniforms */      Uniforms_4547489696,
+    /* BatchUniforms */ BatchUniforms_2297567160,
     /* NumAttribs */    1,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -8347,8 +8347,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedPosition3dText =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dText,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dText_size,
-    /* Uniforms */      Uniforms_4481420780,
-    /* BatchUniforms */ BatchUniforms_6217350677,
+    /* Uniforms */      Uniforms_3466201300,
+    /* BatchUniforms */ BatchUniforms_5838561979,
     /* NumAttribs */    3,
     /* Attributes */    {
         { "acolor",     4 | VET_Color},
@@ -8365,8 +8365,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedPosition3dTextColor
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTextColor,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTextColor_size,
-    /* Uniforms */      Uniforms_3547624466,
-    /* BatchUniforms */ BatchUniforms_6337609321,
+    /* Uniforms */      Uniforms_4547489696,
+    /* BatchUniforms */ BatchUniforms_2297567160,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "atc",        2 | VET_TexCoord},
@@ -8382,8 +8382,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VInstancedPosition3dTextColor
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTextColorCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VInstancedPosition3dTextColorCxform_size,
-    /* Uniforms */      Uniforms_4481420780,
-    /* BatchUniforms */ BatchUniforms_6217350677,
+    /* Uniforms */      Uniforms_3466201300,
+    /* BatchUniforms */ BatchUniforms_5838561979,
     /* NumAttribs */    2,
     /* Attributes */    {
         { "atc",        2 | VET_TexCoord},
@@ -8399,8 +8399,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VBox1Blur =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTexTGCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_VTexTGCxform_size,
-    /* Uniforms */      Uniforms_4798601671,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4662830587,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    1,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -8415,8 +8415,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VDrawableCopyPixels =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VDrawableCopyPixels,
     /* pBinary */       pBinary_Vulkan_SPIRV_VDrawableCopyPixels_size,
-    /* Uniforms */      Uniforms_5005424478,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4987230841,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    1,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -8431,8 +8431,8 @@ static VertexShaderDesc ShaderDesc_VS_Vulkan_SPIRV_VDrawableCopyPixelsAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_VDrawableCopyPixelsAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_VDrawableCopyPixelsAlpha_size,
-    /* Uniforms */      Uniforms_4414783507,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3328250060,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     /* NumAttribs */    1,
     /* Attributes */    {
         { "pos",        4 | VET_Pos},
@@ -10753,7 +10753,7 @@ extern unsigned pBinary_Vulkan_SPIRV_FDrawableCompare_size;
 extern const unsigned char pBinary_Vulkan_SPIRV_FDrawablePaletteMap[];
 extern unsigned pBinary_Vulkan_SPIRV_FDrawablePaletteMap_size;
 
-UniformVar Uniforms_4535377741[Uniform::SU_Count] = 
+UniformVar Uniforms_3947590396[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -10772,7 +10772,7 @@ UniformVar Uniforms_4535377741[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_3756130650[Uniform::SU_Count] = 
+UniformVar Uniforms_5561203973[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -10791,7 +10791,7 @@ UniformVar Uniforms_3756130650[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_6117461306[Uniform::SU_Count] = 
+UniformVar Uniforms_5313510483[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -10810,7 +10810,7 @@ UniformVar Uniforms_6117461306[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_5650485972[Uniform::SU_Count] = 
+UniformVar Uniforms_3176950603[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      {0, 1032, 4, 4, 4, 0 },
@@ -10829,7 +10829,7 @@ UniformVar Uniforms_5650485972[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_3186954237[Uniform::SU_Count] = 
+UniformVar Uniforms_2698908552[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -10848,7 +10848,7 @@ UniformVar Uniforms_3186954237[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_4602762762[Uniform::SU_Count] = 
+UniformVar Uniforms_3438566651[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -10867,7 +10867,7 @@ UniformVar Uniforms_4602762762[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_3124591169[Uniform::SU_Count] = 
+UniformVar Uniforms_4401428650[Uniform::SU_Count] = 
 {
     /* cxadd*/      {0, 1032, 4, 4, 4, 0 },
     /* cxmul*/      {1, 1036, 16, 16, 16, 0 },
@@ -10886,7 +10886,7 @@ UniformVar Uniforms_3124591169[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_2460454664[Uniform::SU_Count] = 
+UniformVar Uniforms_5603775806[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -10905,7 +10905,7 @@ UniformVar Uniforms_2460454664[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_4719056760[Uniform::SU_Count] = 
+UniformVar Uniforms_6143405754[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -10924,7 +10924,7 @@ UniformVar Uniforms_4719056760[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_5169239271[Uniform::SU_Count] = 
+UniformVar Uniforms_2333604871[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -10943,7 +10943,7 @@ UniformVar Uniforms_5169239271[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_4912805460[Uniform::SU_Count] = 
+UniformVar Uniforms_4289424616[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -10962,7 +10962,7 @@ UniformVar Uniforms_4912805460[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_3390122391[Uniform::SU_Count] = 
+UniformVar Uniforms_4558635928[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -10981,7 +10981,7 @@ UniformVar Uniforms_3390122391[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_6098560083[Uniform::SU_Count] = 
+UniformVar Uniforms_2427823327[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      {0, 1032, 16, 16, 16, 0 },
@@ -11000,7 +11000,7 @@ UniformVar Uniforms_6098560083[Uniform::SU_Count] =
     /* vfuniforms*/ { -1, 0, 0, 0, 0, 0 },
 };
 
-UniformVar Uniforms_2402564022[Uniform::SU_Count] = 
+UniformVar Uniforms_2389110651[Uniform::SU_Count] = 
 {
     /* cxadd*/      { -1, 0, 0, 0, 0, 0 },
     /* cxmul*/      { -1, 0, 0, 0, 0, 0 },
@@ -11026,8 +11026,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTG =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTG,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTG_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11038,8 +11038,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11050,8 +11050,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11062,8 +11062,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGEAlpha_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11074,8 +11074,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGEAlphaMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGEAlphaMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11086,8 +11086,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGEAlphaInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGEAlphaInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11098,8 +11098,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGCxform =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxform_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11110,8 +11110,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGCxformMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11122,8 +11122,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGCxformInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11134,8 +11134,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGCxformEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformEAlpha_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11146,8 +11146,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGCxformEAlphaMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformEAlphaMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11158,8 +11158,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGCxformEAlphaInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformEAlphaInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11170,8 +11170,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGCxformAc =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAc,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAc_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11182,8 +11182,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGCxformAcMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11194,8 +11194,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGCxformAcInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11206,8 +11206,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGCxformAcEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcEAlpha_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11218,8 +11218,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGCxformAcEAlphaMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcEAlphaMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11230,8 +11230,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGCxformAcEAlphaInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcEAlphaInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11242,8 +11242,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FVertex =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertex,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertex_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11254,8 +11254,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FVertexMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexMul_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11266,8 +11266,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FVertexInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexInv_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11278,8 +11278,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FVertexEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexEAlpha_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11290,8 +11290,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FVertexEAlphaMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexEAlphaMul_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11302,8 +11302,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FVertexEAlphaInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexEAlphaInv_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11314,8 +11314,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FVertexCxform =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxform_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11326,8 +11326,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FVertexCxformMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformMul_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11338,8 +11338,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FVertexCxformInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformInv_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11350,8 +11350,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FVertexCxformEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformEAlpha_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11362,8 +11362,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FVertexCxformEAlphaMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformEAlphaMul_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11374,8 +11374,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FVertexCxformEAlphaInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformEAlphaInv_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11386,8 +11386,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FVertexCxformAc =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAc,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAc_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11398,8 +11398,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FVertexCxformAcMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcMul_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11410,8 +11410,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FVertexCxformAcInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcInv_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11422,8 +11422,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FVertexCxformAcEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcEAlpha_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11434,8 +11434,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FVertexCxformAcEAlphaMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcEAlphaMul_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11446,8 +11446,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FVertexCxformAcEAlphaInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcEAlphaInv_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11458,8 +11458,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGTexTG =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTG,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTG_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11470,8 +11470,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGTexTGMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGMul_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11482,8 +11482,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGTexTGInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGInv_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11494,8 +11494,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGTexTGEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGEAlpha_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11506,8 +11506,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGTexTGEAlphaMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGEAlphaMul_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11518,8 +11518,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGTexTGEAlphaInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGEAlphaInv_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11530,8 +11530,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGTexTGCxform =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxform_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11542,8 +11542,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGTexTGCxformMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformMul_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11554,8 +11554,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGTexTGCxformInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformInv_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11566,8 +11566,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGTexTGCxformEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformEAlpha_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11578,8 +11578,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGTexTGCxformEAlphaMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformEAlphaMul_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11590,8 +11590,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGTexTGCxformEAlphaInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformEAlphaInv_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11602,8 +11602,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGTexTGCxformAc =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAc,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAc_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11614,8 +11614,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGTexTGCxformAcMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcMul_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11626,8 +11626,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGTexTGCxformAcInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcInv_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11638,8 +11638,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlpha_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11650,8 +11650,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlphaMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlphaMul_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11662,8 +11662,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlphaInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlphaInv_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11674,8 +11674,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGVertex =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertex,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertex_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11686,8 +11686,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGVertexMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11698,8 +11698,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGVertexInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11710,8 +11710,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGVertexEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexEAlpha_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11722,8 +11722,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGVertexEAlphaMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexEAlphaMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11734,8 +11734,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGVertexEAlphaInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexEAlphaInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11746,8 +11746,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGVertexCxform =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxform_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11758,8 +11758,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGVertexCxformMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11770,8 +11770,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGVertexCxformInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11782,8 +11782,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGVertexCxformEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformEAlpha_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11794,8 +11794,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGVertexCxformEAlphaMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformEAlphaMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11806,8 +11806,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGVertexCxformEAlphaInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformEAlphaInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11818,8 +11818,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGVertexCxformAc =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAc,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAc_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11830,8 +11830,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGVertexCxformAcMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11842,8 +11842,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGVertexCxformAcInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11854,8 +11854,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGVertexCxformAcEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcEAlpha_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11866,8 +11866,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGVertexCxformAcEAlphaMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcEAlphaMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11878,8 +11878,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGVertexCxformAcEAlphaInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcEAlphaInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11890,8 +11890,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTG =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTG,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTG_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11902,8 +11902,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11914,8 +11914,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11926,8 +11926,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGEAlpha_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11938,8 +11938,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGEAlphaMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGEAlphaMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11950,8 +11950,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGEAlphaInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGEAlphaInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11962,8 +11962,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGCxform =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxform_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11974,8 +11974,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGCxformMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11986,8 +11986,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGCxformInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -11998,8 +11998,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGCxformEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformEAlpha_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12010,8 +12010,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGCxformEAlphaMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformEAlphaMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12022,8 +12022,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGCxformEAlphaInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformEAlphaInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12034,8 +12034,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGCxformAc =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAc,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAc_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12046,8 +12046,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGCxformAcMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12058,8 +12058,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGCxformAcInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12070,8 +12070,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGCxformAcEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcEAlpha_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12082,8 +12082,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGCxformAcEAlphaMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcEAlphaMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12094,8 +12094,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGCxformAcEAlphaInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcEAlphaInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12106,8 +12106,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchVertex =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertex,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertex_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12118,8 +12118,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchVertexMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexMul_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12130,8 +12130,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchVertexInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexInv_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12142,8 +12142,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchVertexEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexEAlpha_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12154,8 +12154,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchVertexEAlphaMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexEAlphaMul_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12166,8 +12166,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchVertexEAlphaInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexEAlphaInv_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12178,8 +12178,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchVertexCxform =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxform_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12190,8 +12190,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchVertexCxformMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformMul_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12202,8 +12202,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchVertexCxformInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformInv_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12214,8 +12214,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchVertexCxformEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformEAlpha_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12226,8 +12226,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchVertexCxformEAlphaMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformEAlphaMul_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12238,8 +12238,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchVertexCxformEAlphaInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformEAlphaInv_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12250,8 +12250,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchVertexCxformAc =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAc,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAc_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12262,8 +12262,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchVertexCxformAcMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcMul_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12274,8 +12274,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchVertexCxformAcInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcInv_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12286,8 +12286,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchVertexCxformAcEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcEAlpha_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12298,8 +12298,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchVertexCxformAcEAlphaMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcEAlphaMul_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12310,8 +12310,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchVertexCxformAcEAlphaInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcEAlphaInv_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12322,8 +12322,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGTexTG =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTG,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTG_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12334,8 +12334,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGTexTGMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGMul_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12346,8 +12346,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGTexTGInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGInv_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12358,8 +12358,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGTexTGEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGEAlpha_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12370,8 +12370,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGTexTGEAlphaMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGEAlphaMul_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12382,8 +12382,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGTexTGEAlphaInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGEAlphaInv_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12394,8 +12394,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGTexTGCxform =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxform_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12406,8 +12406,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGTexTGCxformMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformMul_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12418,8 +12418,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGTexTGCxformInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformInv_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12430,8 +12430,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGTexTGCxformEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformEAlpha_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12442,8 +12442,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGTexTGCxformEAlphaMul
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformEAlphaMul_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12454,8 +12454,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGTexTGCxformEAlphaInv
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformEAlphaInv_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12466,8 +12466,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGTexTGCxformAc =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAc,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAc_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12478,8 +12478,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGTexTGCxformAcMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcMul_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12490,8 +12490,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGTexTGCxformAcInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcInv_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12502,8 +12502,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGTexTGCxformAcEAlpha 
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlpha_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12514,8 +12514,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGTexTGCxformAcEAlphaM
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlphaMul_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12526,8 +12526,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGTexTGCxformAcEAlphaI
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlphaInv_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12538,8 +12538,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGVertex =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertex,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertex_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12550,8 +12550,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGVertexMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12562,8 +12562,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGVertexInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12574,8 +12574,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGVertexEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexEAlpha_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12586,8 +12586,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGVertexEAlphaMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexEAlphaMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12598,8 +12598,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGVertexEAlphaInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexEAlphaInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12610,8 +12610,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGVertexCxform =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxform_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12622,8 +12622,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGVertexCxformMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12634,8 +12634,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGVertexCxformInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12646,8 +12646,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGVertexCxformEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformEAlpha_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12658,8 +12658,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGVertexCxformEAlphaMu
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformEAlphaMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12670,8 +12670,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGVertexCxformEAlphaIn
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformEAlphaInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12682,8 +12682,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGVertexCxformAc =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAc,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAc_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12694,8 +12694,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGVertexCxformAcMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12706,8 +12706,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGVertexCxformAcInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12718,8 +12718,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGVertexCxformAcEAlpha
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcEAlpha_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12730,8 +12730,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGVertexCxformAcEAlpha
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcEAlphaMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12742,8 +12742,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTexTGVertexCxformAcEAlpha
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcEAlphaInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12754,8 +12754,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTG =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTG,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTG_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12766,8 +12766,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12778,8 +12778,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGInv =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12790,8 +12790,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGEAlpha =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGEAlpha_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12802,8 +12802,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGEAlphaMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGEAlphaMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12814,8 +12814,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGEAlphaInv =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGEAlphaInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12826,8 +12826,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGCxform =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxform_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12838,8 +12838,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGCxformMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12850,8 +12850,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGCxformInv =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12862,8 +12862,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGCxformEAlpha =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformEAlpha_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12874,8 +12874,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGCxformEAlphaMul 
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformEAlphaMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12886,8 +12886,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGCxformEAlphaInv 
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformEAlphaInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12898,8 +12898,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGCxformAc =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAc,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAc_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12910,8 +12910,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGCxformAcMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12922,8 +12922,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGCxformAcInv =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12934,8 +12934,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGCxformAcEAlpha =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcEAlpha_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12946,8 +12946,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGCxformAcEAlphaMu
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcEAlphaMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12958,8 +12958,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGCxformAcEAlphaIn
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCxformAcEAlphaInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12970,8 +12970,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedVertex =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertex,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertex_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12982,8 +12982,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedVertexMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexMul_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -12994,8 +12994,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedVertexInv =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexInv_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13006,8 +13006,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedVertexEAlpha =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexEAlpha_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13018,8 +13018,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedVertexEAlphaMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexEAlphaMul_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13030,8 +13030,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedVertexEAlphaInv =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexEAlphaInv_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13042,8 +13042,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedVertexCxform =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxform_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13054,8 +13054,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedVertexCxformMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformMul_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13066,8 +13066,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedVertexCxformInv =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformInv_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13078,8 +13078,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedVertexCxformEAlpha =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformEAlpha_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13090,8 +13090,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedVertexCxformEAlphaMul
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformEAlphaMul_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13102,8 +13102,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedVertexCxformEAlphaInv
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformEAlphaInv_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13114,8 +13114,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedVertexCxformAc =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAc,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAc_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13126,8 +13126,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedVertexCxformAcMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcMul_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13138,8 +13138,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedVertexCxformAcInv =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcInv_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13150,8 +13150,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedVertexCxformAcEAlpha 
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcEAlpha_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13162,8 +13162,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedVertexCxformAcEAlphaM
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcEAlphaMul_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13174,8 +13174,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedVertexCxformAcEAlphaI
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FVertexCxformAcEAlphaInv_size,
-    /* Uniforms */      Uniforms_3756130650,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5561203973,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13186,8 +13186,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGTexTG =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTG,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTG_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13198,8 +13198,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGTexTGMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGMul_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13210,8 +13210,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGTexTGInv =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGInv_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13222,8 +13222,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGTexTGEAlpha =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGEAlpha_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13234,8 +13234,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGTexTGEAlphaMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGEAlphaMul_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13246,8 +13246,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGTexTGEAlphaInv =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGEAlphaInv_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13258,8 +13258,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGTexTGCxform =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxform_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13270,8 +13270,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGTexTGCxformMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformMul_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13282,8 +13282,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGTexTGCxformInv =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformInv_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13294,8 +13294,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGTexTGCxformEAlph
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformEAlpha_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13306,8 +13306,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGTexTGCxformEAlph
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformEAlphaMul_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13318,8 +13318,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGTexTGCxformEAlph
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformEAlphaInv_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13330,8 +13330,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGTexTGCxformAc =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAc,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAc_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13342,8 +13342,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGTexTGCxformAcMul
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcMul_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13354,8 +13354,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGTexTGCxformAcInv
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcInv_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13366,8 +13366,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGTexTGCxformAcEAl
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlpha_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13378,8 +13378,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGTexTGCxformAcEAl
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlphaMul_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13390,8 +13390,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGTexTGCxformAcEAl
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGTexTGCxformAcEAlphaInv_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13402,8 +13402,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGVertex =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertex,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertex_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13414,8 +13414,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGVertexMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13426,8 +13426,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGVertexInv =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13438,8 +13438,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGVertexEAlpha =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexEAlpha_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13450,8 +13450,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGVertexEAlphaMul 
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexEAlphaMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13462,8 +13462,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGVertexEAlphaInv 
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexEAlphaInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13474,8 +13474,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGVertexCxform =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxform_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13486,8 +13486,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGVertexCxformMul 
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13498,8 +13498,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGVertexCxformInv 
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13510,8 +13510,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGVertexCxformEAlp
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformEAlpha_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13522,8 +13522,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGVertexCxformEAlp
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformEAlphaMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13534,8 +13534,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGVertexCxformEAlp
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformEAlphaInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13546,8 +13546,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGVertexCxformAc =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAc,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAc_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13558,8 +13558,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGVertexCxformAcMu
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13570,8 +13570,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGVertexCxformAcIn
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13582,8 +13582,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGVertexCxformAcEA
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcEAlpha_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13594,8 +13594,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGVertexCxformAcEA
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcEAlphaMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13606,8 +13606,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTexTGVertexCxformAcEA
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGVertexCxformAcEAlphaInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13618,8 +13618,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FSolid =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FSolid,
     /* pBinary */       pBinary_Vulkan_SPIRV_FSolid_size,
-    /* Uniforms */      Uniforms_5650485972,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3176950603,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13630,8 +13630,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FSolidMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FSolidMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FSolidMul_size,
-    /* Uniforms */      Uniforms_5650485972,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3176950603,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13642,8 +13642,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FSolidInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FSolidInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FSolidInv_size,
-    /* Uniforms */      Uniforms_5650485972,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3176950603,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13654,8 +13654,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FText =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FText,
     /* pBinary */       pBinary_Vulkan_SPIRV_FText_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13666,8 +13666,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTextMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTextMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTextMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13678,8 +13678,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTextInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTextInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTextInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13690,8 +13690,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchSolid =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FSolid,
     /* pBinary */       pBinary_Vulkan_SPIRV_FSolid_size,
-    /* Uniforms */      Uniforms_5650485972,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3176950603,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13702,8 +13702,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchSolidMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FSolidMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FSolidMul_size,
-    /* Uniforms */      Uniforms_5650485972,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3176950603,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13714,8 +13714,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchSolidInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FSolidInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FSolidInv_size,
-    /* Uniforms */      Uniforms_5650485972,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3176950603,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13726,8 +13726,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchText =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FText,
     /* pBinary */       pBinary_Vulkan_SPIRV_FText_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13738,8 +13738,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTextMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTextMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTextMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13750,8 +13750,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchTextInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTextInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTextInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13762,8 +13762,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedSolid =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FSolid,
     /* pBinary */       pBinary_Vulkan_SPIRV_FSolid_size,
-    /* Uniforms */      Uniforms_5650485972,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3176950603,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13774,8 +13774,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedSolidMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FSolidMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FSolidMul_size,
-    /* Uniforms */      Uniforms_5650485972,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3176950603,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13786,8 +13786,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedSolidInv =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FSolidInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FSolidInv_size,
-    /* Uniforms */      Uniforms_5650485972,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3176950603,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13798,8 +13798,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedText =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FText,
     /* pBinary */       pBinary_Vulkan_SPIRV_FText_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13810,8 +13810,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTextMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTextMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTextMul_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13822,8 +13822,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedTextInv =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTextInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTextInv_size,
-    /* Uniforms */      Uniforms_4535377741,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3947590396,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13834,8 +13834,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUV =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUV,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUV_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13846,8 +13846,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVMul_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13858,8 +13858,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVEAlpha_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13870,8 +13870,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVEAlphaMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVEAlphaMul_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13882,8 +13882,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVCxform =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxform_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13894,8 +13894,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVCxformMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformMul_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13906,8 +13906,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVCxformEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformEAlpha_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13918,8 +13918,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVCxformEAlphaMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformEAlphaMul_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13930,8 +13930,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVCxformAc =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAc,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAc_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13942,8 +13942,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVCxformAcMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAcMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAcMul_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13954,8 +13954,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVCxformAcEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAcEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAcEAlpha_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13966,8 +13966,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVCxformAcEAlphaMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAcEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAcEAlphaMul_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13978,8 +13978,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVA =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVA,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVA_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -13990,8 +13990,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVAMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAMul_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14002,8 +14002,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVAInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAInv_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14014,8 +14014,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVAEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAEAlpha_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14026,8 +14026,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVAEAlphaMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAEAlphaMul_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14038,8 +14038,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVAEAlphaInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAEAlphaInv_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14050,8 +14050,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVACxform =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxform_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14062,8 +14062,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVACxformMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformMul_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14074,8 +14074,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVACxformInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformInv_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14086,8 +14086,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVACxformEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformEAlpha_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14098,8 +14098,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVACxformEAlphaMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformEAlphaMul_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14110,8 +14110,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVACxformEAlphaInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformEAlphaInv_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14122,8 +14122,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVACxformAc =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAc,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAc_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14134,8 +14134,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVACxformAcMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcMul_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14146,8 +14146,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVACxformAcInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcInv_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14158,8 +14158,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVACxformAcEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcEAlpha_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14170,8 +14170,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVACxformAcEAlphaMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcEAlphaMul_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14182,8 +14182,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FYUVACxformAcEAlphaInv =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcEAlphaInv_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14194,8 +14194,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUV =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUV,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUV_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14206,8 +14206,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVMul_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14218,8 +14218,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVEAlpha_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14230,8 +14230,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVEAlphaMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVEAlphaMul_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14242,8 +14242,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVCxform =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxform_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14254,8 +14254,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVCxformMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformMul_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14266,8 +14266,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVCxformEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformEAlpha_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14278,8 +14278,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVCxformEAlphaMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformEAlphaMul_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14290,8 +14290,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVCxformAc =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAc,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAc_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14302,8 +14302,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVCxformAcMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAcMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAcMul_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14314,8 +14314,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVCxformAcEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAcEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAcEAlpha_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14326,8 +14326,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVCxformAcEAlphaMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAcEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAcEAlphaMul_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14338,8 +14338,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVA =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVA,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVA_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14350,8 +14350,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVAMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAMul_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14362,8 +14362,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVAInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAInv_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14374,8 +14374,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVAEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAEAlpha_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14386,8 +14386,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVAEAlphaMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAEAlphaMul_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14398,8 +14398,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVAEAlphaInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAEAlphaInv_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14410,8 +14410,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVACxform =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxform_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14422,8 +14422,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVACxformMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformMul_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14434,8 +14434,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVACxformInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformInv_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14446,8 +14446,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVACxformEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformEAlpha_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14458,8 +14458,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVACxformEAlphaMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformEAlphaMul_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14470,8 +14470,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVACxformEAlphaInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformEAlphaInv_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14482,8 +14482,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVACxformAc =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAc,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAc_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14494,8 +14494,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVACxformAcMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcMul_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14506,8 +14506,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVACxformAcInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcInv_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14518,8 +14518,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVACxformAcEAlpha =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcEAlpha_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14530,8 +14530,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVACxformAcEAlphaMul =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcEAlphaMul_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14542,8 +14542,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBatchYUVACxformAcEAlphaInv =
     /* Flags */         Shader_Batch,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcEAlphaInv_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14554,8 +14554,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUV =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUV,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUV_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14566,8 +14566,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVMul_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14578,8 +14578,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVEAlpha =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVEAlpha_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14590,8 +14590,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVEAlphaMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVEAlphaMul_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14602,8 +14602,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVCxform =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxform_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14614,8 +14614,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVCxformMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformMul_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14626,8 +14626,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVCxformEAlpha =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformEAlpha_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14638,8 +14638,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVCxformEAlphaMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformEAlphaMul_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14650,8 +14650,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVCxformAc =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAc,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAc_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14662,8 +14662,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVCxformAcMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAcMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAcMul_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14674,8 +14674,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVCxformAcEAlpha =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAcEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAcEAlpha_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14686,8 +14686,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVCxformAcEAlphaMul 
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAcEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVCxformAcEAlphaMul_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14698,8 +14698,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVA =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVA,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVA_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14710,8 +14710,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVAMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAMul_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14722,8 +14722,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVAInv =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAInv_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14734,8 +14734,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVAEAlpha =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAEAlpha_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14746,8 +14746,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVAEAlphaMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAEAlphaMul_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14758,8 +14758,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVAEAlphaInv =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVAEAlphaInv_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14770,8 +14770,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVACxform =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxform,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxform_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14782,8 +14782,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVACxformMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformMul_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14794,8 +14794,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVACxformInv =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformInv_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14806,8 +14806,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVACxformEAlpha =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformEAlpha_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14818,8 +14818,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVACxformEAlphaMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformEAlphaMul_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14830,8 +14830,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVACxformEAlphaInv =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformEAlphaInv_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14842,8 +14842,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVACxformAc =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAc,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAc_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14854,8 +14854,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVACxformAcMul =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcMul_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14866,8 +14866,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVACxformAcInv =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcInv_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14878,8 +14878,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVACxformAcEAlpha =
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcEAlpha_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14890,8 +14890,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVACxformAcEAlphaMul
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcEAlphaMul_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14902,8 +14902,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FInstancedYUVACxformAcEAlphaInv
     /* Flags */         Shader_Instanced,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcEAlphaInv,
     /* pBinary */       pBinary_Vulkan_SPIRV_FYUVACxformAcEAlphaInv_size,
-    /* Uniforms */      Uniforms_4602762762,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_3438566651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14914,8 +14914,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGCMatrixAc =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCMatrixAc,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCMatrixAc_size,
-    /* Uniforms */      Uniforms_3124591169,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4401428650,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14926,8 +14926,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGCMatrixAcMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCMatrixAcMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCMatrixAcMul_size,
-    /* Uniforms */      Uniforms_3124591169,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4401428650,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14938,8 +14938,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGCMatrixAcEAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCMatrixAcEAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCMatrixAcEAlpha_size,
-    /* Uniforms */      Uniforms_3124591169,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4401428650,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14950,8 +14950,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FTexTGCMatrixAcEAlphaMul =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCMatrixAcEAlphaMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FTexTGCMatrixAcEAlphaMul_size,
-    /* Uniforms */      Uniforms_3124591169,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4401428650,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14962,8 +14962,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox1Blur =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox1Blur,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox1Blur_size,
-    /* Uniforms */      Uniforms_2460454664,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5603775806,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14974,8 +14974,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox1BlurMul =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox1BlurMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox1BlurMul_size,
-    /* Uniforms */      Uniforms_2460454664,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5603775806,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14986,8 +14986,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2Blur =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2Blur,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2Blur_size,
-    /* Uniforms */      Uniforms_2460454664,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5603775806,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -14998,8 +14998,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2BlurMul =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2BlurMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2BlurMul_size,
-    /* Uniforms */      Uniforms_2460454664,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5603775806,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15010,8 +15010,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2Shadow =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2Shadow,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2Shadow_size,
-    /* Uniforms */      Uniforms_4719056760,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_6143405754,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15022,8 +15022,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2ShadowMul =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowMul_size,
-    /* Uniforms */      Uniforms_4719056760,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_6143405754,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15034,8 +15034,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2ShadowKnockout =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowKnockout,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowKnockout_size,
-    /* Uniforms */      Uniforms_4719056760,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_6143405754,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15046,8 +15046,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2ShadowKnockoutMul =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowKnockoutMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowKnockoutMul_size,
-    /* Uniforms */      Uniforms_4719056760,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_6143405754,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15058,8 +15058,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2InnerShadow =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2InnerShadow,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2InnerShadow_size,
-    /* Uniforms */      Uniforms_4719056760,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_6143405754,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15070,8 +15070,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2InnerShadowMul =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2InnerShadowMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2InnerShadowMul_size,
-    /* Uniforms */      Uniforms_4719056760,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_6143405754,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15082,8 +15082,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2InnerShadowKnockout =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2InnerShadowKnockout,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2InnerShadowKnockout_size,
-    /* Uniforms */      Uniforms_4719056760,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_6143405754,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15094,8 +15094,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2InnerShadowKnockoutMul =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2InnerShadowKnockoutMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2InnerShadowKnockoutMul_size,
-    /* Uniforms */      Uniforms_4719056760,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_6143405754,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15106,8 +15106,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2Shadowonly =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2Shadowonly,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2Shadowonly_size,
-    /* Uniforms */      Uniforms_5169239271,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2333604871,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15118,8 +15118,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2ShadowonlyMul =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowonlyMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowonlyMul_size,
-    /* Uniforms */      Uniforms_5169239271,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2333604871,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15130,8 +15130,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2ShadowHighlight =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowHighlight,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowHighlight_size,
-    /* Uniforms */      Uniforms_4912805460,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4289424616,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15142,8 +15142,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2ShadowHighlightMul =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowHighlightMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowHighlightMul_size,
-    /* Uniforms */      Uniforms_4912805460,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4289424616,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15154,8 +15154,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2ShadowHighlightKnockout =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowHighlightKnockout,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowHighlightKnockout_size,
-    /* Uniforms */      Uniforms_4912805460,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4289424616,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15166,8 +15166,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2ShadowHighlightKnockoutMul
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowHighlightKnockoutMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowHighlightKnockoutMul_size,
-    /* Uniforms */      Uniforms_4912805460,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4289424616,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15178,8 +15178,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2InnerShadowHighlight =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2InnerShadowHighlight,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2InnerShadowHighlight_size,
-    /* Uniforms */      Uniforms_4912805460,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4289424616,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15190,8 +15190,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2InnerShadowHighlightMul =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2InnerShadowHighlightMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2InnerShadowHighlightMul_size,
-    /* Uniforms */      Uniforms_4912805460,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4289424616,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15202,8 +15202,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2InnerShadowHighlightKnocko
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2InnerShadowHighlightKnockout,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2InnerShadowHighlightKnockout_size,
-    /* Uniforms */      Uniforms_4912805460,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4289424616,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15214,8 +15214,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2InnerShadowHighlightKnocko
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2InnerShadowHighlightKnockoutMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2InnerShadowHighlightKnockoutMul_size,
-    /* Uniforms */      Uniforms_4912805460,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4289424616,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15226,8 +15226,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2FullShadowHighlight =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2FullShadowHighlight,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2FullShadowHighlight_size,
-    /* Uniforms */      Uniforms_4912805460,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4289424616,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15238,8 +15238,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2FullShadowHighlightMul =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2FullShadowHighlightMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2FullShadowHighlightMul_size,
-    /* Uniforms */      Uniforms_4912805460,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4289424616,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15250,8 +15250,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2ShadowonlyHighlight =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowonlyHighlight,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowonlyHighlight_size,
-    /* Uniforms */      Uniforms_3390122391,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4558635928,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15262,8 +15262,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FBox2ShadowonlyHighlightMul =
     /* Flags */         Shader_DynamicLoop,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowonlyHighlightMul,
     /* pBinary */       pBinary_Vulkan_SPIRV_FBox2ShadowonlyHighlightMul_size,
-    /* Uniforms */      Uniforms_3390122391,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_4558635928,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15274,8 +15274,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FDrawableCopyPixels =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FDrawableCopyPixels,
     /* pBinary */       pBinary_Vulkan_SPIRV_FDrawableCopyPixels_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15286,8 +15286,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FDrawableCopyPixelsMergeAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FDrawableCopyPixelsMergeAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FDrawableCopyPixelsMergeAlpha_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15298,8 +15298,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FDrawableCopyPixelsNoDestAlpha 
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FDrawableCopyPixelsNoDestAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FDrawableCopyPixelsNoDestAlpha_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15310,8 +15310,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FDrawableCopyPixelsAlpha =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FDrawableCopyPixelsAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FDrawableCopyPixelsAlpha_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15322,8 +15322,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FDrawableCopyPixelsAlphaMergeAl
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FDrawableCopyPixelsAlphaMergeAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FDrawableCopyPixelsAlphaMergeAlpha_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15334,8 +15334,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FDrawableCopyPixelsAlphaNoDestA
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FDrawableCopyPixelsAlphaNoDestAlpha,
     /* pBinary */       pBinary_Vulkan_SPIRV_FDrawableCopyPixelsAlphaNoDestAlpha_size,
-    /* Uniforms */      Uniforms_3186954237,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2698908552,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15346,8 +15346,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FDrawableMerge =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FDrawableMerge,
     /* pBinary */       pBinary_Vulkan_SPIRV_FDrawableMerge_size,
-    /* Uniforms */      Uniforms_6098560083,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2427823327,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15358,8 +15358,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FDrawableCompare =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FDrawableCompare,
     /* pBinary */       pBinary_Vulkan_SPIRV_FDrawableCompare_size,
-    /* Uniforms */      Uniforms_6117461306,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_5313510483,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
@@ -15370,8 +15370,8 @@ static FragShaderDesc ShaderDesc_FS_Vulkan_SPIRV_FDrawablePaletteMap =
     /* Flags */         0,
     /* pBinary */       pBinary_Vulkan_SPIRV_FDrawablePaletteMap,
     /* pBinary */       pBinary_Vulkan_SPIRV_FDrawablePaletteMap_size,
-    /* Uniforms */      Uniforms_2402564022,
-    /* BatchUniforms */ BatchUniforms_5760312302,
+    /* Uniforms */      Uniforms_2389110651,
+    /* BatchUniforms */ BatchUniforms_4719444725,
     
 };
 
