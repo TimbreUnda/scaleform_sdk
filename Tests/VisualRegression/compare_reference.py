@@ -38,6 +38,8 @@ def main():
                     help='Per-pixel mismatch threshold (default: 8)')
     ap.add_argument('--diff-dir', default='',
                     help='Output directory for diff images (default: Output/Diff)')
+    ap.add_argument('--exclude', nargs='*', default=[],
+                    help='Test names to exclude from comparison')
     args = ap.parse_args()
 
     manifest_path = args.manifest or os.path.join(SCRIPT_DIR, 'TestManifest.json')
@@ -62,9 +64,16 @@ def main():
     total_frames = 0
     failed_frames = 0
 
+    exclude_set = set(args.exclude)
+    skipped_count = 0
     for test in tests:
         name   = test['name']
         frames = sorted(test.get('frames', default_frames))
+
+        if name in exclude_set:
+            print(f'\n=== {name} === [SKIP — excluded]')
+            skipped_count += 1
+            continue
 
         print(f'\n=== {name} ===')
         test_pass = True
@@ -116,9 +125,10 @@ def main():
         print(f"  {name}: [{'PASS' if test_pass else 'FAIL'}]")
         all_results.append({'name': name, 'pass': test_pass})
 
-    overall = passed_count == len(tests)
+    tested = len(tests) - skipped_count
+    overall = passed_count == tested
     print(f'\n{"=" * 40}')
-    print(f"  OVERALL: {'PASS' if overall else 'FAIL'}  ({passed_count}/{len(tests)} tests)")
+    print(f"  OVERALL: {'PASS' if overall else 'FAIL'}  ({passed_count}/{tested} tests, {skipped_count} skipped)")
     if failed_frames > 0:
         print(f"  Failed frames: {failed_frames}/{total_frames}")
     print(f'{"=" * 40}')

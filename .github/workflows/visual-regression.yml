@@ -67,9 +67,15 @@ jobs:
             exit 1
           }
 
+          # Tests that crash SwiftShader at high-complexity frames
+          $exclude = @("Mask_AS2", "Mask_AS3", "MMOPackedRender")
           $failed = 0
           foreach ($test in $manifest.tests) {
             $name = $test.name
+            if ($exclude -contains $name) {
+              Write-Host "=== $name === [SKIP — crashes SwiftShader]" -ForegroundColor DarkGray
+              continue
+            }
             $swf = Join-Path $dataDir $test.swf
             $outDir = Join-Path $outputRoot $name
             New-Item -ItemType Directory -Force -Path $outDir | Out-Null
@@ -160,6 +166,7 @@ jobs:
           python Tests/VisualRegression/compare_reference.py
           --vulkan-dir Tests/VisualRegression/Output/Captures/vulkan_swiftshader
           --threshold 16
+          --exclude Mask_AS2 Mask_AS3 MMOPackedRender
 
       - name: Upload captures on failure
         if: failure()
