@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="D3D11_Release|Win32">
+      <Configuration>D3D11_Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="D3D11_Release|x64">
+      <Configuration>D3D11_Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="D3D11_Debug|Win32">
+      <Configuration>D3D11_Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="D3D11_Debug|x64">
+      <Configuration>D3D11_Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{C1A2B3C4-D5E6-F789-ABCD-EF1234567891}</ProjectGuid>
+    <RootNamespace>CaptureD3D11</RootNamespace>
+    <ProjectName>CaptureD3D11</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='D3D11_Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='D3D11_Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='D3D11_Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='D3D11_Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <!-- Property sheet order matches GFxPlayerTinyVulkan.vcxproj (5-level-deep project) -->
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='D3D11_Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_Define_Msvc10.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_App.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_Config_Release.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_Define_x86.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_Renderer_DX11.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='D3D11_Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_Define_Msvc10.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_App.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_Config_Release.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_Define_x64.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_Renderer_DX11.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='D3D11_Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_Define_Msvc10.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_App.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_Config_Debug.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_Define_x86.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_Renderer_DX11.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='D3D11_Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_Define_Msvc10.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_App.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_Config_Debug.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_Define_x64.props" />
+    <Import Project="..\..\..\Property Sheets\GFx_Renderer_DX11.props" />
+  </ImportGroup>
+  <PropertyGroup>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='D3D11_Release|Win32'">.\..\..\..\..\..\Bin\$(PlatformName)\$(MsvcVer)\Tests\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='D3D11_Release|Win32'">.\..\..\..\..\..\Obj\$(PlatformName)\$(MsvcVer)\$(Configuration)\$(ProjectName)\</IntDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='D3D11_Release|x64'">.\..\..\..\..\..\Bin\$(PlatformName)\$(MsvcVer)\Tests\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='D3D11_Release|x64'">.\..\..\..\..\..\Obj\$(PlatformName)\$(MsvcVer)\$(Configuration)\$(ProjectName)\</IntDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='D3D11_Debug|Win32'">.\..\..\..\..\..\Bin\$(PlatformName)\$(MsvcVer)\Tests\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='D3D11_Debug|Win32'">.\..\..\..\..\..\Obj\$(PlatformName)\$(MsvcVer)\$(Configuration)\$(ProjectName)\</IntDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='D3D11_Debug|x64'">.\..\..\..\..\..\Bin\$(PlatformName)\$(MsvcVer)\Tests\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='D3D11_Debug|x64'">.\..\..\..\..\..\Obj\$(PlatformName)\$(MsvcVer)\$(Configuration)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='D3D11_Release|Win32'">
+    <Link>
+      <AdditionalDependencies>libgfxrender_d3d11.lib;legacy_stdio_definitions.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <ClCompile>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='D3D11_Release|x64'">
+    <Link>
+      <AdditionalDependencies>libgfxrender_d3d11.lib;legacy_stdio_definitions.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <ClCompile>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='D3D11_Debug|Win32'">
+    <Link>
+      <AdditionalDependencies>libgfxrender_d3d11.lib;legacy_stdio_definitions.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <ClCompile>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='D3D11_Debug|x64'">
+    <Link>
+      <AdditionalDependencies>libgfxrender_d3d11.lib;legacy_stdio_definitions.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <ClCompile>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\..\..\Tests\VisualRegression\CaptureD3D11.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

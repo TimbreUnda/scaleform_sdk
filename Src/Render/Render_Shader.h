@@ -108,17 +108,19 @@ public:
 
         if (sd->pVDesc->Uniforms[var].Size)
         {
-            SF_ASSERT(sd->pVDesc->Uniforms[var].ShadowOffset + sd->pVDesc->Uniforms[var].ElementSize * 
-                      index + n <= Uniforms::SU_TotalSize);
-    	    memcpy(UniformData + sd->pVDesc->Uniforms[var].ShadowOffset + 
-                   sd->pVDesc->Uniforms[var].ElementSize * index, v, n * sizeof(float));
+            unsigned vsN = (n > (unsigned)sd->pVDesc->Uniforms[var].Size) ? (unsigned)sd->pVDesc->Uniforms[var].Size : n;
+            SF_ASSERT(sd->pVDesc->Uniforms[var].ShadowOffset + sd->pVDesc->Uniforms[var].ElementSize *
+                      index + vsN <= Uniforms::SU_TotalSize);
+    	    memcpy(UniformData + sd->pVDesc->Uniforms[var].ShadowOffset +
+                   sd->pVDesc->Uniforms[var].ElementSize * index, v, vsN * sizeof(float));
         }
         if (sd->pFDesc->Uniforms[var].Size)
         {
-            SF_ASSERT(sd->pFDesc->Uniforms[var].ShadowOffset + sd->pFDesc->Uniforms[var].ElementSize * 
-                      index + n <= Uniforms::SU_TotalSize);
-            memcpy(UniformData + sd->pFDesc->Uniforms[var].ShadowOffset + 
-                   sd->pFDesc->Uniforms[var].ElementSize * index, v, n * sizeof(float));
+            unsigned fsN = (n > (unsigned)sd->pFDesc->Uniforms[var].Size) ? (unsigned)sd->pFDesc->Uniforms[var].Size : n;
+            SF_ASSERT(sd->pFDesc->Uniforms[var].ShadowOffset + sd->pFDesc->Uniforms[var].ElementSize *
+                      index + fsN <= Uniforms::SU_TotalSize);
+            memcpy(UniformData + sd->pFDesc->Uniforms[var].ShadowOffset +
+                   sd->pFDesc->Uniforms[var].ElementSize * index, v, fsN * sizeof(float));
         }
 	    UniformSet[var] = 1;
     }

@@ -1,0 +1,13 @@
+Src/Render/Vulkan/Vulkan_Config.h
+Src/Render/Vulkan/Vulkan_HAL.cpp
+Src/Render/Vulkan/Vulkan_HAL.h
+Src/Render/Vulkan/Vulkan_MeshCache.cpp
+Src/Render/Vulkan/Vulkan_MeshCache.h
+Src/Render/Vulkan/Vulkan_Shader.cpp
+Src/Render/Vulkan/Vulkan_Shader.h
+Src/Render/Vulkan/Vulkan_ShaderDescs.cpp
+Src/Render/Vulkan/Vulkan_ShaderDescs.h
+Src/Render/Vulkan/Vulkan_Texture.cpp
+Src/Render/Vulkan/Vulkan_Texture.h
+Src/Render/Vulkan/Vulkan_Sync.h
+Src/Render/Vulkan/Vulkan_Events.h
