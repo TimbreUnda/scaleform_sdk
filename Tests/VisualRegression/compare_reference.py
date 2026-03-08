@@ -78,10 +78,14 @@ def main():
             total_frames += 1
 
             if not os.path.exists(ref_png):
-                print(f'    Frame {frame}: [SKIP] missing D3D11 reference: {ref_png}')
+                print(f'    Frame {frame}: [FAIL] missing D3D11 reference: {ref_png}')
+                test_pass = False
+                failed_frames += 1
                 continue
             if not os.path.exists(vk_png):
-                print(f'    Frame {frame}: [SKIP] missing Vulkan image: {vk_png}')
+                print(f'    Frame {frame}: [FAIL] missing Vulkan image: {vk_png}')
+                test_pass = False
+                failed_frames += 1
                 continue
 
             os.makedirs(os.path.dirname(diff_png), exist_ok=True)
