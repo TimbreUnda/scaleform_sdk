@@ -1,5 +1,8 @@
 # Build visual regression test tools: CaptureD3D11 and CaptureVulkan.
 # Run from scaleform_sdk root, or from Tests/VisualRegression.
+# Use --skip-d3d11 to build only Vulkan (e.g. in CI without D3D11 libs).
+
+param([switch]$SkipD3D11)
 
 $ErrorActionPreference = "Stop"
 
@@ -7,22 +10,38 @@ $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $root = (Resolve-Path (Join-Path $scriptDir "..\..")).Path
 
-$vsDevCmd = "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat"
+# Find Visual Studio using vswhere (works for all editions: Community, Professional, Enterprise)
+$vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+if (Test-Path $vswhere) {
+    $vsInstall = & $vswhere -latest -property installationPath 2>$null
+    if ($vsInstall) {
+        $vsDevCmd = Join-Path $vsInstall "Common7\Tools\VsDevCmd.bat"
+    }
+}
+# Fallback to hardcoded paths
+if (-not $vsDevCmd -or -not (Test-Path $vsDevCmd)) {
+    $vsDevCmd = "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat"
+}
 if (-not (Test-Path $vsDevCmd)) {
-    # Try Community 2019
     $vsDevCmd = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\Tools\VsDevCmd.bat"
 }
 if (-not (Test-Path $vsDevCmd)) {
-    Write-Error "VsDevCmd.bat not found. Please set the path for your Visual Studio installation."
+    Write-Error "VsDevCmd.bat not found. Install Visual Studio or set the path manually."
     exit 1
 }
 
 $expatProj        = Join-Path $root "3rdParty\expat-2.1.0\gfx_projects\Win32\Msvc10\expat.vcxproj"
 $renderVkProj     = Join-Path $root "Projects\Win32\Msvc10\SDK\Render\Render_Vulkan.vcxproj"
-$captureD3D11Proj = Join-Path $root "Projects\Win32\Msvc10\Tests\CaptureD3D11\CaptureD3D11.vcxproj"
 $captureVkProj    = Join-Path $root "Projects\Win32\Msvc10\Tests\CaptureVulkan\CaptureVulkan.vcxproj"
 
-foreach ($proj in @($expatProj, $renderVkProj, $captureD3D11Proj, $captureVkProj)) {
+$requiredProjs = @($expatProj, $renderVkProj, $captureVkProj)
+
+if (-not $SkipD3D11) {
+    $captureD3D11Proj = Join-Path $root "Projects\Win32\Msvc10\Tests\CaptureD3D11\CaptureD3D11.vcxproj"
+    $requiredProjs += $captureD3D11Proj
+}
+
+foreach ($proj in $requiredProjs) {
     if (-not (Test-Path $proj)) { Write-Error "Project not found: $proj"; exit 1 }
 }
 
@@ -43,9 +62,13 @@ MSBuild $expatProj "Release" "x64"
 Write-Host "=== Building Render_Vulkan (Vulkan_Release x64) ===" -ForegroundColor Cyan
 MSBuild $renderVkProj "Vulkan_Release" "x64"
 
-# 3) Build CaptureD3D11
-Write-Host "=== Building CaptureD3D11 (D3D11_Release x64) ===" -ForegroundColor Cyan
-MSBuild $captureD3D11Proj "D3D11_Release" "x64"
+# 3) Build CaptureD3D11 (skipped with -SkipD3D11)
+if (-not $SkipD3D11) {
+    Write-Host "=== Building CaptureD3D11 (D3D11_Release x64) ===" -ForegroundColor Cyan
+    MSBuild $captureD3D11Proj "D3D11_Release" "x64"
+} else {
+    Write-Host "=== Skipping CaptureD3D11 (-SkipD3D11) ===" -ForegroundColor Yellow
+}
 
 # 4) Build CaptureVulkan
 Write-Host "=== Building CaptureVulkan (Vulkan_Release x64) ===" -ForegroundColor Cyan

@@ -1,0 +1,201 @@
+name: Visual Regression
+
+on:
+  pull_request:
+    paths:
+      - 'Src/Render/Vulkan/**'
+      - 'Src/Render/Render_Shader.h'
+      - 'Include/GFx_Renderer_Vulkan.h'
+      - 'Tests/VisualRegression/**'
+      - 'Bin/x64/Msvc10/GFxPlayerTinyVulkan/**'
+      - 'Lib/**/libgfxrender_vulkan*'
+  workflow_dispatch:
+
+jobs:
+  swiftshader-capture:
+    name: Vulkan capture (SwiftShader) vs D3D11 reference
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Install Vulkan SDK (headers + loader needed for build)
+      - name: Install Vulkan SDK
+        shell: pwsh
+        run: |
+          $sdkVersion = "1.3.290.0"
+          $url = "https://sdk.lunarg.com/sdk/download/$sdkVersion/windows/VulkanSDK-$sdkVersion-Installer.exe"
+          $installer = "$env:RUNNER_TEMP\VulkanSDK-Installer.exe"
+          Write-Host "Downloading Vulkan SDK $sdkVersion..."
+          Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
+          Write-Host "Installing Vulkan SDK..."
+          Start-Process -FilePath $installer -ArgumentList "--accept-licenses --default-answer --confirm-command install" -Wait
+          $sdkPath = "C:\VulkanSDK\$sdkVersion"
+          echo "VULKAN_SDK=$sdkPath" >> $env:GITHUB_ENV
+          echo "VK_SDK_PATH=$sdkPath" >> $env:GITHUB_ENV
+          echo "$sdkPath\Bin" >> $env:GITHUB_PATH
+
+      # Build CaptureVulkan from source
+      - name: Build CaptureVulkan
+        shell: pwsh
+        run: |
+          # Build expat, Render_Vulkan lib, and CaptureVulkan (skip D3D11 — no libs in CI)
+          & Tests/VisualRegression/build_tests.ps1 -SkipD3D11
+          if (-not (Test-Path "Bin/x64/Msvc10/Tests/CaptureVulkan.exe")) {
+            Write-Error "CaptureVulkan.exe was not built"
+            exit 1
+          }
+          Write-Host "CaptureVulkan.exe built successfully"
+
+      # Download and set up SwiftShader as the Vulkan ICD
+      - name: Install SwiftShader
+        shell: pwsh
+        run: |
+          $swiftshaderDir = "$env:RUNNER_TEMP\swiftshader"
+          New-Item -ItemType Directory -Force -Path $swiftshaderDir | Out-Null
+
+          # Download SwiftShader from official Chrome build artifacts
+          $url = "https://github.com/nicebyte/swiftshader-binaries/releases/download/v1/swiftshader-windows-x86_64.zip"
+          $zipPath = "$env:RUNNER_TEMP\swiftshader.zip"
+          Write-Host "Downloading SwiftShader from $url"
+          Invoke-WebRequest -Uri $url -OutFile $zipPath -UseBasicParsing
+          Expand-Archive -Path $zipPath -DestinationPath $swiftshaderDir -Force
+
+          # Find the ICD JSON and DLL
+          $icdJson = Get-ChildItem -Path $swiftshaderDir -Recurse -Filter "vk_swiftshader_icd.json" | Select-Object -First 1
+          if (-not $icdJson) {
+            Write-Error "vk_swiftshader_icd.json not found in downloaded archive"
+            exit 1
+          }
+          Write-Host "SwiftShader ICD: $($icdJson.FullName)"
+
+          # Set VK_ICD_FILENAMES so the Vulkan loader picks up SwiftShader
+          echo "VK_ICD_FILENAMES=$($icdJson.FullName)" >> $env:GITHUB_ENV
+          echo "SWIFTSHADER_DIR=$($icdJson.DirectoryName)" >> $env:GITHUB_ENV
+
+      - name: Verify SwiftShader
+        shell: pwsh
+        run: |
+          Write-Host "VK_ICD_FILENAMES=$env:VK_ICD_FILENAMES"
+          if (-not (Test-Path $env:VK_ICD_FILENAMES)) {
+            Write-Error "SwiftShader ICD file not found"
+            exit 1
+          }
+          Write-Host "SwiftShader ready"
+
+      # Run CaptureVulkan for each test in the manifest
+      - name: Capture Vulkan frames (SwiftShader)
+        shell: pwsh
+        run: |
+          $manifest = Get-Content Tests/VisualRegression/TestManifest.json | ConvertFrom-Json
+          $captureExe = "Bin/x64/Msvc10/Tests/CaptureVulkan.exe"
+          $dataDir = "Bin/Data"
+          $outputRoot = "Tests/VisualRegression/Output/Captures/vulkan_swiftshader"
+          $defaultFrames = ($manifest.defaultFrames -join ",")
+          $defaultWidth = $manifest.defaultResolution.width
+          $defaultHeight = $manifest.defaultResolution.height
+
+          if (-not (Test-Path $captureExe)) {
+            Write-Error "CaptureVulkan.exe not found — build step may have failed"
+            exit 1
+          }
+
+          $failed = 0
+          foreach ($test in $manifest.tests) {
+            $name = $test.name
+            $swf = Join-Path $dataDir $test.swf
+            $outDir = Join-Path $outputRoot $name
+            New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+
+            $frames = if ($test.frames) { $test.frames -join "," } else { $defaultFrames }
+            $w = if ($test.resolution) { $test.resolution.width } else { $defaultWidth }
+            $h = if ($test.resolution) { $test.resolution.height } else { $defaultHeight }
+
+            Write-Host "=== $name ===" -ForegroundColor Cyan
+            $proc = Start-Process -FilePath $captureExe `
+              -ArgumentList "`"$swf`" `"$outDir`" --frames $frames --width $w --height $h" `
+              -NoNewWindow -PassThru -Wait
+            if ($proc.ExitCode -ne 0) {
+              Write-Host "  FAILED (exit code $($proc.ExitCode))" -ForegroundColor Red
+              $failed++
+            }
+          }
+
+          if ($failed -gt 0) {
+            Write-Warning "$failed test(s) failed to capture"
+          }
+
+      # Convert PPM captures to PNG for comparison
+      - name: Convert captures to PNG
+        shell: python
+        run: |
+          import os, json, struct, zlib
+
+          def ppm_to_png(ppm_path, png_path):
+              with open(ppm_path, 'rb') as f:
+                  data = f.read()
+              # Parse PPM P6 header
+              idx = 0
+              tokens = []
+              while len(tokens) < 4:
+                  while idx < len(data) and data[idx:idx+1] in (b' ', b'\t', b'\n', b'\r'):
+                      idx += 1
+                  if data[idx:idx+1] == b'#':
+                      while idx < len(data) and data[idx:idx+1] != b'\n':
+                          idx += 1
+                      continue
+                  start = idx
+                  while idx < len(data) and data[idx:idx+1] not in (b' ', b'\t', b'\n', b'\r'):
+                      idx += 1
+                  tokens.append(data[start:idx].decode())
+              idx += 1  # skip whitespace after maxval
+              w, h = int(tokens[1]), int(tokens[2])
+              pixels = data[idx:idx + w * h * 3]
+
+              # Write PNG
+              def chunk(tag, d):
+                  c = tag + d
+                  return struct.pack('>I', len(d)) + c + struct.pack('>I', zlib.crc32(c) & 0xFFFFFFFF)
+              row = w * 3
+              raw = bytearray()
+              for y in range(h):
+                  raw.append(0)
+                  raw.extend(pixels[y*row:(y+1)*row])
+              with open(png_path, 'wb') as f:
+                  f.write(b'\x89PNG\r\n\x1a\n')
+                  f.write(chunk(b'IHDR', struct.pack('>IIBBBBB', w, h, 8, 2, 0, 0, 0)))
+                  f.write(chunk(b'IDAT', zlib.compress(bytes(raw), 6)))
+                  f.write(chunk(b'IEND', b''))
+
+          root = 'Tests/VisualRegression/Output/Captures/vulkan_swiftshader'
+          count = 0
+          for dirpath, dirnames, filenames in os.walk(root):
+              for fn in filenames:
+                  if fn.endswith('.ppm'):
+                      ppm = os.path.join(dirpath, fn)
+                      png = ppm.rsplit('.', 1)[0] + '.png'
+                      ppm_to_png(ppm, png)
+                      count += 1
+          print(f'Converted {count} PPM files to PNG')
+
+      # Compare SwiftShader captures against D3D11 reference
+      - name: Compare SwiftShader vs D3D11 reference
+        run: >
+          python Tests/VisualRegression/compare_reference.py
+          --vulkan-dir Tests/VisualRegression/Output/Captures/vulkan_swiftshader
+          --threshold 16
+
+      - name: Upload captures on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: swiftshader-captures
+          path: |
+            Tests/VisualRegression/Output/Captures/vulkan_swiftshader/
+            Tests/VisualRegression/Output/Diff/
+
