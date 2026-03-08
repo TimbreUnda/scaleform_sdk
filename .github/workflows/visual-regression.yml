@@ -63,6 +63,7 @@ jobs:
           Start-Process -FilePath $installer -ArgumentList "--accept-licenses --default-answer --confirm-command install" -Wait
           $sdkPath = "C:\VulkanSDK\$sdkVersion"
           echo "VULKAN_SDK=$sdkPath" >> $env:GITHUB_ENV
+          echo "VK_SDK_PATH=$sdkPath" >> $env:GITHUB_ENV
           echo "$sdkPath\Bin" >> $env:GITHUB_PATH
 
       # Build CaptureVulkan from source
