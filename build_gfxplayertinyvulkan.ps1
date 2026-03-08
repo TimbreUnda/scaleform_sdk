@@ -3,11 +3,26 @@
 
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
-$vsDevCmd = "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat"
+
+# Find Visual Studio using vswhere (works for all editions: Community, Professional, Enterprise)
+$vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+if (Test-Path $vswhere) {
+    $vsInstall = & $vswhere -latest -property installationPath 2>$null
+    if ($vsInstall) {
+        $vsDevCmd = Join-Path $vsInstall "Common7\Tools\VsDevCmd.bat"
+    }
+}
+if (-not $vsDevCmd -or -not (Test-Path $vsDevCmd)) {
+    $vsDevCmd = "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat"
+}
+if (-not (Test-Path $vsDevCmd)) {
+    $vsDevCmd = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\Tools\VsDevCmd.bat"
+}
+
 $sln = Join-Path $root "Projects\Win32\Msvc10\Samples\GFx 4.2 Demos.sln"
 $expatProj = Join-Path $root "3rdParty\expat-2.1.0\gfx_projects\Win32\Msvc10\expat.vcxproj"
 
-if (-not (Test-Path $vsDevCmd)) { Write-Error "VsDevCmd.bat not found: $vsDevCmd"; exit 1 }
+if (-not (Test-Path $vsDevCmd)) { Write-Error "VsDevCmd.bat not found. Install Visual Studio or set the path manually."; exit 1 }
 if (-not (Test-Path $sln)) { Write-Error "Solution not found: $sln"; exit 1 }
 if (-not (Test-Path $expatProj)) { Write-Error "expat project not found: $expatProj"; exit 1 }
 
