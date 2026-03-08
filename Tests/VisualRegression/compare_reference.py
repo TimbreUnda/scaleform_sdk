@@ -108,7 +108,9 @@ def main():
             try:
                 cmp = json.loads(result.stdout)
             except Exception:
-                cmp = {'pass': False, 'error': result.stderr[:300] if result.stderr else '(no output)'}
+                err = result.stderr[:300] if result.stderr else '(no output)'
+                cmp = {'pass': False, 'error': err}
+                print(f'      compare_images error: {err}', file=sys.stderr)
 
             ok = cmp.get('pass', False)
             if not ok:
