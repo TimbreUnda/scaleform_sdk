@@ -70,9 +70,8 @@ jobs:
       - name: Build CaptureVulkan
         shell: pwsh
         run: |
-          # build_tests.ps1 builds expat, Render_Vulkan lib, and both capture tools
-          # We only need CaptureVulkan but the script builds all — that's fine
-          & Tests/VisualRegression/build_tests.ps1
+          # Build expat, Render_Vulkan lib, and CaptureVulkan (skip D3D11 — no libs in CI)
+          & Tests/VisualRegression/build_tests.ps1 -SkipD3D11
           if (-not (Test-Path "Bin/x64/Msvc10/Tests/CaptureVulkan.exe")) {
             Write-Error "CaptureVulkan.exe was not built"
             exit 1
