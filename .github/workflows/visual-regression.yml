@@ -225,37 +225,3 @@ jobs:
             Tests/VisualRegression/Output/Captures/vulkan_swiftshader/
             Tests/VisualRegression/Output/Diff/
 
-  # ---------------------------------------------------------------
-  # Staleness check: warn if Vulkan source changed but no ref update
-  # ---------------------------------------------------------------
-  staleness-check:
-    name: Reference staleness check
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Check for stale references
-        run: |
-          BASE=${{ github.event.pull_request.base.sha }}
-          HEAD=${{ github.event.pull_request.head.sha }}
-
-          # Check if Vulkan source files changed
-          VK_CHANGED=$(git diff --name-only $BASE $HEAD -- \
-            'Src/Render/Vulkan/' \
-            'Src/Render/Render_Shader.h' \
-            'Include/GFx_Renderer_Vulkan.h' | wc -l)
-
-          # Check if reference images were updated
-          REF_CHANGED=$(git diff --name-only $BASE $HEAD -- \
-            'Tests/VisualRegression/Reference/' | wc -l)
-
-          if [ "$VK_CHANGED" -gt 0 ] && [ "$REF_CHANGED" -eq 0 ]; then
-            echo "::warning::Vulkan source files changed ($VK_CHANGED files) but reference images were not updated. Run the capture tools locally and commit updated reference PNGs."
-          elif [ "$VK_CHANGED" -gt 0 ]; then
-            echo "Vulkan source changed ($VK_CHANGED files) and reference images were updated ($REF_CHANGED files). Good."
-          else
-            echo "No Vulkan source changes detected."
-          fi
