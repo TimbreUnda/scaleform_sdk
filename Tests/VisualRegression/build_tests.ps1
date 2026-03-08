@@ -7,13 +7,23 @@ $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $root = (Resolve-Path (Join-Path $scriptDir "..\..")).Path
 
-$vsDevCmd = "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat"
+# Find Visual Studio using vswhere (works for all editions: Community, Professional, Enterprise)
+$vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+if (Test-Path $vswhere) {
+    $vsInstall = & $vswhere -latest -property installationPath 2>$null
+    if ($vsInstall) {
+        $vsDevCmd = Join-Path $vsInstall "Common7\Tools\VsDevCmd.bat"
+    }
+}
+# Fallback to hardcoded paths
+if (-not $vsDevCmd -or -not (Test-Path $vsDevCmd)) {
+    $vsDevCmd = "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat"
+}
 if (-not (Test-Path $vsDevCmd)) {
-    # Try Community 2019
     $vsDevCmd = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\Tools\VsDevCmd.bat"
 }
 if (-not (Test-Path $vsDevCmd)) {
-    Write-Error "VsDevCmd.bat not found. Please set the path for your Visual Studio installation."
+    Write-Error "VsDevCmd.bat not found. Install Visual Studio or set the path manually."
     exit 1
 }
 
