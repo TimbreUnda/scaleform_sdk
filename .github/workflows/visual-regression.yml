@@ -3,12 +3,14 @@ name: Visual Regression
 on:
   pull_request:
     paths:
-      - 'Src/Render/Vulkan/**'
-      - 'Src/Render/Render_Shader.h'
-      - 'Include/GFx_Renderer_Vulkan.h'
+      - 'Src/**'
+      - 'Include/**'
       - 'Tests/VisualRegression/**'
-      - 'Bin/x64/Msvc10/GFxPlayerTinyVulkan/**'
-      - 'Lib/**/libgfxrender_vulkan*'
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - '3rdParty/CMakeLists.txt'
+      - 'Apps/CMakeLists.txt'
+      - '.github/workflows/visual-regression.yml'
   workflow_dispatch:
 
 jobs:
@@ -40,17 +42,19 @@ jobs:
           echo "VK_SDK_PATH=$sdkPath" >> $env:GITHUB_ENV
           echo "$sdkPath\Bin" >> $env:GITHUB_PATH
 
-      # Build CaptureVulkan from source
+      # Build CaptureVulkan from source using CMake
+      - name: Configure CMake
+        run: cmake --preset ci
+
       - name: Build CaptureVulkan
-        shell: pwsh
         run: |
-          # Build expat, Render_Vulkan lib, and CaptureVulkan (skip D3D11 — no libs in CI)
-          & Tests/VisualRegression/build_tests.ps1 -SkipD3D11
-          if (-not (Test-Path "Bin/x64/Msvc10/Tests/CaptureVulkan.exe")) {
+          cmake --build --preset ci-release
+          if (!(Test-Path "Bin/x64/Msvc10/Tests/CaptureVulkan.exe")) {
             Write-Error "CaptureVulkan.exe was not built"
             exit 1
           }
           Write-Host "CaptureVulkan.exe built successfully"
+        shell: pwsh
 
       # Download and set up SwiftShader as the Vulkan ICD
       - name: Install SwiftShader
