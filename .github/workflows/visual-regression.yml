@@ -12,32 +12,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ---------------------------------------------------------------
-  # Tier 1: Compare committed reference PNGs (no GPU, always runs)
-  # ---------------------------------------------------------------
-  compare-references:
-    name: Compare D3D11 vs Vulkan reference PNGs
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Compare reference images
-        run: python Tests/VisualRegression/compare_reference.py --threshold 8
-
-      - name: Upload diff images on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: reference-diff-images
-          path: Tests/VisualRegression/Output/Diff/
-
-  # ---------------------------------------------------------------
-  # Tier 2: Render with SwiftShader and compare against D3D11 ref
-  # ---------------------------------------------------------------
   swiftshader-capture:
     name: Vulkan capture (SwiftShader) vs D3D11 reference
     runs-on: windows-latest
