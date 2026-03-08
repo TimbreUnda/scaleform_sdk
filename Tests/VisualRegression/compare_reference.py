@@ -20,10 +20,66 @@ Exit code: 0 = all pass, 1 = any failure.
 import sys
 import os
 import json
-import subprocess
+import math
 import argparse
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, SCRIPT_DIR)
+from compare_images import read_image, write_png
+
+
+def compare_pair(ref_path, test_path, diff_path, threshold):
+    """Compare two images directly. Returns result dict."""
+    rw, rh, rpx = read_image(ref_path)
+    tw, th, tpx = read_image(test_path)
+
+    if rw != tw or rh != th:
+        return {
+            'pass': False,
+            'error': f'Dimension mismatch: reference={rw}x{rh}, test={tw}x{th}',
+            'rmse': 0, 'maxDelta': 0, 'mismatchCount': 0,
+        }
+
+    w, h = rw, rh
+    n = w * h
+    sum_sq = 0.0
+    max_delta = 0
+    mismatch_count = 0
+    diff_data = bytearray(n * 3) if diff_path else None
+
+    for i in range(n):
+        o = i * 3
+        dr = abs(int(rpx[o])     - int(tpx[o]))
+        dg = abs(int(rpx[o + 1]) - int(tpx[o + 1]))
+        db = abs(int(rpx[o + 2]) - int(tpx[o + 2]))
+        s = dr + dg + db
+        sum_sq += dr * dr + dg * dg + db * db
+        if s > max_delta:
+            max_delta = s
+        if s > threshold:
+            mismatch_count += 1
+        if diff_data is not None:
+            diff_data[o]     = min(255, dr * 4)
+            diff_data[o + 1] = min(255, dg * 4)
+            diff_data[o + 2] = min(255, db * 4)
+
+    rmse = math.sqrt(sum_sq / (n * 3))
+    passed = mismatch_count == 0 or rmse <= threshold / 3.0
+
+    if diff_data is not None and mismatch_count > 0:
+        os.makedirs(os.path.dirname(os.path.abspath(diff_path)), exist_ok=True)
+        write_png(diff_path, w, h, bytes(diff_data))
+
+    return {
+        'pass':            passed,
+        'rmse':            round(rmse, 4),
+        'maxDelta':        max_delta,
+        'mismatchCount':   mismatch_count,
+        'mismatchPercent': round(mismatch_count / n * 100, 4),
+        'threshold':       threshold,
+        'width':           w,
+        'height':          h,
+    }
 
 
 def main():
@@ -47,7 +103,6 @@ def main():
     vulkan_dir    = args.vulkan_dir or os.path.join(reference_dir, 'vulkan')
     d3d11_dir     = os.path.join(reference_dir, 'd3d11')
     diff_dir      = args.diff_dir or os.path.join(SCRIPT_DIR, 'Output', 'Diff')
-    compare_script = os.path.join(SCRIPT_DIR, 'compare_images.py')
 
     if not os.path.exists(manifest_path):
         print(f'ERROR: Manifest not found: {manifest_path}', file=sys.stderr)
@@ -97,20 +152,11 @@ def main():
                 failed_frames += 1
                 continue
 
-            os.makedirs(os.path.dirname(diff_png), exist_ok=True)
-            cmd = [
-                sys.executable, compare_script,
-                ref_png, vk_png,
-                '--diff', diff_png,
-                '--threshold', str(args.threshold),
-            ]
-            result = subprocess.run(cmd, capture_output=True, text=True)
             try:
-                cmp = json.loads(result.stdout)
-            except Exception:
-                err = result.stderr[:300] if result.stderr else '(no output)'
-                cmp = {'pass': False, 'error': err}
-                print(f'      compare_images error: {err}', file=sys.stderr)
+                cmp = compare_pair(ref_png, vk_png, diff_png, args.threshold)
+            except Exception as e:
+                cmp = {'pass': False, 'error': str(e), 'rmse': '?', 'mismatchCount': '?'}
+                print(f'      compare error: {e}')
 
             ok = cmp.get('pass', False)
             if not ok:
