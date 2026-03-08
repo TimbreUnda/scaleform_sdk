@@ -26,21 +26,15 @@ jobs:
         with:
           python-version: '3.11'
 
-      # Install Vulkan SDK (headers + loader needed for build)
-      - name: Install Vulkan SDK
-        shell: pwsh
-        run: |
-          $sdkVersion = "1.3.290.0"
-          $url = "https://sdk.lunarg.com/sdk/download/$sdkVersion/windows/VulkanSDK-$sdkVersion-Installer.exe"
-          $installer = "$env:RUNNER_TEMP\VulkanSDK-Installer.exe"
-          Write-Host "Downloading Vulkan SDK $sdkVersion..."
-          Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing
-          Write-Host "Installing Vulkan SDK..."
-          Start-Process -FilePath $installer -ArgumentList "--accept-licenses --default-answer --confirm-command install" -Wait
-          $sdkPath = "C:\VulkanSDK\$sdkVersion"
-          echo "VULKAN_SDK=$sdkPath" >> $env:GITHUB_ENV
-          echo "VK_SDK_PATH=$sdkPath" >> $env:GITHUB_ENV
-          echo "$sdkPath\Bin" >> $env:GITHUB_PATH
+      # Install Vulkan SDK + SwiftShader (CPU-based Vulkan ICD for headless CI)
+      - name: Install Vulkan SDK + SwiftShader
+        uses: jakoch/install-vulkan-sdk-action@v1
+        with:
+          vulkan_version: 1.3.290.0
+          install_runtime: true
+          cache: true
+          stripdown: true
+          install_swiftshader: true
 
       # Build CaptureVulkan from source using CMake
       - name: Configure CMake
@@ -55,53 +49,6 @@ jobs:
           }
           Write-Host "CaptureVulkan.exe built successfully"
         shell: pwsh
-
-      # Download and set up SwiftShader as the Vulkan ICD
-      - name: Install SwiftShader
-        shell: pwsh
-        run: |
-          $swiftshaderDir = "$env:RUNNER_TEMP\swiftshader"
-          New-Item -ItemType Directory -Force -Path $swiftshaderDir | Out-Null
-
-          # Download prebuilt SwiftShader DLL
-          $url = "https://github.com/rokuz/swiftshader_binaries/releases/download/release_1/swiftshader_win_x86_64.zip"
-          $zipPath = "$env:RUNNER_TEMP\swiftshader.zip"
-          Write-Host "Downloading SwiftShader from $url"
-          Invoke-WebRequest -Uri $url -OutFile $zipPath -UseBasicParsing
-          Expand-Archive -Path $zipPath -DestinationPath $swiftshaderDir -Force
-
-          # Find the DLL
-          $dll = Get-ChildItem -Path $swiftshaderDir -Recurse -Filter "vk_swiftshader.dll" | Select-Object -First 1
-          if (-not $dll) {
-            Write-Error "vk_swiftshader.dll not found in downloaded archive"
-            exit 1
-          }
-          Write-Host "SwiftShader DLL: $($dll.FullName)"
-
-          # Generate ICD JSON (the archive only contains the DLL)
-          $icdPath = Join-Path $dll.DirectoryName "vk_swiftshader_icd.json"
-          @{
-            file_format_version = "1.0.0"
-            ICD = @{
-              library_path = $dll.FullName.Replace('\', '\\')
-              api_version  = "1.1.0"
-            }
-          } | ConvertTo-Json | Set-Content -Path $icdPath
-          Write-Host "Generated ICD JSON: $icdPath"
-
-          # Set VK_ICD_FILENAMES so the Vulkan loader picks up SwiftShader
-          echo "VK_ICD_FILENAMES=$icdPath" >> $env:GITHUB_ENV
-          echo "SWIFTSHADER_DIR=$($dll.DirectoryName)" >> $env:GITHUB_ENV
-
-      - name: Verify SwiftShader
-        shell: pwsh
-        run: |
-          Write-Host "VK_ICD_FILENAMES=$env:VK_ICD_FILENAMES"
-          if (-not (Test-Path $env:VK_ICD_FILENAMES)) {
-            Write-Error "SwiftShader ICD file not found"
-            exit 1
-          }
-          Write-Host "SwiftShader ready"
 
       # Run CaptureVulkan for each test in the manifest
       - name: Capture Vulkan frames (SwiftShader)
@@ -142,7 +89,8 @@ jobs:
           }
 
           if ($failed -gt 0) {
-            Write-Warning "$failed test(s) failed to capture"
+            Write-Error "$failed of $($manifest.tests.Count) test(s) failed to capture"
+            exit 1
           }
 
       # Convert PPM captures to PNG for comparison
