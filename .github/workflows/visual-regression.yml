@@ -63,24 +63,35 @@ jobs:
           $swiftshaderDir = "$env:RUNNER_TEMP\swiftshader"
           New-Item -ItemType Directory -Force -Path $swiftshaderDir | Out-Null
 
-          # Download SwiftShader from official Chrome build artifacts
-          $url = "https://github.com/nicebyte/swiftshader-binaries/releases/download/v1/swiftshader-windows-x86_64.zip"
+          # Download prebuilt SwiftShader DLL
+          $url = "https://github.com/rokuz/swiftshader_binaries/releases/download/release_1/swiftshader_win_x86_64.zip"
           $zipPath = "$env:RUNNER_TEMP\swiftshader.zip"
           Write-Host "Downloading SwiftShader from $url"
           Invoke-WebRequest -Uri $url -OutFile $zipPath -UseBasicParsing
           Expand-Archive -Path $zipPath -DestinationPath $swiftshaderDir -Force
 
-          # Find the ICD JSON and DLL
-          $icdJson = Get-ChildItem -Path $swiftshaderDir -Recurse -Filter "vk_swiftshader_icd.json" | Select-Object -First 1
-          if (-not $icdJson) {
-            Write-Error "vk_swiftshader_icd.json not found in downloaded archive"
+          # Find the DLL
+          $dll = Get-ChildItem -Path $swiftshaderDir -Recurse -Filter "vk_swiftshader.dll" | Select-Object -First 1
+          if (-not $dll) {
+            Write-Error "vk_swiftshader.dll not found in downloaded archive"
             exit 1
           }
-          Write-Host "SwiftShader ICD: $($icdJson.FullName)"
+          Write-Host "SwiftShader DLL: $($dll.FullName)"
+
+          # Generate ICD JSON (the archive only contains the DLL)
+          $icdPath = Join-Path $dll.DirectoryName "vk_swiftshader_icd.json"
+          @{
+            file_format_version = "1.0.0"
+            ICD = @{
+              library_path = $dll.FullName.Replace('\', '\\')
+              api_version  = "1.1.0"
+            }
+          } | ConvertTo-Json | Set-Content -Path $icdPath
+          Write-Host "Generated ICD JSON: $icdPath"
 
           # Set VK_ICD_FILENAMES so the Vulkan loader picks up SwiftShader
-          echo "VK_ICD_FILENAMES=$($icdJson.FullName)" >> $env:GITHUB_ENV
-          echo "SWIFTSHADER_DIR=$($icdJson.DirectoryName)" >> $env:GITHUB_ENV
+          echo "VK_ICD_FILENAMES=$icdPath" >> $env:GITHUB_ENV
+          echo "SWIFTSHADER_DIR=$($dll.DirectoryName)" >> $env:GITHUB_ENV
 
       - name: Verify SwiftShader
         shell: pwsh
