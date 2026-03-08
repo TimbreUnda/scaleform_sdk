@@ -623,12 +623,9 @@ int main(int argc, char* argv[])
     wc.lpszClassName = "CaptureVulkan_Class";
     RegisterClassExA(&wc);
 
-    RECT rc = { 0, 0, (LONG)width, (LONG)height };
-    AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
     hWnd = CreateWindowExA(0, "CaptureVulkan_Class", "CaptureVulkan",
-        WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT,
-        rc.right - rc.left, rc.bottom - rc.top,
+        WS_POPUP,
+        0, 0, width, height,
         NULL, NULL, hInst, NULL);
     if (!hWnd) { fprintf(stderr, "CaptureVulkan: Failed to create window\n"); return 1; }
     ShowWindow(hWnd, SW_HIDE);

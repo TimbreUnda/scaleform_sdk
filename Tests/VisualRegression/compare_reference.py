@@ -158,6 +158,9 @@ def main():
                 cmp = {'pass': False, 'error': str(e), 'rmse': '?', 'mismatchCount': '?'}
                 print(f'      compare error: {e}')
 
+            if 'error' in cmp:
+                print(f'      error: {cmp["error"]}')
+
             ok = cmp.get('pass', False)
             if not ok:
                 test_pass = False
