@@ -5,12 +5,6 @@ Content     :   Vulkan GPU debug markers via VK_EXT_debug_utils.
 Created     :   2026
 Authors     :   Scaleform Vulkan Backend
 
-Copyright   :   Copyright 2026 Autodesk, Inc. All Rights reserved.
-
-Use of this software is subject to the terms of the Autodesk license
-agreement provided at the time of installation or download, or which
-otherwise accompanies this software in either electronic or hard copy form.
-
 **************************************************************************/
 
 #ifndef INC_SF_Vulkan_Events_H
