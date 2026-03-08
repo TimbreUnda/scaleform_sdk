@@ -438,12 +438,13 @@ static bool InitVulkan()
     instCI.pApplicationInfo        = &appInfo;
     instCI.enabledExtensionCount   = 2;
     instCI.ppEnabledExtensionNames = exts;
-    if (vkCreateInstance(&instCI, nullptr, &vkInstance) != VK_SUCCESS) return false;
+    VkResult r = vkCreateInstance(&instCI, nullptr, &vkInstance);
+    if (r != VK_SUCCESS) { fprintf(stderr, "  vkCreateInstance failed: %d\n", r); return false; }
 
     // Physical device: prefer discrete GPU
     uint32_t devCount = 0;
     vkEnumeratePhysicalDevices(vkInstance, &devCount, nullptr);
-    if (!devCount) return false;
+    if (!devCount) { fprintf(stderr, "  No physical devices found\n"); return false; }
     VkPhysicalDevice devs[16];
     devCount = (devCount > 16) ? 16 : devCount;
     vkEnumeratePhysicalDevices(vkInstance, &devCount, devs);
@@ -484,18 +485,20 @@ static bool InitVulkan()
     dCI.enabledExtensionCount   = 1;
     dCI.ppEnabledExtensionNames = devExts;
     dCI.pEnabledFeatures        = &features;
-    if (vkCreateDevice(vkPhysDevice, &dCI, nullptr, &vkDevice) != VK_SUCCESS) return false;
+    r = vkCreateDevice(vkPhysDevice, &dCI, nullptr, &vkDevice);
+    if (r != VK_SUCCESS) { fprintf(stderr, "  vkCreateDevice failed: %d\n", r); return false; }
     vkGetDeviceQueue(vkDevice, vkQueueFamily, 0, &vkQueue);
 
     // Surface
     VkWin32SurfaceCreateInfoKHR surfCI = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
     surfCI.hinstance = GetModuleHandle(NULL);
     surfCI.hwnd      = hWnd;
-    if (vkCreateWin32SurfaceKHR(vkInstance, &surfCI, nullptr, &vkSurface) != VK_SUCCESS) return false;
+    r = vkCreateWin32SurfaceKHR(vkInstance, &surfCI, nullptr, &vkSurface);
+    if (r != VK_SUCCESS) { fprintf(stderr, "  vkCreateWin32SurfaceKHR failed: %d\n", r); return false; }
 
     VkBool32 presentSupport = VK_FALSE;
     vkGetPhysicalDeviceSurfaceSupportKHR(vkPhysDevice, vkQueueFamily, vkSurface, &presentSupport);
-    if (!presentSupport) return false;
+    if (!presentSupport) { fprintf(stderr, "  Present not supported\n"); return false; }
 
     // Pick surface format
     {
@@ -538,10 +541,10 @@ static bool InitVulkan()
         vkCreateFence(vkDevice, &fenCI, nullptr, &vkInFlightFences[i]);
     }
 
-    if (!CreateSwapchain())      return false;
-    if (!CreateDepthResources()) return false;
-    if (!CreateRenderPass())     return false;
-    if (!CreateFramebuffers())   return false;
+    if (!CreateSwapchain())      { fprintf(stderr, "  CreateSwapchain failed\n"); return false; }
+    if (!CreateDepthResources()) { fprintf(stderr, "  CreateDepthResources failed\n"); return false; }
+    if (!CreateRenderPass())     { fprintf(stderr, "  CreateRenderPass failed\n"); return false; }
+    if (!CreateFramebuffers())   { fprintf(stderr, "  CreateFramebuffers failed\n"); return false; }
 
     return true;
 }
@@ -620,12 +623,9 @@ int main(int argc, char* argv[])
     wc.lpszClassName = "CaptureVulkan_Class";
     RegisterClassExA(&wc);
 
-    RECT rc = { 0, 0, (LONG)width, (LONG)height };
-    AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
     hWnd = CreateWindowExA(0, "CaptureVulkan_Class", "CaptureVulkan",
-        WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT,
-        rc.right - rc.left, rc.bottom - rc.top,
+        WS_POPUP,
+        0, 0, width, height,
         NULL, NULL, hInst, NULL);
     if (!hWnd) { fprintf(stderr, "CaptureVulkan: Failed to create window\n"); return 1; }
     ShowWindow(hWnd, SW_HIDE);

@@ -243,10 +243,10 @@ void ShaderInterface::Finish(unsigned meshCount)
     // Copy vertex uniform data to UBO ring
     UPInt vsSize = Uniform::SU_VertexSize * sizeof(float);
     UPInt fsSize = Uniform::SU_FragSize * sizeof(float);
-    UPInt totalSize = vsSize + fsSize;
 
-    // Align to minUniformBufferOffsetAlignment (typically 256)
-    totalSize = (totalSize + 255) & ~(UPInt)255;
+    // Align vsSize so the fragment UBO offset also meets minUniformBufferOffsetAlignment
+    UPInt vsAligned = (vsSize + 255) & ~(UPInt)255;
+    UPInt totalSize = vsAligned + fsSize;
 
     UPInt uboOffset = hal->allocUBOSpace(totalSize);
     UByte* pDst = hal->pUBORingData + uboOffset;
@@ -266,8 +266,8 @@ void ShaderInterface::Finish(unsigned meshCount)
         }
     }
 
-    // Copy fragment uniforms after vertex uniforms
-    UByte* pFsDst = pDst + vsSize;
+    // Copy fragment uniforms after vertex uniforms (at aligned offset)
+    UByte* pFsDst = pDst + vsAligned;
     for (int i = 0; i < Uniform::SU_Count; i++)
     {
         if (UniformSet[i])
@@ -304,7 +304,7 @@ void ShaderInterface::Finish(unsigned meshCount)
     bufInfo[0].offset = uboOffset;
     bufInfo[0].range  = vsSize;
     bufInfo[1].buffer = hal->UBORingBuffer;
-    bufInfo[1].offset = uboOffset + vsSize;
+    bufInfo[1].offset = uboOffset + vsAligned;
     bufInfo[1].range  = fsSize;
 
     // Write texture descriptors
