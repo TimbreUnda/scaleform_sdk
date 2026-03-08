@@ -58,7 +58,7 @@ Lib/Win32/Msvc10/Release/NonSCU/
 # Generated shader sources (rebuilt by GFxShaderMaker)
 Src/Render/D3D1x/Shaders/
 
-# Test binaries (rebuilt from Tests/VisualRegression/build_tests.ps1)
+# Test build output (rebuilt from Tests/VisualRegression/build_tests.ps1)
 Bin/x64/Msvc10/Tests/
 
 # Visual regression test output
