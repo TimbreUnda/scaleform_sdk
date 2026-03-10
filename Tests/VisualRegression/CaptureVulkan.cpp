@@ -270,7 +270,19 @@ static bool CreateSwapchain()
     ci.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     ci.preTransform     = caps.currentTransform;
     ci.compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    ci.presentMode      = VK_PRESENT_MODE_FIFO_KHR;
+    // Use IMMEDIATE (no VSync) for fast capture; fall back to FIFO if unavailable.
+    VkPresentModeKHR desiredMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+    {
+        uint32_t modeCount = 0;
+        vkGetPhysicalDeviceSurfacePresentModesKHR(vkPhysDevice, vkSurface, &modeCount, nullptr);
+        std::vector<VkPresentModeKHR> modes(modeCount);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(vkPhysDevice, vkSurface, &modeCount, modes.data());
+        bool found = false;
+        for (uint32_t i = 0; i < modeCount; i++)
+            if (modes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR) { found = true; break; }
+        if (!found) desiredMode = VK_PRESENT_MODE_FIFO_KHR;
+    }
+    ci.presentMode      = desiredMode;
     ci.clipped          = VK_TRUE;
     if (vkCreateSwapchainKHR(vkDevice, &ci, nullptr, &vkSwapchain) != VK_SUCCESS) return false;
 
