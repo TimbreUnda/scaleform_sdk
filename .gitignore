@@ -35,6 +35,8 @@ build/
 *.ilk
 *.map
 Obj/
+# Un-ignore AS3 Obj/ — these are source files, not build artifacts
+!Src/GFx/AS3/Obj/
 
 # ---------------------------------------------------------------------------
 # 3rdParty — prebuilt libs (now rebuilt from source via CMake)
