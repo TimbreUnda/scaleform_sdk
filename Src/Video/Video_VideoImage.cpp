@@ -28,8 +28,6 @@ namespace Scaleform { namespace GFx { namespace Video {
 // Scaleform can try to decode the video image multiple times and take a frame meant
 // for later. So we try to keep the renderer and decoder in sync to avoid that as much
 // as possible.
-Uint64 GDecodeTick;
-Uint64 GRenderTick;
 
 using namespace Render;
 
@@ -68,12 +66,6 @@ bool VideoImage::Decode(ImageData* pdest, CopyScanlineFunc func, void* parg) con
         pVideoPlayer->FrameNotInitialized = false;
         return true;
     }
-
-	if ( GDecodeTick >= GRenderTick )
-	{
-		return false;
-	}
-	++GDecodeTick;
 
     if (pVideoPlayer->GetCriPlayer()->IsNextFrameOnTime())
     {

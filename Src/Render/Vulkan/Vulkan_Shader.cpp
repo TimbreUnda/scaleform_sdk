@@ -199,9 +199,11 @@ void ShaderInterface::BeginScene()
 bool ShaderInterface::SetStaticShader(ShaderDesc::ShaderType shader, const VertexFormat* pformat)
 {
     CurShaders.pVFormat = pformat;
-    CurShaders.pVS    = &pHal->SManager.StaticVShaders[VertexShaderDesc::GetShaderIndex(shader, pHal->SManager.ShaderModel)];
+    unsigned vsIndex = VertexShaderDesc::GetShaderIndex(shader, pHal->SManager.ShaderModel);
+    unsigned fsIndex = FragShaderDesc::GetShaderIndex(shader, pHal->SManager.ShaderModel);
+    CurShaders.pVS    = &pHal->SManager.StaticVShaders[vsIndex];
     CurShaders.pVDesc = CurShaders.pVS->pDesc;
-    CurShaders.pFS    = &pHal->SManager.StaticFShaders[FragShaderDesc::GetShaderIndex(shader, pHal->SManager.ShaderModel)];
+    CurShaders.pFS    = &pHal->SManager.StaticFShaders[fsIndex];
     CurShaders.pFDesc = CurShaders.pFS->pDesc;
 
     if (pformat)
@@ -209,8 +211,7 @@ bool ShaderInterface::SetStaticShader(ShaderDesc::ShaderType shader, const Verte
         // Cache SysVertexFormat per (VertexFormat*, vsIndex) pair.  Different shaders
         // assign different attribute locations (e.g. pos@loc0 vs pos@loc1), so a single
         // cached SysVertexFormat per VertexFormat is not safe.
-        unsigned vsIdx = VertexShaderDesc::GetShaderIndex(shader, pHal->SManager.ShaderModel);
-        UPInt cacheKey = ((UPInt)pformat * 2654435761u) ^ ((UPInt)vsIdx * 2246822519u);
+        UPInt cacheKey = ((UPInt)pformat * 2654435761u) ^ ((UPInt)vsIndex * 2246822519u);
         Ptr<SysVertexFormat>* ppCached = pHal->SManager.SysVFCache.Get(cacheKey);
         if (ppCached)
         {
@@ -394,6 +395,8 @@ void ShaderInterface::Finish(unsigned meshCount)
 
     memset(pmgr->CurrentTextures, 0, sizeof(pmgr->CurrentTextures));
     memset(pmgr->CurrentSamplers, 0, sizeof(pmgr->CurrentSamplers));
+
+    ShaderInterfaceBase<Uniform, ShaderPair>::Finish(meshCount);
 }
 
 

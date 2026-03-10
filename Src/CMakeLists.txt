@@ -472,6 +472,7 @@ add_library(gfx_as3 STATIC
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Media/AS3_Obj_Media_SoundLoaderContext.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Media/AS3_Obj_Media_SoundMixer.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Media/AS3_Obj_Media_SoundTransform.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Media/AS3_Obj_Media_Video.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_FileFilter.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_FileReference.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_FileReferenceList.cpp
@@ -479,6 +480,7 @@ add_library(gfx_as3 STATIC
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_IDynamicPropertyWriter.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_LocalConnection.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_NetConnection.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_NetStream.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_ObjectEncoding.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_Responder.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_SharedObject.cpp
@@ -744,6 +746,64 @@ add_library(gfxsound_fmod STATIC
 sf_apply_compile_flags(gfxsound_fmod)
 target_link_libraries(gfxsound_fmod PRIVATE fmod)
 set_target_properties(gfxsound_fmod PROPERTIES OUTPUT_NAME "libgfxsound_fmod")
+
+# ---------------------------------------------------------------------------
+# libgfxvideo -- CRI Movie video playback
+# ---------------------------------------------------------------------------
+if(SF_ENABLE_VIDEO)
+    # Locate CRI Movie SDK (headers + prebuilt libs)
+    set(SF_CRI_SDK_DIR "${CMAKE_SOURCE_DIR}/3rdParty/cri/pc" CACHE PATH
+        "Path to CRI Movie SDK (must contain include/ and libs/)")
+    if(NOT EXISTS "${SF_CRI_SDK_DIR}/include/cri_movie.h")
+        message(FATAL_ERROR
+            "SF_ENABLE_VIDEO=ON but CRI Movie SDK not found at ${SF_CRI_SDK_DIR}\n"
+            "Set SF_CRI_SDK_DIR to the directory containing include/cri_movie.h")
+    endif()
+
+    # CRI imported libraries
+    add_library(cri_movie STATIC IMPORTED)
+    add_library(cri_base  STATIC IMPORTED)
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set_target_properties(cri_movie PROPERTIES IMPORTED_LOCATION
+            "${SF_CRI_SDK_DIR}/libs/x64/cri_movie_pcx64.lib")
+        set_target_properties(cri_base  PROPERTIES IMPORTED_LOCATION
+            "${SF_CRI_SDK_DIR}/libs/x64/cri_base_pcx64.lib")
+    else()
+        set_target_properties(cri_movie PROPERTIES IMPORTED_LOCATION
+            "${SF_CRI_SDK_DIR}/libs/Win32/cri_movie_pcx86.lib")
+        set_target_properties(cri_base  PROPERTIES IMPORTED_LOCATION
+            "${SF_CRI_SDK_DIR}/libs/Win32/cri_base_pcx86.lib")
+    endif()
+
+    add_library(gfxvideo STATIC
+        ${CMAKE_SOURCE_DIR}/Src/Video/Video_Video.cpp
+        ${CMAKE_SOURCE_DIR}/Src/Video/Video_VideoPC.cpp
+        ${CMAKE_SOURCE_DIR}/Src/Video/Video_VideoPlayerImpl.cpp
+        ${CMAKE_SOURCE_DIR}/Src/Video/Video_VideoCharacter.cpp
+        ${CMAKE_SOURCE_DIR}/Src/Video/Video_VideoImage.cpp
+        ${CMAKE_SOURCE_DIR}/Src/Video/Video_VideoAS2.cpp
+        ${CMAKE_SOURCE_DIR}/Src/Video/Video_VideoAS3.cpp
+        ${CMAKE_SOURCE_DIR}/Src/Video/Video_CriHeap.cpp
+        ${CMAKE_SOURCE_DIR}/Src/Video/Video_CriMvFileReader.cpp
+        ${CMAKE_SOURCE_DIR}/Src/Video/Video_CriMvSoundGateway.cpp
+        ${CMAKE_SOURCE_DIR}/Src/Video/Video_CriMvSystemTimer.cpp
+        ${CMAKE_SOURCE_DIR}/Src/Video/Video_SystemSoundInterface.cpp
+        ${CMAKE_SOURCE_DIR}/Src/Video/Video_VideoSoundSystemDX8.cpp
+        ${CMAKE_SOURCE_DIR}/Src/Video/AS2/AS2_NetConnection.cpp
+        ${CMAKE_SOURCE_DIR}/Src/Video/AS2/AS2_NetStream.cpp
+        ${CMAKE_SOURCE_DIR}/Src/Video/AS2/AS2_VideoObject.cpp
+        ${CMAKE_SOURCE_DIR}/Src/Video/AS3/AS3_VideoCharacter.cpp
+        ${CMAKE_SOURCE_DIR}/Src/Video/AS3/AS3_VideoProviderNetStream.cpp
+        # AS3 runtime objects needed by video (Video, NetStream class info)
+        ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Media/AS3_Obj_Media_Video.cpp
+        ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_NetStream.cpp
+    )
+    sf_apply_compile_flags(gfxvideo)
+    target_include_directories(gfxvideo PRIVATE "${SF_CRI_SDK_DIR}/include")
+    target_link_libraries(gfxvideo PUBLIC cri_movie cri_base)
+    target_link_libraries(gfxvideo INTERFACE dsound)
+    set_target_properties(gfxvideo PROPERTIES OUTPUT_NAME "libgfxvideo")
+endif()
 
 # ---------------------------------------------------------------------------
 # libgfxrender_vulkan -- Vulkan renderer
