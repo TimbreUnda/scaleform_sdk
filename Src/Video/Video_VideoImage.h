@@ -46,7 +46,6 @@ public:
     {
         // Do not release the backing texture. Will be restored after loss.
     }
-
     void NotifyVideoPlayerRemoved() { pVideoPlayer = NULL; }
 
 protected:

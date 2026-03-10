@@ -66,6 +66,10 @@ inline float asin_assert(const float f)
 	return asinf(f);
 }
 
+// Include <cmath> before redefining math functions, so the standard library
+// declarations are processed without macro interference.
+#include <cmath>
+
 // Replace default functions with asserting ones.
 #define sqrt sqrt_assert
 #define sqrtf sqrt_assert

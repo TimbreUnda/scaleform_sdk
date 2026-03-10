@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(ScaleformSDK VERSION 4.2 LANGUAGES CXX C)
+project(ScaleformSDK VERSION 4.3 LANGUAGES CXX C)
 
 # ---------------------------------------------------------------------------
 # Options — renderer selection

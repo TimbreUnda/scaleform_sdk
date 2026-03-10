@@ -99,9 +99,9 @@ static VkFormat VetToVkFormat(unsigned attr)
         break;
     case VET_U8:
         switch (count) {
-        case 1: return VK_FORMAT_R8_USCALED;
-        case 2: return VK_FORMAT_R8G8_USCALED;
-        case 4: return VK_FORMAT_R8G8B8A8_USCALED;
+        case 1: return VK_FORMAT_R8_UINT;
+        case 2: return VK_FORMAT_R8G8_UINT;
+        case 4: return VK_FORMAT_R8G8B8A8_UINT;
         }
         break;
     case VET_U8N:
@@ -377,6 +377,20 @@ void ShaderInterface::Finish(unsigned meshCount)
     vkUpdateDescriptorSets(hal->pDevice, writeCount, writes, 0, nullptr);
     vkCmdBindDescriptorSets(hal->pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             hal->pPipelineLayout, 0, 1, &descSet, 0, nullptr);
+
+    // Bind the Vulkan graphics pipeline matching the current shader/blend/stencil state.
+    // In Vulkan, unlike D3D11, the pipeline must be explicitly bound before each draw call.
+    if (hal->InRenderPass && CurShaders.pVDesc && CurShaders.pFDesc)
+    {
+        SysVertexFormat* pvf = 0;
+        if (CurShaders.pVFormat)
+            pvf = (SysVertexFormat*)CurShaders.pVFormat->pSysFormat.GetPtr();
+        VkPipeline pipeline = hal->GetPipeline(
+            CurShaders.pVDesc->Type, CurShaders.pFDesc->Type,
+            hal->CurrentBlendType, hal->CurrentStencilMode, pvf);
+        if (pipeline != VK_NULL_HANDLE)
+            vkCmdBindPipeline(hal->pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    }
 
     memset(pmgr->CurrentTextures, 0, sizeof(pmgr->CurrentTextures));
     memset(pmgr->CurrentSamplers, 0, sizeof(pmgr->CurrentSamplers));

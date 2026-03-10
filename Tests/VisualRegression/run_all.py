@@ -49,7 +49,8 @@ DEFAULT_COMPARISONS = [{'reference': 'd3d11', 'test': 'vulkan'}]
 # Helpers
 # ---------------------------------------------------------------------------
 
-def run_capture(exe_path, swf_path, output_dir, frames, width, height, log_path):
+def run_capture(exe_path, swf_path, output_dir, frames, width, height, log_path,
+                timeout=15):
     """
     Run a capture executable and save its combined stdout+stderr to log_path.
     Returns True if the process exited 0.
@@ -66,7 +67,16 @@ def run_capture(exe_path, swf_path, output_dir, frames, width, height, log_path)
     ]
     print(f'  Running: {" ".join(cmd)}')
 
-    result = subprocess.run(cmd, capture_output=True, text=True, errors='replace')
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True,
+                                errors='replace', timeout=timeout)
+    except subprocess.TimeoutExpired:
+        print(f'  [TIMEOUT] Process killed after {timeout}s')
+        with open(log_path, 'w', encoding='utf-8') as f:
+            f.write(f'Command: {" ".join(cmd)}\n')
+            f.write(f'Exit code: TIMEOUT ({timeout}s)\n')
+            f.write(f'Timestamp: {datetime.datetime.now().isoformat()}\n')
+        return False
 
     # Echo stdout live; print stderr to our stderr (validation messages, errors)
     if result.stdout:
@@ -130,6 +140,8 @@ def main():
                     help='Skip capture for this renderer (repeatable)')
     ap.add_argument('--only-compare',   action='store_true',
                     help='Skip all captures; only run pixel comparisons')
+    ap.add_argument('--timeout',        type=int, default=15,
+                    help='Per-capture timeout in seconds (default: 15)')
     args = ap.parse_args()
 
     # Resolve paths
@@ -202,7 +214,8 @@ def main():
 
             log_path = os.path.join(output_dir, 'Logs', rname, f'{name}.log')
             print(f'  [{rname}] Capturing...')
-            run_capture(exe, swf_path, rdir, frames, width, height, log_path)
+            run_capture(exe, swf_path, rdir, frames, width, height, log_path,
+                        timeout=args.timeout)
 
         # ---- Compare phase ----
         test_pass    = True

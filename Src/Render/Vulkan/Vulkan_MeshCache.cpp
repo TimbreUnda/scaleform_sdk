@@ -258,16 +258,7 @@ bool MeshCache::createMaskEraseBatchVertexBuffer()
     void* pdata = nullptr;
     SF_VK_CHECK_RETURN(vkMapMemory(pDevice, MaskEraseBatchVertexMemory, 0, bufSize, 0, &pdata), false);
 
-    VertexXY16iAlpha* pv = (VertexXY16iAlpha*)pdata;
-    for (unsigned i = 0; i < MaxEraseBatchCount; i++)
-    {
-        pv[i*6+0].x = 0;  pv[i*6+0].y = 0;  memset(pv[i*6+0].Alpha, 255, sizeof(pv[i*6+0].Alpha));
-        pv[i*6+1].x = 1;  pv[i*6+1].y = 0;  memset(pv[i*6+1].Alpha, 255, sizeof(pv[i*6+1].Alpha));
-        pv[i*6+2].x = 0;  pv[i*6+2].y = 1;  memset(pv[i*6+2].Alpha, 255, sizeof(pv[i*6+2].Alpha));
-        pv[i*6+3].x = 0;  pv[i*6+3].y = 1;  memset(pv[i*6+3].Alpha, 255, sizeof(pv[i*6+3].Alpha));
-        pv[i*6+4].x = 1;  pv[i*6+4].y = 0;  memset(pv[i*6+4].Alpha, 255, sizeof(pv[i*6+4].Alpha));
-        pv[i*6+5].x = 1;  pv[i*6+5].y = 1;  memset(pv[i*6+5].Alpha, 255, sizeof(pv[i*6+5].Alpha));
-    }
+    fillMaskEraseVertexBuffer<VertexXY16iAlpha>((VertexXY16iAlpha*)pdata, MaxEraseBatchCount);
     vkUnmapMemory(pDevice, MaskEraseBatchVertexMemory);
 
     return true;

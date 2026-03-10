@@ -126,6 +126,7 @@ private:
 
 class TextureManager : public Render::TextureManager
 {
+    friend class HAL;
     friend class Texture;
     friend class DepthStencilSurface;
     friend class ShaderInterface;
@@ -149,9 +150,12 @@ class TextureManager : public Render::TextureManager
     bool                    createDummyTexture();
     void                    destroyDummyTexture();
 
-    ImageKillList           ImageKills;
-    ViewKillList            ViewKills;
-    MemoryKillList          MemoryKills;
+    // Per-slot deferred kill lists, indexed by frame slot.  Each slot is only
+    // drained when the corresponding in-flight fence has been waited on.
+    ImageKillList           ImageKills[SF_VK_MAX_FRAMES_IN_FLIGHT];
+    ViewKillList            ViewKills[SF_VK_MAX_FRAMES_IN_FLIGHT];
+    MemoryKillList          MemoryKills[SF_VK_MAX_FRAMES_IN_FLIGHT];
+    unsigned                KillSlot;
 
     static const unsigned   SamplerTypeCount = (Sample_Count * Wrap_Count);
     VkSampler               Samplers[SamplerTypeCount];
@@ -167,7 +171,17 @@ class TextureManager : public Render::TextureManager
     virtual void    processTextureKillList();
     virtual void    processInitTextures();
 
+    // When true, processTextureKillList() is a no-op: VkImageView/VkImage/
+    // VkDeviceMemory kills accumulate until the next BeginScene, after the
+    // GPU fence ensures no command buffer still references them.
+    bool            DeferKills;
+
 public:
+    void            SetKillSlot(unsigned frameIndex) { KillSlot = frameIndex % SF_VK_MAX_FRAMES_IN_FLIGHT; }
+    // Drain accumulated texture kills for the current slot (call after GPU fence).
+    void            DrainDeferredKills();
+    // Drain ALL slots (call at shutdown after vkDeviceWaitIdle).
+    void            DrainAllDeferredKills();
     TextureManager(VkDevice device, VkPhysicalDevice physDevice,
                    VkCommandPool cmdPool, VkQueue queue,
                    ThreadId renderThreadId,

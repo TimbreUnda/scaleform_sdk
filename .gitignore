@@ -35,6 +35,8 @@ build/
 *.ilk
 *.map
 Obj/
+# Un-ignore AS3 Obj/ — these are source files, not build artifacts
+!Src/GFx/AS3/Obj/
 
 # ---------------------------------------------------------------------------
 # 3rdParty — prebuilt libs (now rebuilt from source via CMake)
@@ -110,8 +112,29 @@ Bin/Win32/Msvc10/Tests/
 # Visual regression test output
 Tests/VisualRegression/Output/
 
+# Claude Code workspace settings
+.claude/
+
 # IDE workspace files
 *.code-workspace
+
+# MSBuild local artifacts (projects generated or used locally)
+Projects/Win32/
+
+# Build output executables (rebuilt from source)
+Bin/x64/Msvc10/DrawText_D3D11/
+Bin/x64/Msvc10/ImageDelegate_D3D11/
+Bin/x64/Msvc10/MMOKit_D3D11/
+Bin/x64/Msvc10/MenuKit_D3D11/
+
+# Generated shader intermediates (rebuilt by GFxShaderMaker)
+Shaders/
+Src/Render/D3D9/Shaders/
+Src/Render/GL/Shaders/
+Src/Render/PS4/Shaders/
+
+# Generated data files
+Bin/Data/AS3/Kits/StarforceTD/null_sb_player_data.sox
 
 # Root-level debug/capture session artifacts
 screenshot_*.ppm

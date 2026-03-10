@@ -216,8 +216,12 @@ add_library(gfx STATIC
     ${CMAKE_SOURCE_DIR}/Src/Render/Render_TreeText.cpp
     ${CMAKE_SOURCE_DIR}/Src/Render/Render_Vertex.cpp
     ${CMAKE_SOURCE_DIR}/Src/Render/Render_VertexPath.cpp
+    ${CMAKE_SOURCE_DIR}/Src/Render/Render_Profiler.cpp
     ${CMAKE_SOURCE_DIR}/Src/Render/Renderer2D.cpp
     ${CMAKE_SOURCE_DIR}/Src/Render/Renderer2DImpl.cpp
+    # Net/Socket (4.3): platform socket implementation
+    ${CMAKE_SOURCE_DIR}/Src/GFx/Net/GFx_Socket.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/Net/GFx_Socket_Win32.cpp
 )
 sf_apply_compile_flags(gfx)
 target_link_libraries(gfx PUBLIC expat zlib libpng libjpeg pcre)
@@ -307,7 +311,6 @@ set(SF_AS3_NON_SCU_SOURCES
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/IME/AS3_IMEManager.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/GFx_AS3Support.cpp
     # Below: not in vcxproj, added to resolve link errors
-    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/System/AS3_Obj_System_Domain.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/AS3_SocketThreadMgr.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/AS3_SocketBuffer.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/AS3_AOTC2.cpp
@@ -335,6 +338,7 @@ if(SF_USE_SCU)
         ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Utils/AS3_Obj_Utils_All.cpp
         ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Vec/AS3_Obj_Vec_All.cpp
         ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Xml/AS3_Obj_Xml_All.cpp
+        ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Sensors/AS3_Obj_Sensors_All.cpp
         ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/AS3_Obj_All.cpp
         ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/AS3_All.cpp
     )
@@ -387,6 +391,17 @@ add_library(gfx_as3 STATIC
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Display/AS3_Obj_Display_SWFVersion.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Display/AS3_Obj_Display_Shader.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Display/AS3_Obj_Display_ShaderData.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Display/AS3_Obj_Display_GraphicsBitmapFill.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Display/AS3_Obj_Display_GraphicsEndFill.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Display/AS3_Obj_Display_GraphicsGradientFill.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Display/AS3_Obj_Display_GraphicsPath.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Display/AS3_Obj_Display_GraphicsPathCommand.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Display/AS3_Obj_Display_GraphicsPathWinding.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Display/AS3_Obj_Display_GraphicsSolidFill.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Display/AS3_Obj_Display_GraphicsStroke.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Display/AS3_Obj_Display_IGraphicsData.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Display/AS3_Obj_Display_IGraphicsFill.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Display/AS3_Obj_Display_IGraphicsPath.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Errors/AS3_Obj_Errors_EOFError.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Errors/AS3_Obj_Errors_IllegalOperationError.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Errors/AS3_Obj_Errors_InvalidSWFError.cpp
@@ -425,6 +440,8 @@ add_library(gfx_as3 STATIC
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Events/AS3_Obj_Events_TransformGestureEvent.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Events/AS3_Obj_Events_StageOrientationEvent.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Events/AS3_Obj_Events_StageOrientation.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Events/AS3_Obj_Events_AccelerometerEvent.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Events/AS3_Obj_Events_GeolocationEvent.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Filters/AS3_Obj_Filters_BevelFilter.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Filters/AS3_Obj_Filters_BitmapFilter.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Filters/AS3_Obj_Filters_BitmapFilterQuality.cpp
@@ -546,6 +563,8 @@ add_library(gfx_as3 STATIC
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Xml/AS3_Obj_Xml_XMLDocument.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Xml/AS3_Obj_Xml_XMLNode.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Xml/AS3_Obj_Xml_XMLNodeType.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Sensors/AS3_Obj_Sensors_Accelerometer.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Sensors/AS3_Obj_Sensors_Geolocation.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/AS3_Obj_Activation.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/AS3_Obj_ArgumentError.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/AS3_Obj_Array.cpp
@@ -613,7 +632,7 @@ add_library(gfx_as3 STATIC
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/AS3_ValueStack.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/GFx_AS3Support.cpp
     # Below: not in vcxproj, added to resolve link errors
-    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/System/AS3_Obj_System_Domain.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/AS3_Obj_Domain.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/AS3_SocketThreadMgr.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/AS3_SocketBuffer.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/AS3_AOTC2.cpp
@@ -638,6 +657,7 @@ if(SF_USE_SCU)
         ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Printing/AS3_Obj_Printing_AIR_All.cpp
         ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Sampler/AS3_Obj_Sampler_AIR_All.cpp
         ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Security/AS3_Obj_Security_AIR_All.cpp
+        ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Sensors/AS3_Obj_Sensors_AIR_All.cpp
         ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Utils/AS3_Obj_Utils_AIR_All.cpp
     )
 else()
@@ -699,6 +719,7 @@ add_library(gfx_air STATIC
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Security/AS3_Obj_Security_SignatureStatus.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Security/AS3_Obj_Security_SignerTrustSettings.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Utils/AS3_Obj_Utils_CompressionAlgorithm.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Sensors/AS3_Obj_Sensors_Geolocation.cpp
 )
 endif()
 sf_apply_compile_flags(gfx_air)

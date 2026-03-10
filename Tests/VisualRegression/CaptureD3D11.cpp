@@ -293,7 +293,8 @@ int main(int argc, char* argv[])
     if (FAILED(hr)) { fprintf(stderr, "CaptureD3D11: CreateTexture2D (staging) failed\n"); return 1; }
 
     // --- Initialize Scaleform HAL ---
-    Ptr<Render::D3D1x::HAL> pRenderHAL = *new Render::D3D1x::HAL();
+    CaptureThreadCommandQueue* queue = new CaptureThreadCommandQueue();
+    Ptr<Render::D3D1x::HAL> pRenderHAL = *new Render::D3D1x::HAL(queue);
     Ptr<Render::Renderer2D> pRenderer;
     if (!(pRenderer = *new Render::Renderer2D(pRenderHAL.GetPtr())))
     {
@@ -301,7 +302,6 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    CaptureThreadCommandQueue* queue = new CaptureThreadCommandQueue();
     queue->pHAL = pRenderHAL;
     queue->pR2D = pRenderer;
 

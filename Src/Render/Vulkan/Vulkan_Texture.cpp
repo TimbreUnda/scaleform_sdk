@@ -80,17 +80,17 @@ void Texture::ReleaseHWTextures(bool)
         {
             if (pTextures[i].View != VK_NULL_HANDLE)
             {
-                pmgr->ViewKills.PushBack(pTextures[i].View);
+                pmgr->ViewKills[pmgr->KillSlot].PushBack(pTextures[i].View);
                 pTextures[i].View = VK_NULL_HANDLE;
             }
             if (pTextures[i].Image != VK_NULL_HANDLE)
             {
-                pmgr->ImageKills.PushBack(pTextures[i].Image);
+                pmgr->ImageKills[pmgr->KillSlot].PushBack(pTextures[i].Image);
                 pTextures[i].Image = VK_NULL_HANDLE;
             }
             if (pTextures[i].Memory != VK_NULL_HANDLE)
             {
-                pmgr->MemoryKills.PushBack(pTextures[i].Memory);
+                pmgr->MemoryKills[pmgr->KillSlot].PushBack(pTextures[i].Memory);
                 pTextures[i].Memory = VK_NULL_HANDLE;
             }
         }
@@ -652,7 +652,9 @@ TextureManager::TextureManager(VkDevice device, VkPhysicalDevice physDevice,
   pDevice(device), pPhysicalDevice(physDevice),
   pCommandPool(cmdPool), pQueue(queue),
   DummyImage(VK_NULL_HANDLE), DummyImageView(VK_NULL_HANDLE),
-  DummyImageMemory(VK_NULL_HANDLE), DummySampler(VK_NULL_HANDLE)
+  DummyImageMemory(VK_NULL_HANDLE), DummySampler(VK_NULL_HANDLE),
+  KillSlot(0),
+  DeferKills(false)
 {
     memset(Samplers, 0, sizeof(Samplers));
     memset(CurrentTextures, 0, sizeof(CurrentTextures));
@@ -668,6 +670,7 @@ TextureManager::~TextureManager()
 
 void TextureManager::Reset()
 {
+    DeferKills = false;
     destroyDummyTexture();
 
     for (unsigned i = 0; i < SamplerTypeCount; i++)
@@ -678,7 +681,12 @@ void TextureManager::Reset()
             Samplers[i] = VK_NULL_HANDLE;
         }
     }
-    processTextureKillList();
+    // Drain all slots at shutdown
+    for (unsigned s = 0; s < SF_VK_MAX_FRAMES_IN_FLIGHT; ++s)
+    {
+        KillSlot = s;
+        processTextureKillList();
+    }
 }
 
 void TextureManager::initTextureFormats()
@@ -695,19 +703,45 @@ void TextureManager::initTextureFormats()
     }
 }
 
+void TextureManager::DrainDeferredKills()
+{
+    bool prev = DeferKills;
+    DeferKills = false;
+    processTextureKillList();
+    DeferKills = prev;
+}
+
+void TextureManager::DrainAllDeferredKills()
+{
+    bool prev = DeferKills;
+    DeferKills = false;
+    for (unsigned s = 0; s < SF_VK_MAX_FRAMES_IN_FLIGHT; ++s)
+    {
+        KillSlot = s;
+        processTextureKillList();
+    }
+    DeferKills = prev;
+}
+
 void TextureManager::processTextureKillList()
 {
-    for (unsigned i = 0; i < ViewKills.GetSize(); i++)
-        vkDestroyImageView(pDevice, ViewKills[i], nullptr);
-    ViewKills.Clear();
+    // During rendering, Vulkan resources may still be referenced by in-flight
+    // command buffers.  Defer destruction until the next BeginScene, after the
+    // application has waited on the GPU fence for this slot.
+    if (DeferKills)
+        return;
 
-    for (unsigned i = 0; i < ImageKills.GetSize(); i++)
-        vkDestroyImage(pDevice, ImageKills[i], nullptr);
-    ImageKills.Clear();
+    for (unsigned i = 0; i < ViewKills[KillSlot].GetSize(); i++)
+        vkDestroyImageView(pDevice, ViewKills[KillSlot][i], nullptr);
+    ViewKills[KillSlot].Clear();
 
-    for (unsigned i = 0; i < MemoryKills.GetSize(); i++)
-        vkFreeMemory(pDevice, MemoryKills[i], nullptr);
-    MemoryKills.Clear();
+    for (unsigned i = 0; i < ImageKills[KillSlot].GetSize(); i++)
+        vkDestroyImage(pDevice, ImageKills[KillSlot][i], nullptr);
+    ImageKills[KillSlot].Clear();
+
+    for (unsigned i = 0; i < MemoryKills[KillSlot].GetSize(); i++)
+        vkFreeMemory(pDevice, MemoryKills[KillSlot][i], nullptr);
+    MemoryKills[KillSlot].Clear();
 }
 
 void TextureManager::processInitTextures()
