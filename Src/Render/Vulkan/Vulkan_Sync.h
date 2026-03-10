@@ -25,9 +25,19 @@ public:
     {
         if (device == VK_NULL_HANDLE)
         {
+            // Release outstanding frames BEFORE clearing pDevice, so that
+            // ReleaseFence can still call vkDestroyFence on each VkFence.
+            ReleaseOutstandingFrames();
+
+            // Destroy any in-progress fence that hasn't been submitted yet.
+            if (pNextEndFrameFence != VK_NULL_HANDLE && pDevice != VK_NULL_HANDLE)
+            {
+                vkDestroyFence(pDevice, pNextEndFrameFence, nullptr);
+                pNextEndFrameFence = VK_NULL_HANDLE;
+            }
+
             pDevice = VK_NULL_HANDLE;
             pQueue  = VK_NULL_HANDLE;
-            ReleaseOutstandingFrames();
             return true;
         }
 
@@ -46,7 +56,14 @@ public:
     virtual void BeginFrame()
     {
         if (!pDevice) return;
-        SF_ASSERT(pNextEndFrameFence == VK_NULL_HANDLE);
+
+        // If a previous fence was never consumed by EndFrame, destroy it now
+        // to avoid leaking VkFence handles.
+        if (pNextEndFrameFence != VK_NULL_HANDLE)
+        {
+            vkDestroyFence(pDevice, pNextEndFrameFence, nullptr);
+            pNextEndFrameFence = VK_NULL_HANDLE;
+        }
 
         VkFenceCreateInfo ci = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
         VkResult r = vkCreateFence(pDevice, &ci, nullptr, &pNextEndFrameFence);

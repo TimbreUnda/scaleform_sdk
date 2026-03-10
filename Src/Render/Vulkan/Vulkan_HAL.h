@@ -100,6 +100,8 @@ struct PipelineKeyHashF
 class HAL : public Render::ShaderHAL<ShaderManager, ShaderInterface>
 {
 public:
+    typedef Render::ShaderHAL<ShaderManager, ShaderInterface> BaseHAL;
+
     VkDevice                pDevice;
     VkPhysicalDevice        pPhysicalDevice;
     VkQueue                 pGraphicsQueue;
@@ -131,29 +133,9 @@ public:
     virtual void        beginDisplay(BeginDisplayData* data);
     virtual void        updateViewport();
 
-    virtual void        DrawProcessedPrimitive(Primitive* pprimitive,
-                                               PrimitiveBatch* pstart, PrimitiveBatch* pend);
-    virtual void        DrawProcessedComplexMeshes(ComplexMesh* complexMesh,
-                                                   const StrideArray<HMatrix>& matrices);
-
     // *** Mask / Stencil
-    bool            StencilChecked;
-    bool            StencilAvailable;
-    bool            DepthBufferAvailable;
-
-    virtual void    PushMask_BeginSubmit(MaskPrimitive* primitive);
-    virtual void    EndMaskSubmit();
-    virtual void    PopMask();
-    virtual void    beginMaskDisplay()
-    {
-        SF_ASSERT(MaskStackTop == 0);
-        StencilChecked  = 0;
-        StencilAvailable= 0;
-        DepthBufferAvailable = 0;
-        HALState &= ~HS_DrawingMask;
-    }
-    bool    checkMaskBufferCaps();
-    virtual void    clearSolidRectangle(const Rect<int>& r, Color color);
+    virtual void    applyDepthStencilMode(DepthStencilMode mode, unsigned stencilRef);
+    virtual bool    checkDepthStencilBufferCaps();
 
     // *** Blend modes
     void    applyBlendModeImpl(BlendMode mode, bool sourceAc = false, bool forceAc = false);
@@ -179,7 +161,7 @@ public:
         return base + (unsigned)blendMode;
     }
 
-    // *** Stencil modes
+    // *** Stencil modes (for Vulkan pipeline depth/stencil state lookup)
     enum StencilModes
     {
         StencilMode_Disabled,
@@ -194,14 +176,12 @@ public:
     };
 
     // *** Raster modes
-    enum RasterModes
-    {
-        RasterMode_Default,
-        RasterMode_Wireframe,
-        RasterMode_Count
-    };
-    RasterModes RasterMode;
-    void SetRasterMode(RasterModes mode) { RasterMode = mode; }
+    virtual bool IsRasterModeSupported(RasterModeType mode) const { return mode != RasterMode_Point; }
+    virtual void applyRasterModeImpl(RasterModeType mode);
+
+    // *** Vertex arrays (pure virtuals from ShaderHAL)
+    virtual UPInt setVertexArray(PrimitiveBatch* pbatch, Render::MeshCacheItem* pmesh);
+    virtual UPInt setVertexArray(const ComplexMesh::FillRecord& fr, unsigned formatIndex, Render::MeshCacheItem* pmesh);
 
     // *** Pipeline management
     VkPipelineLayout    pPipelineLayout;
@@ -238,7 +218,7 @@ public:
     // Main render pass info, set each frame by the application so PopRenderTarget
     // can resume the swapchain render pass after returning from an offscreen filter pass.
     VkRenderPass    pMainRenderPass;        // original main pass (owns the pipeline compatibility key)
-    VkRenderPass    pMainResumeRenderPass;  // same format, LOAD_OP_LOAD – used for restart
+    VkRenderPass    pMainResumeRenderPass;  // same format, LOAD_OP_LOAD - used for restart
     VkFramebuffer   pMainFramebuffer;
     VkExtent2D      MainRenderExtent;
 
@@ -264,16 +244,12 @@ public:
     virtual RenderTarget*   CreateRenderTarget(Render::Texture* texture, bool needsStencil);
     virtual RenderTarget*   CreateTempRenderTarget(const ImageSize& size, bool needsStencil);
     virtual bool            SetRenderTarget(RenderTarget* target, bool setState = 1);
-    virtual void            PushRenderTarget(const RectF& frameRect, RenderTarget* prt, unsigned flags = 0);
+    virtual void            PushRenderTarget(const RectF& frameRect, RenderTarget* prt, unsigned flags = 0, Color clearColor = 0);
     virtual void            PopRenderTarget(unsigned flags = 0);
     virtual bool            createDefaultRenderBuffer();
 
-    // *** Filters
-    virtual void          PushFilters(FilterPrimitive* primitive);
-    virtual void          drawUncachedFilter(const FilterStackEntry& e);
-    virtual void          drawCachedFilter(FilterPrimitive* primitive);
-
-    virtual class MeshCache& GetMeshCache() { return Cache; }
+    virtual class MeshCache&       GetMeshCache()        { return Cache; }
+    virtual Render::RenderSync*    GetRenderSync()       { return &Cache.RSync; }
 
     virtual void    MapVertexFormat(PrimitiveFillType fill, const VertexFormat* sourceFormat,
                                     const VertexFormat** single,
@@ -285,27 +261,33 @@ public:
 protected:
     virtual void setBatchUnitSquareVertexStream();
     virtual void drawPrimitive(unsigned indexCount, unsigned meshCount);
-    virtual void drawMaskClearRectangles(const HMatrix* matrices, UPInt count);
-    void         drawIndexedPrimitive(unsigned indexCount, unsigned meshCount, UPInt indexOffset, unsigned vertexBaseIndex);
-    void         drawIndexedInstanced(unsigned indexCount, unsigned meshCount, UPInt indexOffset, unsigned vertexBaseIndex);
+    virtual void drawMaskClearRectangles(const Matrix2F* matrices, UPInt count);
+    virtual void drawIndexedPrimitive(unsigned indexCount, unsigned vertexCount, unsigned meshCount, UPInt indexOffset, UPInt vertexOffset);
+    virtual void drawIndexedInstanced(unsigned indexCount, unsigned vertexCount, unsigned meshCount, UPInt indexOffset, UPInt vertexOffset);
 
     bool         shouldRenderFilters(const FilterPrimitive* prim) const;
     virtual Render::RenderEvent& GetEvent(EventType eventType);
 
     void drawScreenQuad();
 
+public:
+    // Pipeline state - public so ShaderInterface::Finish can bind pipelines
+    unsigned        CurrentStencilMode;
+    unsigned        CurrentBlendType;
+
 private:
     // Pipeline cache map
     typedef Hash<PipelineKey, VkPipeline, PipelineKeyHashF> PipelineMap;
     PipelineMap     Pipelines;
-    unsigned        CurrentStencilMode;
-    unsigned        CurrentBlendType;
 
     // Blend state descriptions (reusable for pipeline creation)
     VkPipelineColorBlendAttachmentState BlendDescs[BlendTypeCount];
     VkPipelineDepthStencilStateCreateInfo DepthStencilDescs[StencilMode_Count];
     void    initBlendDescriptions();
     void    initDepthStencilDescriptions();
+
+    // Map from base-class DepthStencilMode to Vulkan-specific StencilModes
+    static StencilModes MapDepthStencilMode(DepthStencilMode mode);
 
     RenderEvent Events[Event_Count];
 
@@ -326,19 +308,38 @@ public:
     VkFramebuffer   pFramebuffer;
     UPInt           CacheID;
 
-    // Deferred deletion queue: framebuffers queued here are destroyed at the
-    // start of BeginScene, after the previous frame's fence has been waited on.
-    // This prevents destroying framebuffers still referenced by an in-flight
-    // command buffer (Vulkan requires the framebuffer to live until the CB completes).
-    static Array<VkFramebuffer> PendingDeletes;
+    // Per-slot deferred deletion queues for framebuffers.  With N frames in
+    // flight, the app waits on slot S's fence before reusing slot S, so
+    // PendingDeletes[S] is safe to drain at that point.  Using a single shared
+    // list would destroy framebuffers from frame N-1 before its GPU work
+    // completes (the app only waited on the fence for slot S, not N-1's slot).
+    static Array<VkFramebuffer> PendingDeletes[SF_VK_MAX_FRAMES_IN_FLIGHT];
     static VkDevice             PendingDeleteDevice;
+    static unsigned             PendingDeleteSlot;
+
+    static void SetPendingDeleteSlot(unsigned frameIndex)
+    {
+        PendingDeleteSlot = frameIndex % SF_VK_MAX_FRAMES_IN_FLIGHT;
+    }
 
     static void DrainPendingDeletes()
     {
         if (PendingDeleteDevice == VK_NULL_HANDLE) return;
-        for (unsigned i = 0; i < PendingDeletes.GetSize(); ++i)
-            vkDestroyFramebuffer(PendingDeleteDevice, PendingDeletes[i], nullptr);
-        PendingDeletes.ClearAndRelease();
+        Array<VkFramebuffer>& list = PendingDeletes[PendingDeleteSlot];
+        for (unsigned i = 0; i < list.GetSize(); ++i)
+            vkDestroyFramebuffer(PendingDeleteDevice, list[i], nullptr);
+        list.ClearAndRelease();
+    }
+
+    static void DrainAllPendingDeletes()
+    {
+        if (PendingDeleteDevice == VK_NULL_HANDLE) return;
+        for (unsigned s = 0; s < SF_VK_MAX_FRAMES_IN_FLIGHT; ++s)
+        {
+            for (unsigned i = 0; i < PendingDeletes[s].GetSize(); ++i)
+                vkDestroyFramebuffer(PendingDeleteDevice, PendingDeletes[s][i], nullptr);
+            PendingDeletes[s].ClearAndRelease();
+        }
     }
 
     static void UpdateData(RenderBuffer* buffer, VkDevice device, VkImageView rtView,
@@ -359,14 +360,14 @@ public:
         poldHD->pDSSurface = dsView;
         poldHD->pRenderSurface = rtView;
         if (poldHD->pFramebuffer != fb && poldHD->pFramebuffer != VK_NULL_HANDLE)
-            PendingDeletes.PushBack(poldHD->pFramebuffer);
+            PendingDeletes[PendingDeleteSlot].PushBack(poldHD->pFramebuffer);
         poldHD->pFramebuffer = fb;
     }
 
     virtual ~RenderTargetData()
     {
         if (pFramebuffer != VK_NULL_HANDLE)
-            PendingDeletes.PushBack(pFramebuffer);
+            PendingDeletes[PendingDeleteSlot].PushBack(pFramebuffer);
     }
 
 private:

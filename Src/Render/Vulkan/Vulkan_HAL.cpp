@@ -20,8 +20,9 @@ Authors     :   Scaleform Vulkan Backend
 namespace Scaleform { namespace Render { namespace Vulkan {
 
 // Static members for deferred framebuffer deletion
-Array<VkFramebuffer> RenderTargetData::PendingDeletes;
+Array<VkFramebuffer> RenderTargetData::PendingDeletes[SF_VK_MAX_FRAMES_IN_FLIGHT];
 VkDevice             RenderTargetData::PendingDeleteDevice = VK_NULL_HANDLE;
+unsigned             RenderTargetData::PendingDeleteSlot = 0;
 
 
 // *** HAL
@@ -45,9 +46,6 @@ HAL::HAL(ThreadCommandQueue* commandQueue)
   MainRenderExtent{0, 0},
   Cache(Memory::GetGlobalHeap(), MeshCacheParams::PC_Defaults),
   PrevBatchType(PrimitiveBatch::DP_None),
-  StencilChecked(false), StencilAvailable(false),
-  DepthBufferAvailable(false),
-  RasterMode(RasterMode_Default),
   pPipelineLayout(VK_NULL_HANDLE),
   pPipelineCache(VK_NULL_HANDLE),
   pDescriptorSetLayout(VK_NULL_HANDLE),
@@ -173,8 +171,8 @@ bool HAL::ShutdownHAL()
     if (pDevice)
         vkDeviceWaitIdle(pDevice);
 
-    // Drain any framebuffers queued for deferred deletion
-    RenderTargetData::DrainPendingDeletes();
+    // Drain all framebuffers queued for deferred deletion (all slots)
+    RenderTargetData::DrainAllPendingDeletes();
 
     // Destroy pipelines
     for (PipelineMap::Iterator it = Pipelines.Begin(); it != Pipelines.End(); ++it)
@@ -206,7 +204,7 @@ bool HAL::ShutdownHAL()
 
     // Final drain: ~RenderTargetData may have pushed framebuffers during
     // destroyRenderBuffers / pRenderBufferManager.Clear above.
-    RenderTargetData::DrainPendingDeletes();
+    RenderTargetData::DrainAllPendingDeletes();
 
     pDevice = VK_NULL_HANDLE;
     return true;
@@ -236,26 +234,36 @@ bool HAL::RestoreAfterReset()
 
 bool HAL::BeginScene()
 {
-    if (!Render::HAL::BeginScene())
+    if (!BaseHAL::BeginScene())
         return false;
 
     ScopedRenderEvent GPUEvent(GetEvent(Event_BeginScene), __FUNCTION__);
 
-    // Drain deferred framebuffer deletions from the previous frame(s).
-    // Safe here because the app waits on the in-flight fence before calling BeginScene.
+    // Set the current frame slot and drain framebuffer deletions for THIS slot.
+    // With N frames in flight the app waits on slot S's fence before reusing it,
+    // so only slot S's accumulated deletes are guaranteed safe to destroy here.
+    unsigned frameIdx = CurrentFrame % SF_VK_MAX_FRAMES_IN_FLIGHT;
+    RenderTargetData::SetPendingDeleteSlot(frameIdx);
     RenderTargetData::DrainPendingDeletes();
 
     // Return render targets used last frame back to the pool now that the GPU is done.
     for (unsigned i = 0; i < PendingRTReleases.GetSize(); ++i)
-        PendingRTReleases[i]->SetInUse(false);
+        PendingRTReleases[i]->SetInUse(RTUse_Unused);
     PendingRTReleases.Clear();
 
-    unsigned frameIdx = CurrentFrame % SF_VK_MAX_FRAMES_IN_FLIGHT;
+    // Drain VkImageView/VkImage/VkDeviceMemory kills for this slot.  The app
+    // waited on the in-flight fence for this slot, so its resources are safe.
+    Vulkan::TextureManager* ptm = (Vulkan::TextureManager*)pTextureManager.GetPtr();
+    if (ptm)
+    {
+        ptm->SetKillSlot(frameIdx);
+        ptm->DrainDeferredKills();
+        ptm->DeferKills = true;
+    }
+
     vkResetDescriptorPool(pDevice, FrameDescriptorPools[frameIdx], 0);
     UBORingOffset = 0;
 
-    SManager.BeginScene();
-    ShaderData.BeginScene();
     return true;
 }
 
@@ -268,11 +276,10 @@ bool HAL::EndScene()
     // PendingRTReleases keep the underlying textures alive until BeginScene
     // of a later frame (after the GPU fence has been waited on).
     for (unsigned i = 0; i < PendingRTReleases.GetSize(); ++i)
-        PendingRTReleases[i]->SetInUse(false);
+        PendingRTReleases[i]->SetInUse(RTUse_Unused);
 
-    if (!Render::HAL::EndScene())
+    if (!BaseHAL::EndScene())
         return false;
-    SManager.EndScene();
 
     CurrentFrame++;
     return true;
@@ -324,470 +331,110 @@ void HAL::updateViewport()
 }
 
 
-void HAL::DrawProcessedPrimitive(Primitive* pprimitive,
-                                  PrimitiveBatch* pstart, PrimitiveBatch* pend)
+// *** Vertex arrays (ShaderHAL pure virtuals)
+
+UPInt HAL::setVertexArray(PrimitiveBatch* pbatch, Render::MeshCacheItem* pmeshBase)
 {
-    SF_AMP_SCOPE_RENDER_TIMER(__FUNCTION__, Amp_Profile_Level_High);
-    ScopedRenderEvent GPUEvent(GetEvent(Event_DrawPrimitive), __FUNCTION__);
+    Vulkan::MeshCacheItem* pmesh = reinterpret_cast<Vulkan::MeshCacheItem*>(pmeshBase);
 
-    if (!checkState(HS_InDisplay, __FUNCTION__) || !pprimitive->GetMeshCount())
-        return;
+    VkBuffer vb = pmesh->pVertexBuffer->GetHWBuffer();
+    VkDeviceSize vbOffset = pmesh->VBAllocOffset;
+    vkCmdBindVertexBuffers(pCommandBuffer, 0, 1, &vb, &vbOffset);
+    // Index buffer bound at offset 0; the allocation offset is returned and
+    // passed as firstIndex to vkCmdDrawIndexed by the caller.
+    vkCmdBindIndexBuffer(pCommandBuffer, pmesh->pIndexBuffer->GetHWBuffer(),
+                         0, VK_INDEX_TYPE_UINT16);
 
-    SF_ASSERT(pend != 0);
-    PrimitiveBatch* pbatch = pstart ? pstart : pprimitive->Batches.GetFirst();
-
-    ShaderData.BeginPrimitive();
-
-    unsigned bidx = 0;
-    while (pbatch != pend)
-    {
-        MeshCacheItem* pmesh = (MeshCacheItem*)pbatch->GetCacheItem();
-        unsigned meshIndex = pbatch->GetMeshIndex();
-        unsigned batchMeshCount = pbatch->GetMeshCount();
-
-        if (pmesh)
-        {
-            Profiler.SetBatch((UPInt)pprimitive, bidx);
-
-            unsigned fillFlags = FillFlags;
-            if (batchMeshCount > 0)
-                fillFlags |= pprimitive->Meshes[0].M.Has3D() ? FF_3DProjection : 0;
-
-            const ShaderManager::Shader& pShader =
-                SManager.SetPrimitiveFill(pprimitive->pFill, fillFlags, pbatch->Type, pbatch->pFormat, batchMeshCount, Matrices,
-                                          &pprimitive->Meshes[meshIndex], &ShaderData);
-
-            // Bind vertex and index buffers
-            VkBuffer vb = pmesh->pVertexBuffer->GetHWBuffer();
-            VkDeviceSize vbOffset = pmesh->VBAllocOffset;
-            vkCmdBindVertexBuffers(pCommandBuffer, 0, 1, &vb, &vbOffset);
-            vkCmdBindIndexBuffer(pCommandBuffer, pmesh->pIndexBuffer->GetHWBuffer(),
-                                 0, VK_INDEX_TYPE_UINT16);
-
-            // Bind the correct pipeline
-            if ((HALState & HS_ViewValid) && pShader)
-            {
-                SysVertexFormat* pvf = (SysVertexFormat*)pbatch->pFormat->pSysFormat.GetPtr();
-                const ShaderPair& curSh = ShaderData.GetCurrentShaders();
-                VkPipeline pipeline = GetPipeline(curSh.pVDesc ? curSh.pVDesc->Type : ShaderDesc::ST_None,
-                                                  curSh.pFDesc ? curSh.pFDesc->Type : ShaderDesc::ST_None,
-                                                  CurrentBlendType, CurrentStencilMode, pvf);
-                if (pipeline != VK_NULL_HANDLE && InRenderPass)
-                {
-                    vkCmdBindPipeline(pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-
-                    UPInt indexOffset = pmesh->IBAllocOffset / sizeof(IndexType);
-                    if (pbatch->Type != PrimitiveBatch::DP_Instanced)
-                        drawIndexedPrimitive(pmesh->IndexCount, pmesh->MeshCount, indexOffset, 0);
-                    else
-                        drawIndexedInstanced(pmesh->IndexCount, pbatch->GetMeshCount(), indexOffset, 0);
-                }
-            }
-
-            pmesh->GPUFence = Cache.GetRenderSync()->InsertFence();
-            pmesh->MoveToCacheListFront(MCL_ThisFrame);
-        }
-
-        pbatch = pbatch->GetNext();
-        bidx++;
-    }
+    return pmesh->IBAllocOffset / sizeof(IndexType);
 }
 
-
-void HAL::DrawProcessedComplexMeshes(ComplexMesh* complexMesh,
-                                      const StrideArray<HMatrix>& matrices)
+UPInt HAL::setVertexArray(const ComplexMesh::FillRecord& fr, unsigned formatIndex, Render::MeshCacheItem* pmeshBase)
 {
-    SF_AMP_SCOPE_RENDER_TIMER(__FUNCTION__, Amp_Profile_Level_High);
-    ScopedRenderEvent GPUEvent(GetEvent(Event_DrawComplex), __FUNCTION__);
+    Vulkan::MeshCacheItem* pmesh = reinterpret_cast<Vulkan::MeshCacheItem*>(pmeshBase);
 
-    typedef ComplexMesh::FillRecord   FillRecord;
-    typedef PrimitiveBatch::BatchType BatchType;
+    VkBuffer vb = pmesh->pVertexBuffer->GetHWBuffer();
+    VkDeviceSize byteOffset = fr.VertexByteOffset + pmesh->VBAllocOffset;
+    vkCmdBindVertexBuffers(pCommandBuffer, 0, 1, &vb, &byteOffset);
+    // Index buffer bound at offset 0; the allocation offset is returned and
+    // passed as firstIndex to vkCmdDrawIndexed by the caller.
+    vkCmdBindIndexBuffer(pCommandBuffer, pmesh->pIndexBuffer->GetHWBuffer(),
+                         0, VK_INDEX_TYPE_UINT16);
 
-    MeshCacheItem* pmesh = (MeshCacheItem*)complexMesh->GetCacheItem();
-    if (!checkState(HS_InDisplay, __FUNCTION__) || !pmesh)
-        return;
-
-    const FillRecord* fillRecords = complexMesh->GetFillRecords();
-    unsigned    fillCount     = complexMesh->GetFillRecordCount();
-    unsigned    instanceCount = (unsigned)matrices.GetSize();
-    unsigned    indexBufferOffset = (unsigned)(pmesh->IBAllocOffset / sizeof(IndexType));
-    BatchType   batchType = PrimitiveBatch::DP_Single;
-    unsigned    formatIndex;
-    unsigned    maxDrawCount = 1;
-    unsigned    vertexBaseIndex = 0;
-    unsigned    vertexSize = 0;
-
-    if (instanceCount > 1 && SManager.HasInstancingSupport())
-    {
-        maxDrawCount = Alg::Min(instanceCount, Cache.GetParams().MaxBatchInstances);
-        batchType = PrimitiveBatch::DP_Instanced;
-        formatIndex = 1;
-    }
-    else
-    {
-        batchType = PrimitiveBatch::DP_Single;
-        formatIndex = 0;
-    }
-
-    const Matrix2F* textureMatrices = complexMesh->GetFillMatrixCache();
-
-    VkBuffer ib = pmesh->pIndexBuffer->GetHWBuffer();
-    vkCmdBindIndexBuffer(pCommandBuffer, ib, 0, VK_INDEX_TYPE_UINT16);
-
-    for (unsigned fillIndex = 0; fillIndex < fillCount; fillIndex++)
-    {
-        const FillRecord& fr = fillRecords[fillIndex];
-        Profiler.SetBatch((UPInt)complexMesh, fillIndex);
-
-        unsigned fillFlags = FillFlags;
-        unsigned startIndex = 0;
-        if (instanceCount > 0)
-        {
-            const HMatrix& hm = matrices[0];
-            fillFlags |= hm.Has3D() ? FF_3DProjection : 0;
-            for (unsigned i = 0; i < instanceCount; i++)
-            {
-                const HMatrix& hm2 = matrices[startIndex + i];
-                if (!(Profiler.GetCxform(hm2.GetCxform()) == Cxform::Identity))
-                    fillFlags |= FF_Cxform;
-            }
-        }
-
-        PrimitiveFillType fillType = Profiler.GetFillType(fr.pFill->GetType());
-        const ShaderManager::Shader& pso = SManager.SetFill(fillType, fillFlags, batchType, fr.pFormats[formatIndex], &ShaderData);
-
-        bool pipelineBound = false;
-        if ((HALState & HS_ViewValid) && pso && InRenderPass)
-        {
-            SysVertexFormat* pvf = (SysVertexFormat*)fr.pFormats[formatIndex]->pSysFormat.GetPtr();
-            const ShaderPair& curSh = ShaderData.GetCurrentShaders();
-            VkPipeline pipeline = GetPipeline(curSh.pVDesc ? curSh.pVDesc->Type : ShaderDesc::ST_None,
-                                              curSh.pFDesc ? curSh.pFDesc->Type : ShaderDesc::ST_None,
-                                              CurrentBlendType, CurrentStencilMode, pvf);
-            if (pipeline != VK_NULL_HANDLE)
-            {
-                vkCmdBindPipeline(pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-                pipelineBound = true;
-            }
-        }
-
-        if (fr.pFormats[formatIndex]->Size != vertexSize)
-        {
-            vertexSize = fr.pFormats[formatIndex]->Size;
-            vertexBaseIndex = 0;
-            VkBuffer vb = pmesh->pVertexBuffer->GetHWBuffer();
-            VkDeviceSize byteOffset = fr.VertexByteOffset + pmesh->VBAllocOffset;
-            vkCmdBindVertexBuffers(pCommandBuffer, 0, 1, &vb, &byteOffset);
-        }
-
-        UByte textureCount = fr.pFill->GetTextureCount();
-        bool solid = (fillType == PrimFill_None || fillType == PrimFill_Mask || fillType == PrimFill_SolidColor);
-
-        for (unsigned i = 0; i < instanceCount; i++)
-        {
-            const HMatrix& hm = matrices[startIndex + i];
-            ShaderData.SetMatrix(pso, Uniform::SU_mvp, complexMesh->GetVertexMatrix(), hm, Matrices, 0, i % maxDrawCount);
-            if (solid)
-                ShaderData.SetColor(pso, Uniform::SU_cxmul, Profiler.GetColor(fr.pFill->GetSolidColor()), 0, i % maxDrawCount);
-            else if (fillFlags & FF_Cxform)
-                ShaderData.SetCxform(pso, Profiler.GetCxform(hm.GetCxform()), 0, i % maxDrawCount);
-
-            for (unsigned tm = 0, stage = 0; tm < textureCount; tm++)
-            {
-                ShaderData.SetMatrix(pso, Uniform::SU_texgen, textureMatrices[fr.FillMatrixIndex[tm]], tm, i % maxDrawCount);
-                Texture* ptex = (Texture*)fr.pFill->GetTexture(tm);
-                ShaderData.SetTexture(pso, Uniform::SU_tex, ptex, fr.pFill->GetFillMode(tm), stage);
-                stage += ptex->GetPlaneCount();
-            }
-
-            bool lastPrimitive = (i == instanceCount - 1);
-            if (batchType != PrimitiveBatch::DP_Instanced)
-            {
-                ShaderData.Finish(1);
-                if (pipelineBound)
-                {
-                    drawIndexedPrimitive(fr.IndexCount, instanceCount, fr.IndexOffset + indexBufferOffset, vertexBaseIndex);
-                    AccumulatedStats.Primitives++;
-                }
-                if (!lastPrimitive)
-                    ShaderData.BeginPrimitive();
-            }
-            else if (((i + 1) % maxDrawCount == 0 && i != 0) || lastPrimitive)
-            {
-                unsigned drawCount = maxDrawCount;
-                if (lastPrimitive && (i + 1) % maxDrawCount != 0)
-                    drawCount = (i + 1) % maxDrawCount;
-                ShaderData.Finish(drawCount);
-                if (pipelineBound)
-                {
-                    drawIndexedInstanced(fr.IndexCount, drawCount, fr.IndexOffset + indexBufferOffset, vertexBaseIndex);
-                    AccumulatedStats.Primitives++;
-                }
-                if (!lastPrimitive)
-                    ShaderData.BeginPrimitive();
-            }
-        }
-
-        AccumulatedStats.Triangles += (fr.IndexCount / 3) * instanceCount;
-        AccumulatedStats.Meshes += instanceCount;
-        vertexBaseIndex += fr.VertexCount;
-    }
-
-    pmesh->MoveToCacheListFront(MCL_ThisFrame);
+    return pmesh->IBAllocOffset / sizeof(IndexType);
 }
 
 
 // *** Mask / Stencil
 
-bool HAL::checkMaskBufferCaps()
+HAL::StencilModes HAL::MapDepthStencilMode(DepthStencilMode mode)
+{
+    switch (mode)
+    {
+    case DepthStencil_Disabled:                 return StencilMode_Disabled;
+    case DepthStencil_StencilClear:             return StencilMode_Available_ClearMasks;
+    case DepthStencil_StencilClearHigher:        return StencilMode_Available_ClearMasksAbove;
+    case DepthStencil_StencilIncrementEqual:     return StencilMode_Available_WriteMask;
+    case DepthStencil_StencilTestLessEqual:      return StencilMode_Available_TestMask;
+    case DepthStencil_DepthWrite:                return StencilMode_DepthOnly_WriteMask;
+    case DepthStencil_DepthTestEqual:            return StencilMode_DepthOnly_TestMask;
+    default:                                     return StencilMode_Disabled;
+    }
+}
+
+void HAL::applyDepthStencilMode(DepthStencilMode mode, unsigned stencilRef)
+{
+    StencilModes vkMode = MapDepthStencilMode(mode);
+    CurrentStencilMode = (unsigned)vkMode;
+
+    // Update the color write state: some depth/stencil modes disable color writes.
+    bool colorWrite = DepthStencilModeTable[mode].ColorWriteEnable;
+    if (!colorWrite)
+        CurrentBlendType = GetBlendType(Blend_Normal, Write_None);
+
+    // Set the dynamic stencil reference
+    vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)stencilRef);
+
+    // Update base class tracking
+    if (mode != CurrentDepthStencilState || CurrentStencilRef != stencilRef)
+    {
+        if (DepthStencilModeTable[mode].ColorWriteEnable != DepthStencilModeTable[CurrentDepthStencilState].ColorWriteEnable)
+        {
+            CurrentDepthStencilState = mode;
+            applyBlendModeImpl(CurrentBlendState.Mode, CurrentBlendState.SourceAc, CurrentBlendState.ForceAc);
+        }
+        CurrentDepthStencilState = mode;
+        CurrentStencilRef = stencilRef;
+    }
+}
+
+bool HAL::checkDepthStencilBufferCaps()
 {
     if (!StencilChecked)
     {
         StencilChecked = true;
         StencilAvailable = true;
+        MultiBitStencil  = true;
         DepthBufferAvailable = false;
     }
-    return StencilAvailable;
-}
-
-void HAL::PushMask_BeginSubmit(MaskPrimitive* prim)
-{
-    GetEvent(Event_Mask).Begin(__FUNCTION__);
-
-    if (!checkState(HS_InDisplay, __FUNCTION__))
-        return;
-
-    Profiler.SetDrawMode(1);
 
     if (!StencilAvailable && !DepthBufferAvailable)
     {
-        if (!checkMaskBufferCaps())
-            return;
+        SF_DEBUG_WARNONCE(1, "RendererHAL::PushMask_BeginSubmit used, but stencil is not available");
+        return false;
     }
-
-    CurrentBlendType = GetBlendType(Blend_Normal, Write_None);
-
-    bool viewportValid = (HALState & HS_ViewValid) != 0;
-
-    if (MaskStackTop && (MaskStack.GetSize() > MaskStackTop) && viewportValid && StencilAvailable)
-    {
-        CurrentStencilMode = StencilMode_Available_ClearMasksAbove;
-        vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)MaskStackTop);
-        MaskPrimitive* erasePrim = MaskStack[MaskStackTop].pPrimitive;
-        drawMaskClearRectangles(erasePrim->GetMaskAreaMatrices(), erasePrim->GetMaskCount());
-    }
-
-    MaskStack.Resize(MaskStackTop + 1);
-    MaskStackEntry& e = MaskStack[MaskStackTop];
-    e.pPrimitive       = prim;
-    e.OldViewportValid = viewportValid;
-    e.OldViewRect      = ViewRect;
-    MaskStackTop++;
-
-    HALState |= HS_DrawingMask;
-
-    if (prim->IsClipped() && viewportValid)
-    {
-        Rect<int> boundClip;
-        if (!Matrices->OrientationSet)
-        {
-            const Matrix2F& m = prim->GetMaskAreaMatrix(0).GetMatrix2D();
-            SF_ASSERT((m.Shx() == 0.0f) && (m.Shy() == 0.0f));
-            boundClip = Rect<int>(VP.Left + (int)m.Tx(), VP.Top + (int)m.Ty(),
-                VP.Left + (int)(m.Tx() + m.Sx()), VP.Top + (int)(m.Ty() + m.Sy()));
-        }
-        else
-        {
-            Matrix2F m = prim->GetMaskAreaMatrix(0).GetMatrix2D();
-            m.Append(Matrices->Orient2D);
-            RectF rect = m.EncloseTransform(RectF(0,0,1,1));
-            boundClip = Rect<int>(VP.Left + (int)rect.x1, VP.Top + (int)rect.y1,
-                VP.Left + (int)rect.x2, VP.Top + (int)rect.y2);
-        }
-
-        if (!ViewRect.IntersectRect(&ViewRect, boundClip))
-        {
-            ViewRect.Clear();
-            HALState &= ~HS_ViewValid;
-            viewportValid = false;
-        }
-        updateViewport();
-
-        if ((MaskStackTop == 1) && viewportValid)
-        {
-            if (StencilAvailable)
-            {
-                VkClearAttachment clearAtt = {};
-                clearAtt.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
-                clearAtt.clearValue.depthStencil = { 1.0f, 0 };
-                VkClearRect clearRect = {};
-                clearRect.rect.offset = { ViewRect.x1, ViewRect.y1 };
-                clearRect.rect.extent = { (uint32_t)Alg::Max(1, ViewRect.Width()),
-                                          (uint32_t)Alg::Max(1, ViewRect.Height()) };
-                clearRect.layerCount = 1;
-                vkCmdClearAttachments(pCommandBuffer, 1, &clearAtt, 1, &clearRect);
-            }
-            else if (DepthBufferAvailable)
-            {
-                VkClearAttachment clearAtt = {};
-                clearAtt.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-                clearAtt.clearValue.depthStencil = { 1.0f, 0 };
-                VkClearRect clearRect = {};
-                clearRect.rect.offset = { ViewRect.x1, ViewRect.y1 };
-                clearRect.rect.extent = { (uint32_t)Alg::Max(1, ViewRect.Width()),
-                                          (uint32_t)Alg::Max(1, ViewRect.Height()) };
-                clearRect.layerCount = 1;
-                vkCmdClearAttachments(pCommandBuffer, 1, &clearAtt, 1, &clearRect);
-            }
-        }
-    }
-    else if ((MaskStackTop == 1) && viewportValid)
-    {
-        if (StencilAvailable)
-        {
-            CurrentStencilMode = StencilMode_Available_ClearMasks;
-            vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)(MaskStackTop - 1));
-            drawMaskClearRectangles(prim->GetMaskAreaMatrices(), prim->GetMaskCount());
-        }
-        else if (DepthBufferAvailable)
-        {
-            UPInt maskCount = prim->GetMaskCount();
-            for (UPInt i = 0; i < maskCount; i++)
-            {
-                const Matrix2F& m = prim->GetMaskAreaMatrix(i).GetMatrix2D();
-                RectF bounds(m.EncloseTransform(RectF(1.0f)));
-                Rect<int> boundClip((int)bounds.x1, (int)bounds.y1, (int)bounds.x2, (int)bounds.y2);
-                boundClip.Offset(VP.Left, VP.Top);
-                if (boundClip.IntersectRect(&boundClip, ViewRect))
-                {
-                    VkClearAttachment clearAtt = {};
-                    clearAtt.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-                    clearAtt.clearValue.depthStencil = { 1.0f, 0 };
-                    VkClearRect clearRect = {};
-                    clearRect.rect.offset = { boundClip.x1, boundClip.y1 };
-                    clearRect.rect.extent = { (uint32_t)(boundClip.x2 - boundClip.x1),
-                                              (uint32_t)(boundClip.y2 - boundClip.y1) };
-                    clearRect.layerCount = 1;
-                    vkCmdClearAttachments(pCommandBuffer, 1, &clearAtt, 1, &clearRect);
-                }
-            }
-        }
-    }
-
-    if (StencilAvailable)
-    {
-        CurrentStencilMode = StencilMode_Available_WriteMask;
-        vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)(MaskStackTop - 1));
-    }
-    else if (DepthBufferAvailable)
-    {
-        if (MaskStackTop == 1)
-            CurrentStencilMode = StencilMode_DepthOnly_WriteMask;
-        else
-            CurrentStencilMode = StencilMode_Unavailable;
-        vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)(MaskStackTop - 1));
-    }
-    ++AccumulatedStats.Masks;
+    return true;
 }
 
 
-void HAL::EndMaskSubmit()
+// *** Raster modes
+
+void HAL::applyRasterModeImpl(RasterModeType mode)
 {
-    ScopedRenderEvent GPUEvent(GetEvent(Event_Mask), 0, false);
-    Profiler.SetDrawMode(0);
-
-    if (!checkState(HS_InDisplay|HS_DrawingMask, __FUNCTION__))
-        return;
-    HALState &= ~HS_DrawingMask;
-    SF_ASSERT(MaskStackTop);
-
-    UPInt size = BlendModeStack.GetSize();
-    applyBlendMode(size > 0 ? BlendModeStack[size - 1] : Blend_Normal);
-
-    if (StencilAvailable)
-    {
-        CurrentStencilMode = StencilMode_Available_TestMask;
-        vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)MaskStackTop);
-    }
-    else if (DepthBufferAvailable)
-    {
-        CurrentStencilMode = StencilMode_DepthOnly_TestMask;
-        vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, 0);
-    }
-}
-
-
-void HAL::PopMask()
-{
-    ScopedRenderEvent GPUEvent(GetEvent(Event_PopMask), __FUNCTION__);
-
-    if (!checkState(HS_InDisplay, __FUNCTION__))
-        return;
-
-    if (!StencilAvailable && !DepthBufferAvailable)
-        return;
-    SF_ASSERT(MaskStackTop);
-    MaskStackTop--;
-
-    if (MaskStack[MaskStackTop].pPrimitive->IsClipped())
-    {
-        ViewRect = MaskStack[MaskStackTop].OldViewRect;
-        if (MaskStack[MaskStackTop].OldViewportValid)
-            HALState |= HS_ViewValid;
-        else
-            HALState &= ~HS_ViewValid;
-        updateViewport();
-    }
-
-    if (StencilAvailable)
-    {
-        if (MaskStackTop == 0)
-            CurrentStencilMode = StencilMode_Disabled;
-        else
-            CurrentStencilMode = StencilMode_Available_TestMask;
-        vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)MaskStackTop);
-    }
-    else if (DepthBufferAvailable)
-    {
-        CurrentStencilMode = StencilMode_DepthOnly_TestMask;
-        vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)MaskStackTop);
-    }
-}
-
-void HAL::clearSolidRectangle(const Rect<int>& r, Color color)
-{
-    ScopedRenderEvent GPUEvent(GetEvent(Event_Clear), __FUNCTION__);
-
-    color = Profiler.GetClearColor(color);
-
-    if (!Profiler.ShouldDrawMask())
-        CurrentBlendType = GetBlendType(Blend_None, Write_All);
-
-    float colorf[4];
-    color.GetRGBAFloat(colorf, colorf+1, colorf+2, colorf+3);
-    Matrix2F m((float)r.Width(), 0.0f, (float)r.x1,
-               0.0f, (float)r.Height(), (float)r.y1);
-    Matrix2F mvp(m, Matrices->UserView);
-
-    unsigned fillflags = 0;
-    const ShaderManager::Shader& pso = SManager.SetFill(PrimFill_SolidColor, fillflags, PrimitiveBatch::DP_Single,
-        &VertexXY16iAlpha::Format, &ShaderData);
-    ShaderData.SetMatrix(pso, Uniform::SU_mvp, mvp);
-    ShaderData.SetUniform(pso, Uniform::SU_cxmul, colorf, 4);
-    ShaderData.Finish(1);
-
-    SysVertexFormat* pvf = (SysVertexFormat*)VertexXY16iAlpha::Format.pSysFormat.GetPtr();
-    const ShaderPair& curSh = ShaderData.GetCurrentShaders();
-    VkPipeline pipeline = GetPipeline(curSh.pVDesc ? curSh.pVDesc->Type : ShaderDesc::ST_None,
-                                      curSh.pFDesc ? curSh.pFDesc->Type : ShaderDesc::ST_None,
-                                      CurrentBlendType, CurrentStencilMode, pvf);
-    if (pipeline != VK_NULL_HANDLE)
-        vkCmdBindPipeline(pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-
-    drawScreenQuad();
-
-    if (!Profiler.ShouldDrawMask())
-        applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_None);
+    // In Vulkan, raster mode is baked into the pipeline. The pipeline cache key includes
+    // the raster mode, so changing it here means future GetPipeline() calls will look up
+    // or create a pipeline with the appropriate polygon mode.
+    // The base class tracks AppliedSceneRasterMode for redundancy checking.
+    SF_UNUSED(mode);
 }
 
 
@@ -796,7 +443,8 @@ void HAL::clearSolidRectangle(const Rect<int>& r, Color color)
 void HAL::applyBlendModeImpl(BlendMode mode, bool sourceAc, bool forceAc)
 {
     SF_UNUSED(forceAc);
-    CurrentBlendType = GetBlendType(mode, Write_All, sourceAc);
+    bool colorWrite = DepthStencilModeTable[CurrentDepthStencilState].ColorWriteEnable;
+    CurrentBlendType = GetBlendType(mode, colorWrite ? Write_All : Write_None, sourceAc);
 }
 
 
@@ -807,8 +455,8 @@ bool HAL::createPipelineLayout()
     // Descriptor set layout:
     //   binding 0 = VS UBO
     //   binding 1 = FS UBO
-    //   binding 2 = sampler2D tex[MAX_STAGES]  (array — for TexTGTexTG, YUV, YUVA shaders)
-    //   bindings 3..MAX = sampler2D             (individual — for filter shaders like FBox2Shadow)
+    //   binding 2 = sampler2D tex[MAX_STAGES]  (array -- for TexTGTexTG, YUV, YUVA shaders)
+    //   bindings 3..MAX = sampler2D             (individual -- for filter shaders like FBox2Shadow)
     //
     // Two SPIR-V patterns coexist in the compiled shaders:
     //   (a) Array style:      layout(binding=2) uniform sampler2D tex[N];
@@ -893,7 +541,7 @@ VkPipeline HAL::GetPipeline(ShaderDesc::ShaderType vsShader, ShaderDesc::ShaderT
     key.FragShaderType = fsShader;
     key.BlendType   = blendType;
     key.StencilMode = stencilMode;
-    key.RasterMode  = (unsigned)RasterMode;
+    key.RasterMode  = (unsigned)AppliedSceneRasterMode;
     key.pVFormat    = pvf;
     key.pRenderPass = pCurrentRenderPass;
 
@@ -1155,9 +803,9 @@ bool HAL::SetRenderTarget(RenderTarget* ptarget, bool setState)
     return true;
 }
 
-void HAL::PushRenderTarget(const RectF& frameRect, RenderTarget* prt, unsigned flags)
+void HAL::PushRenderTarget(const RectF& frameRect, RenderTarget* prt, unsigned flags, Color clearColor)
 {
-    SF_UNUSED(flags);
+    GetEvent(Event_RenderTarget).Begin(__FUNCTION__);
 
     HALState |= HS_InRenderTarget;
     RenderTargetEntry entry;
@@ -1209,6 +857,8 @@ void HAL::PushRenderTarget(const RectF& frameRect, RenderTarget* prt, unsigned f
             rpBI.renderArea.extent = { bs.Width, bs.Height };
 
             VkClearValue clearVals[2] = {};
+            // Use the supplied clear color
+            clearColor.GetRGBAFloat(&clearVals[0].color.float32[0]);
             clearVals[1].depthStencil = { 1.0f, 0 };
             rpBI.clearValueCount = hasDS ? 2 : 1;
             rpBI.pClearValues    = clearVals;
@@ -1230,27 +880,21 @@ void HAL::PushRenderTarget(const RectF& frameRect, RenderTarget* prt, unsigned f
     Matrices->UVPOChanged = true;
     HALState |= HS_ViewValid;
     updateViewport();
-
-    // LOAD_OP_CLEAR in the offscreen render pass guarantees transparent-black
-    // at render-pass start; no explicit vkCmdClearAttachments needed.
-    // NOTE: PRT_NoClear (used by DrawableImage) is currently NOT honoured
-    // because LOAD_OP_CLEAR always clears.  If DrawableImage support is
-    // needed, add a second render pass with LOAD_OP_LOAD for that path.
-    SF_UNUSED(flags);
-
-    applyBlendMode(Blend_Normal, false, true);
 }
 
 void HAL::PopRenderTarget(unsigned flags)
 {
-    SF_UNUSED(flags);
+    ScopedRenderEvent GPUEvent(GetEvent(Event_RenderTarget), 0, false);
 
     RenderTargetEntry& entry = RenderTargetStack.Back();
 
-    if (InRenderPass)
+    if ((flags & PRT_NoSet) == 0)
     {
-        vkCmdEndRenderPass(pCommandBuffer);
-        InRenderPass = false;
+        if (InRenderPass)
+        {
+            vkCmdEndRenderPass(pCommandBuffer);
+            InRenderPass = false;
+        }
     }
 
     Matrices->CopyFrom(&entry.OldMatrixState);
@@ -1265,7 +909,8 @@ void HAL::PopRenderTarget(unsigned flags)
 
         // Resume the main swapchain render pass so that the caller can immediately
         // composite the filter result without drawing outside a render pass.
-        if (pMainResumeRenderPass != VK_NULL_HANDLE && pMainFramebuffer != VK_NULL_HANDLE)
+        if ((flags & PRT_NoSet) == 0 &&
+            pMainResumeRenderPass != VK_NULL_HANDLE && pMainFramebuffer != VK_NULL_HANDLE)
         {
             VkRenderPassBeginInfo rpBI = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
             rpBI.renderPass  = pMainResumeRenderPass;
@@ -1276,457 +921,35 @@ void HAL::PopRenderTarget(unsigned flags)
             // Use the main render pass as the pipeline key so pipelines are shared
             // with those created during regular (non-filter) main-pass rendering.
             pCurrentRenderPass = pMainRenderPass;
-
         }
     }
 
     ++AccumulatedStats.RTChanges;
     StencilChecked = false;
-    updateViewport();
-}
 
-
-// *** Filters
-
-void HAL::PushFilters(FilterPrimitive* prim)
-{
-    GetEvent(Event_Filter).Begin(__FUNCTION__);
-    if (!checkState(HS_InDisplay, __FUNCTION__))
-        return;
-
-    FilterStackEntry e = {prim, 0};
-
-    if (!shouldRenderFilters(prim))
+    if ((flags & PRT_NoSet) == 0)
     {
-        FilterStack.PushBack(e);
-        return;
+        HALState |= HS_ViewValid;
+        updateViewport();
     }
-
-    if (!Profiler.ShouldDrawMask())
-    {
-        Profiler.SetDrawMode(2);
-
-        setBatchUnitSquareVertexStream();
-
-        unsigned fillflags = 0;
-        float colorf[4];
-        Profiler.GetColor(0xFFFFFFFF).GetRGBAFloat(colorf);
-        const ShaderManager::Shader& pso = SManager.SetFill(PrimFill_SolidColor, fillflags,
-            PrimitiveBatch::DP_Single, &VertexXY16iAlpha::Format, &ShaderData);
-        Matrix2F mvp(prim->GetFilterAreaMatrix().GetMatrix2D(), Matrices->UserView);
-        ShaderData.SetMatrix(pso, Uniform::SU_mvp, mvp);
-        ShaderData.SetUniform(pso, Uniform::SU_cxmul, colorf, 4);
-        ShaderData.Finish(1);
-
-        SysVertexFormat* pvf = (SysVertexFormat*)VertexXY16iAlpha::Format.pSysFormat.GetPtr();
-        const ShaderPair& curSh = ShaderData.GetCurrentShaders();
-        VkPipeline pipeline = GetPipeline(curSh.pVDesc ? curSh.pVDesc->Type : ShaderDesc::ST_None,
-                                          curSh.pFDesc ? curSh.pFDesc->Type : ShaderDesc::ST_None,
-                                          CurrentBlendType, CurrentStencilMode, pvf);
-        if (pipeline != VK_NULL_HANDLE)
-            vkCmdBindPipeline(pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-
-        drawPrimitive(6, 1);
-        FilterStack.PushBack(e);
-        return;
-    }
-
-    if (HALState & HS_CachedFilter)
-    {
-        FilterStack.PushBack(e);
-        return;
-    }
-
-    if (MaskStackTop != 0 && !prim->GetMaskPresent())
-    {
-        if (StencilAvailable)
-        {
-            CurrentStencilMode = StencilMode_Available_TestMask;
-            vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)MaskStackTop);
-        }
-        else if (DepthBufferAvailable)
-        {
-            CurrentStencilMode = StencilMode_DepthOnly_TestMask;
-            vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)MaskStackTop);
-        }
-    }
-
-    HALState |= HS_DrawingFilter;
-
-    if (prim->GetCacheState() == FilterPrimitive::Cache_Uncached)
-    {
-        const Matrix2F& m = e.pPrimitive->GetFilterAreaMatrix().GetMatrix2D();
-        // Skip entirely when the filter area is degenerate (collapsed/invisible object).
-        // A zero-scale matrix would produce a 0x0 render target which violates Vulkan
-        // spec (VUID-VkFramebufferCreateInfo-width-00885 etc.).
-        if (m.Sx() < 1.0f || m.Sy() < 1.0f)
-            return;
-        e.pRenderTarget = *CreateTempRenderTarget(ImageSize((UInt32)m.Sx(), (UInt32)m.Sy()), prim->GetMaskPresent());
-        RectF frameRect(m.Tx(), m.Ty(), m.Tx() + m.Sx(), m.Ty() + m.Sy());
-        PushRenderTarget(frameRect, e.pRenderTarget);
-        applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, false);
-
-        if (prim->GetMaskPresent())
-        {
-            RenderTargetData* phd = (RenderTargetData*)e.pRenderTarget->GetRenderTargetData();
-            if (phd && phd->pDSSurface != VK_NULL_HANDLE)
-            {
-                if (StencilAvailable)
-                {
-                    VkClearAttachment clearAtt = {};
-                    clearAtt.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
-                    clearAtt.clearValue.depthStencil = { 0.0f, (uint32_t)MaskStackTop };
-                    VkClearRect clearRect = {};
-                    clearRect.rect.extent = { (uint32_t)m.Sx(), (uint32_t)m.Sy() };
-                    clearRect.layerCount = 1;
-                    vkCmdClearAttachments(pCommandBuffer, 1, &clearAtt, 1, &clearRect);
-                }
-            }
-        }
-    }
-    else
-    {
-        HALState |= HS_CachedFilter;
-        CachedFilterIndex = (int)FilterStack.GetSize();
-        GetRQProcessor().SetQueueEmitFilter(RenderQueueProcessor::QPF_Filters);
-    }
-    FilterStack.PushBack(e);
-}
-
-void HAL::drawUncachedFilter(const FilterStackEntry& e)
-{
-    const FilterSet* filters = e.pPrimitive->GetFilters();
-    unsigned filterCount = filters->GetFilterCount();
-    const Filter* filter = 0;
-    unsigned pass = 0, passes = 0;
-
-    if (!e.pPrimitive || !e.pRenderTarget)
-    {
-        return;
-    }
-
-    SF_ASSERT(RenderTargetStack.Back().pRenderTarget == e.pRenderTarget);
-    const int MaxTemporaryTextures = 3;
-    Ptr<RenderTarget> temporaryTextures[MaxTemporaryTextures];
-    memset(temporaryTextures, 0, sizeof temporaryTextures);
-
-    ImageSize size = e.pRenderTarget->GetSize();
-    temporaryTextures[0] = e.pRenderTarget;
-
-    setBatchUnitSquareVertexStream();
-    applyBlendMode(Blend_Overlay, true);
-
-    unsigned shaders[ShaderManager::MaximumFilterPasses];
-    for (unsigned i = 0; i < filterCount; ++i)
-    {
-        filter = filters->GetFilter(i);
-        passes = SManager.GetFilterPasses(filter, FillFlags, shaders);
-
-        bool requireSource = false;
-        if (filter->GetFilterType() >= Filter_Shadow &&
-            filter->GetFilterType() <= Filter_Blur_End)
-        {
-            temporaryTextures[Target_Original] = temporaryTextures[Target_Source];
-            requireSource = true;
-        }
-
-        for (pass = 0; pass < passes; ++pass)
-        {
-            if (pass == passes - 1 && i == filterCount - 1)
-                break;
-
-            if (!temporaryTextures[1])
-                temporaryTextures[1] = *CreateTempRenderTarget(size, false);
-
-            RenderTargetData* prtData = (RenderTargetData*)temporaryTextures[1]->GetRenderTargetData();
-            if (!prtData)
-                break;
-
-            if (InRenderPass)
-            {
-                vkCmdEndRenderPass(pCommandBuffer);
-                InRenderPass = false;
-            }
-
-            const ImageSize& tbs = temporaryTextures[1]->GetBufferSize();
-            bool hasDS = (prtData->pDSSurface != VK_NULL_HANDLE);
-            VkRenderPass filterRP = hasDS ? pOffscreenRenderPassDS : pOffscreenRenderPass;
-
-            if (prtData->pFramebuffer == VK_NULL_HANDLE)
-            {
-                prtData->pFramebuffer = createFramebuffer(prtData->pRenderSurface,
-                    hasDS ? prtData->pDSSurface : VK_NULL_HANDLE,
-                    tbs.Width, tbs.Height, filterRP);
-            }
-
-            if (prtData->pFramebuffer != VK_NULL_HANDLE)
-            {
-                VkRenderPassBeginInfo rpBI = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-                rpBI.renderPass  = filterRP;
-                rpBI.framebuffer = prtData->pFramebuffer;
-                rpBI.renderArea.extent = { tbs.Width, tbs.Height };
-                VkClearValue clearVals[2] = {};
-                clearVals[1].depthStencil = { 1.0f, 0 };
-                rpBI.clearValueCount = hasDS ? 2 : 1;
-                rpBI.pClearValues    = clearVals;
-                pCurrentRenderPass = filterRP;
-                vkCmdBeginRenderPass(pCommandBuffer, &rpBI, VK_SUBPASS_CONTENTS_INLINE);
-                InRenderPass = true;
-                // LOAD_OP_CLEAR in the render pass guarantees the RT is zeroed;
-                // no explicit vkCmdClearAttachments needed.
-            }
-
-            ++AccumulatedStats.RTChanges;
-
-            RenderTarget* prt = temporaryTextures[1];
-            const Rect<int>& viewRect = prt->GetRect();
-            const ImageSize& bs = prt->GetBufferSize();
-            VP = Viewport(bs.Width, bs.Height, viewRect.x1, viewRect.y1, viewRect.Width(), viewRect.Height());
-            ViewRect = Rect<int>(viewRect.x1, viewRect.y1, viewRect.x2, viewRect.y2);
-            HALState |= HS_ViewValid;
-            updateViewport();
-
-            Matrix2F mvp = Matrix2F::Scaling(2,-2) * Matrix2F::Translation(-0.5f, -0.5f);
-            SManager.SetFilterFill(mvp, Cxform::Identity, filter, temporaryTextures, shaders, pass, passes,
-                &VertexXY16iAlpha::Format, &ShaderData);
-
-            if (InRenderPass)
-            {
-                SysVertexFormat* pvf = (SysVertexFormat*)VertexXY16iAlpha::Format.pSysFormat.GetPtr();
-                const ShaderPair& curSh = ShaderData.GetCurrentShaders();
-                VkPipeline pipeline = GetPipeline(curSh.pVDesc ? curSh.pVDesc->Type : ShaderDesc::ST_None,
-                                                  curSh.pFDesc ? curSh.pFDesc->Type : ShaderDesc::ST_None,
-                                                  CurrentBlendType, CurrentStencilMode, pvf);
-                if (pipeline != VK_NULL_HANDLE)
-                {
-                    vkCmdBindPipeline(pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-                    drawPrimitive(6, 1);
-                }
-            }
-            else
-            {
-            }
-
-            if (requireSource && pass == 0)
-                temporaryTextures[0] = *CreateTempRenderTarget(size, false);
-
-            Alg::Swap(temporaryTextures[0], temporaryTextures[1]);
-        }
-    }
-
-    bool cacheAsBitmap = passes == 0;
-    SF_DEBUG_ASSERT(!cacheAsBitmap || filterCount == 1, "Expected exactly one cacheAsBitmap filter.");
-
-    if (temporaryTextures[Target_Source] && (Profiler.IsFilterCachingEnabled() || cacheAsBitmap))
-    {
-        RenderTarget* cacheResults[2] = { temporaryTextures[0], temporaryTextures[2] };
-        e.pPrimitive->SetCacheResults(cacheAsBitmap ? FilterPrimitive::Cache_Target : FilterPrimitive::Cache_PreTarget,
-                                      cacheResults, cacheAsBitmap ? 1 : 2);
-        if (RenderTargetData* rtd0 = (RenderTargetData*)cacheResults[0]->GetRenderTargetData())
-            rtd0->CacheID = reinterpret_cast<UPInt>(e.pPrimitive.GetPtr());
-        if (cacheResults[1])
-            if (RenderTargetData* rtd1 = (RenderTargetData*)cacheResults[1]->GetRenderTargetData())
-                rtd1->CacheID = reinterpret_cast<UPInt>(e.pPrimitive.GetPtr());
-    }
-    else
-    {
-        e.pPrimitive->SetCacheResults(FilterPrimitive::Cache_Uncached, 0, 0);
-    }
-
-    PopRenderTarget();
-
-    if (MaskStackTop != 0)
-    {
-        if (StencilAvailable)
-        {
-            CurrentStencilMode = StencilMode_Available_TestMask;
-            vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)MaskStackTop);
-        }
-        else if (DepthBufferAvailable)
-        {
-            CurrentStencilMode = StencilMode_DepthOnly_TestMask;
-            vkCmdSetStencilReference(pCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)MaskStackTop);
-        }
-    }
-
-    if (passes != 0)
-    {
-        setBatchUnitSquareVertexStream();
-        const Matrix2F& mvp = Matrices->UserView * e.pPrimitive->GetFilterAreaMatrix().GetMatrix2D();
-        const Cxform&   cx  = e.pPrimitive->GetFilterAreaMatrix().GetCxform();
-
-        SManager.SetFilterFill(mvp, cx, filter, temporaryTextures, shaders, pass, passes,
-            &VertexXY16iAlpha::Format, &ShaderData);
-        applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, true);
-
-        if (InRenderPass)
-        {
-            SysVertexFormat* pvf = (SysVertexFormat*)VertexXY16iAlpha::Format.pSysFormat.GetPtr();
-            const ShaderPair& curSh = ShaderData.GetCurrentShaders();
-
-            VkPipeline pipeline = GetPipeline(curSh.pVDesc ? curSh.pVDesc->Type : ShaderDesc::ST_None,
-                                              curSh.pFDesc ? curSh.pFDesc->Type : ShaderDesc::ST_None,
-                                              CurrentBlendType, CurrentStencilMode, pvf);
-            if (pipeline != VK_NULL_HANDLE)
-            {
-                vkCmdBindPipeline(pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-                drawPrimitive(6, 1);
-            }
-        }
-        else
-        {
-        }
-        applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, false);
-    }
-    else
-    {
-        drawCachedFilter(e.pPrimitive);
-    }
-
-    for (unsigned i = 0; i < MaxTemporaryTextures; ++i)
-    {
-        if (temporaryTextures[i])
-            PendingRTReleases.PushBack(temporaryTextures[i]);
-    }
-    AccumulatedStats.Filters += filters->GetFilterCount();
-}
-
-void HAL::drawCachedFilter(FilterPrimitive* primitive)
-{
-    setBatchUnitSquareVertexStream();
-
-    const int MaxTemporaryTextures = 3;
-    switch (primitive->GetCacheState())
-    {
-        case FilterPrimitive::Cache_PreTarget:
-        {
-            const FilterSet* filters = primitive->GetFilters();
-            UPInt filterIndex = filters->GetFilterCount() - 1;
-            const Filter* filter = filters->GetFilter(filterIndex);
-            unsigned shaders[ShaderManager::MaximumFilterPasses];
-            unsigned passes = SManager.GetFilterPasses(filter, FillFlags, shaders);
-
-            Ptr<RenderTarget> temporaryTextures[MaxTemporaryTextures];
-            memset(temporaryTextures, 0, sizeof temporaryTextures);
-            RenderTarget* results[2];
-            primitive->GetCacheResults(results, 2);
-            temporaryTextures[0] = results[0];
-            ImageSize size = temporaryTextures[0]->GetSize();
-            temporaryTextures[1] = *CreateTempRenderTarget(size, false);
-            temporaryTextures[2] = results[1];
-            PushRenderTarget(RectF((float)size.Width, (float)size.Height), temporaryTextures[1]);
-
-            Matrix2F mvp = Matrix2F::Scaling(2,-2) * Matrix2F::Translation(-0.5f, -0.5f);
-            SManager.SetFilterFill(mvp, Cxform::Identity, filter, temporaryTextures, shaders, passes - 1, passes,
-                &VertexXY16iAlpha::Format, &ShaderData);
-            applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, true, true);
-
-            if (InRenderPass)
-            {
-                SysVertexFormat* pvf = (SysVertexFormat*)VertexXY16iAlpha::Format.pSysFormat.GetPtr();
-                const ShaderPair& curSh = ShaderData.GetCurrentShaders();
-                VkPipeline pipeline = GetPipeline(curSh.pVDesc ? curSh.pVDesc->Type : ShaderDesc::ST_None,
-                                                  curSh.pFDesc ? curSh.pFDesc->Type : ShaderDesc::ST_None,
-                                                  CurrentBlendType, CurrentStencilMode, pvf);
-                if (pipeline != VK_NULL_HANDLE)
-                {
-                    vkCmdBindPipeline(pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-                    drawPrimitive(6, 1);
-                }
-            }
-            PopRenderTarget();
-
-            RenderTarget* prt = temporaryTextures[1];
-            primitive->SetCacheResults(FilterPrimitive::Cache_Target, &prt, 1);
-            if (RenderTargetData* rtd = (RenderTargetData*)prt->GetRenderTargetData())
-                rtd->CacheID = reinterpret_cast<UPInt>(primitive);
-            drawCachedFilter(primitive);
-
-            for (unsigned i = 0; i < MaxTemporaryTextures; ++i)
-            {
-                if (temporaryTextures[i])
-                    PendingRTReleases.PushBack(temporaryTextures[i]);
-            }
-            break;
-        }
-
-        case FilterPrimitive::Cache_Target:
-        {
-            unsigned fillFlags = (FillFlags | FF_Cxform | FF_AlphaWrite);
-            const ShaderManager::Shader& pso = SManager.SetFill(PrimFill_Texture, fillFlags, PrimitiveBatch::DP_Single,
-                &VertexXY16iAlpha::Format, &ShaderData);
-
-            RenderTarget* results;
-            primitive->GetCacheResults(&results, 1);
-            Texture* ptexture = (Vulkan::Texture*)results->GetTexture();
-            const Matrix2F& mvp = Matrices->UserView * primitive->GetFilterAreaMatrix().GetMatrix2D();
-            const Rect<int>& srect = results->GetRect();
-            Matrix2F texgen;
-            texgen.AppendTranslation((float)srect.x1, (float)srect.y1);
-            texgen.AppendScaling((float)srect.Width() / ptexture->GetSize().Width,
-                                 (float)srect.Height() / ptexture->GetSize().Height);
-
-            const Cxform& cx = primitive->GetFilterAreaMatrix().GetCxform();
-            ShaderData.SetCxform(pso, cx);
-            ShaderData.SetUniform(pso, Uniform::SU_mvp, &mvp.M[0][0], 8);
-            ShaderData.SetUniform(pso, Uniform::SU_texgen, &texgen.M[0][0], 8);
-            ShaderData.SetTexture(pso, Uniform::SU_tex, ptexture, ImageFillMode(Wrap_Clamp, Sample_Linear));
-            ShaderData.Finish(1);
-
-            applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, true, true);
-
-            if (InRenderPass)
-            {
-                SysVertexFormat* pvf = (SysVertexFormat*)VertexXY16iAlpha::Format.pSysFormat.GetPtr();
-                const ShaderPair& curSh = ShaderData.GetCurrentShaders();
-                VkPipeline pipeline = GetPipeline(curSh.pVDesc ? curSh.pVDesc->Type : ShaderDesc::ST_None,
-                                                  curSh.pFDesc ? curSh.pFDesc->Type : ShaderDesc::ST_None,
-                                                  CurrentBlendType, CurrentStencilMode, pvf);
-                if (pipeline != VK_NULL_HANDLE)
-                {
-                    vkCmdBindPipeline(pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-                    drawPrimitive(6, 1);
-                }
-            }
-            applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, false, (HALState & HS_InRenderTarget) != 0);
-
-            results->SetInUse(false);
-            if (!Profiler.IsFilterCachingEnabled())
-                primitive->SetCacheResults(FilterPrimitive::Cache_Uncached, 0, 0);
-            break;
-        }
-
-        default: SF_ASSERT(0); break;
-    }
-}
-
-bool HAL::shouldRenderFilters(const FilterPrimitive* prim) const
-{
-    SF_UNUSED(prim);
-    return true;
 }
 
 
 // *** Draw primitives
 
-// Override the base-class drawMaskClearRectangles to bind the Vulkan pipeline before drawing.
-// The base implementation (Render_ShaderHAL.h) sets a red debug color {1,0,0,0.5} on the cxmul
-// uniform and relies on colorWriteMask==0 to suppress it. In Vulkan, the blend state is baked
-// into pipeline objects, so we must explicitly bind the correct pipeline (Write_None) here —
-// the last-bound pipeline may have had color writes enabled and would let the red bleed through.
-void HAL::drawMaskClearRectangles(const HMatrix* matrices, UPInt count)
+void HAL::drawMaskClearRectangles(const Matrix2F* matrices, UPInt count)
 {
     ScopedRenderEvent GPUEvent(GetEvent(Event_MaskClear), "HAL::drawMaskClearRectangles");
 
     unsigned fillflags = 0;
     const ShaderManager::Shader& pso = SManager.SetFill(PrimFill_SolidColor, fillflags,
-        PrimitiveBatch::DP_Batch, &VertexXY16iAlpha::Format, &ShaderData);
+        PrimitiveBatch::DP_Batch, MappedXY16iAlphaSolid[PrimitiveBatch::DP_Batch], &ShaderData);
 
     setBatchUnitSquareVertexStream();
 
-    // Bind pipeline with the current stencil mode and Write_None blend (colorWriteMask=0).
+    // Bind pipeline with the current stencil mode and current blend type.
     // This must happen after SetFill so the vertex format / shader pair is resolved.
-    SysVertexFormat* pvf = (SysVertexFormat*)VertexXY16iAlpha::Format.pSysFormat.GetPtr();
+    SysVertexFormat* pvf = (SysVertexFormat*)MappedXY16iAlphaSolid[PrimitiveBatch::DP_Batch]->pSysFormat.GetPtr();
     const ShaderPair& curSh = ShaderData.GetCurrentShaders();
     VkPipeline pipeline = GetPipeline(curSh.pVDesc ? curSh.pVDesc->Type : ShaderDesc::ST_None,
                                       curSh.pFDesc ? curSh.pFDesc->Type : ShaderDesc::ST_None,
@@ -1734,18 +957,25 @@ void HAL::drawMaskClearRectangles(const HMatrix* matrices, UPInt count)
     if (pipeline != VK_NULL_HANDLE)
         vkCmdBindPipeline(pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-    static const float colorf[] = {1.f, 0.f, 0.f, 0.5f}; // debug color; suppressed by colorWriteMask=0
-    for (UPInt i = 0; i < count; )
+    unsigned drawRangeCount = 0;
+    for (UPInt i = 0; i < count; i += (UPInt)drawRangeCount)
     {
-        unsigned drawRangeCount = Alg::Min<unsigned>((unsigned)(count - i), SF_RENDER_MAX_BATCHES);
+        drawRangeCount = Alg::Min<unsigned>((unsigned)(count - i), SF_RENDER_MAX_BATCHES);
+
+        if (i != 0)
+            ShaderData.BeginPrimitive();
+
         for (unsigned j = 0; j < drawRangeCount; j++)
         {
-            ShaderData.SetMatrix(pso, Uniform::SU_mvp, Matrix2F::Identity, matrices[i + j], Matrices, 0, j);
+            ShaderData.SetMatrix(pso, Uniform::SU_mvp, matrices[i + j], 0, j);
+
+            float colorf[4];
+            Color c = Profiler.GetClearColor(0xFF00007F);
+            c.GetRGBAFloat(colorf);
             ShaderData.SetUniform(pso, Uniform::SU_cxmul, colorf, 4);
         }
         ShaderData.Finish(drawRangeCount);
         drawPrimitive(drawRangeCount * 6, drawRangeCount);
-        i += drawRangeCount;
     }
 }
 
@@ -1760,31 +990,43 @@ void HAL::drawPrimitive(unsigned indexCount, unsigned meshCount)
 {
     vkCmdDraw(pCommandBuffer, indexCount, meshCount, 0, 0);
     SF_UNUSED(meshCount);
+    AccumulatedStats.Meshes += meshCount;
     AccumulatedStats.Triangles += indexCount / 3;
     AccumulatedStats.Primitives++;
 }
 
-void HAL::drawIndexedPrimitive(unsigned indexCount, unsigned meshCount,
-                                UPInt indexOffset, unsigned vertexBaseIndex)
+void HAL::drawIndexedPrimitive(unsigned indexCount, unsigned vertexCount, unsigned meshCount,
+                                UPInt indexOffset, UPInt vertexOffset)
 {
-    vkCmdDrawIndexed(pCommandBuffer, indexCount, 1, (uint32_t)indexOffset, (int32_t)vertexBaseIndex, 0);
-    SF_UNUSED(meshCount);
+    vkCmdDrawIndexed(pCommandBuffer, indexCount, 1, (uint32_t)indexOffset, (int32_t)vertexOffset, 0);
+    SF_UNUSED2(meshCount, vertexCount);
+    AccumulatedStats.Meshes += meshCount;
     AccumulatedStats.Triangles += indexCount / 3;
     AccumulatedStats.Primitives++;
 }
 
-void HAL::drawIndexedInstanced(unsigned indexCount, unsigned meshCount,
-                                UPInt indexOffset, unsigned vertexBaseIndex)
+void HAL::drawIndexedInstanced(unsigned indexCount, unsigned vertexCount, unsigned meshCount,
+                                UPInt indexOffset, UPInt vertexOffset)
 {
-    vkCmdDrawIndexed(pCommandBuffer, indexCount, meshCount, (uint32_t)indexOffset, (int32_t)vertexBaseIndex, 0);
+    vkCmdDrawIndexed(pCommandBuffer, indexCount, meshCount, (uint32_t)indexOffset, (int32_t)vertexOffset, 0);
+    SF_UNUSED(vertexCount);
+    AccumulatedStats.Meshes += meshCount;
     AccumulatedStats.Triangles += (indexCount / 3) * meshCount;
     AccumulatedStats.Primitives++;
 }
 
 void HAL::drawScreenQuad()
 {
+    // Pipeline is bound by ShaderInterface::Finish, which is called before drawScreenQuad.
     setBatchUnitSquareVertexStream();
     drawPrimitive(6, 1);
+}
+
+
+bool HAL::shouldRenderFilters(const FilterPrimitive* prim) const
+{
+    SF_UNUSED(prim);
+    return true;
 }
 
 
@@ -1826,7 +1068,7 @@ bool HAL::createOffscreenRenderPass()
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments    = &colorRef;
 
-    // dep[0]: external → subpass: wait for prior color output before writing.
+    // dep[0]: external -> subpass: wait for prior color output before writing.
     VkSubpassDependency deps[2] = {};
     deps[0].srcSubpass    = VK_SUBPASS_EXTERNAL;
     deps[0].dstSubpass    = 0;
@@ -1835,7 +1077,7 @@ bool HAL::createOffscreenRenderPass()
     deps[0].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     deps[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
 
-    // dep[1]: subpass → external: ensure color writes are visible to subsequent
+    // dep[1]: subpass -> external: ensure color writes are visible to subsequent
     // fragment shader reads (the render target is sampled as a texture next pass).
     deps[1].srcSubpass    = 0;
     deps[1].dstSubpass    = VK_SUBPASS_EXTERNAL;
