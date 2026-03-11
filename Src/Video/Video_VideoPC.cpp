@@ -1,7 +1,7 @@
 /**************************************************************************
 
 Filename    :   Video_VideoPC.cpp
-Content     :   GFx video for Windows based PC
+Content     :   GFx video for Windows based PC (CRI Mana 2019)
 Created     :   Sep 2009
 Authors     :   Maxim Didenko, Vladislav Merker
 
@@ -21,7 +21,8 @@ otherwise accompanies this software in either electronic or hard copy form.
 #if defined(SF_BUILD_DEFINE_NEW) && defined(SF_DEFINE_NEW)
 #undef new
 #endif
-#include <cri_movie.h>
+#include <cri_mana.h>
+#include <cri_mana_pc.h>
 #if defined(SF_BUILD_DEFINE_NEW) && defined(SF_DEFINE_NEW)
 #define new SF_DEFINE_NEW
 #endif
@@ -42,19 +43,17 @@ VideoPC::VideoPC(const VideoVMSupport& vmSupport, Thread::ThreadPriority decodin
     for(int i = 0 ; i < MAX_VIDEO_DECODING_THREADS; ++i)
     {
         AffinityMask[i] = affinityMask && i < DecodingThreadNumber
-            ? affinityMask[i] : CRIMV_DEFAULT_AFFNITY_MASK_PC;
+            ? affinityMask[i] : DEFAULT_VIDEO_DECODING_AFFINITY_MASK;
     }
 }
 
 void VideoPC::ApplySystemSettings(VideoPlayer* pvideoPlayer)
 {
-    VideoPlayerImpl* pplayer = (VideoPlayerImpl*)pvideoPlayer;
-    CriMvEasyPlayer* pcriPlayer = pplayer->GetCriPlayer();
-    if (pcriPlayer)
-    {
-        pcriPlayer->SetUsableProcessors_PC(
-            DecodingThreadNumber, AffinityMask, Thread::GetOSPriority(DecodeThreadPriority));
-    }
+    SF_UNUSED(pvideoPlayer);
+    // CRI Mana 2019: processor/thread config is set at library init time
+    // via CriManaLibConfig_PC in Video::Initialize(). Per-player settings
+    // are no longer available. Thread priority can be changed via:
+    criMana_SetDecodeThreadPriority_PC(Thread::GetOSPriority(DecodeThreadPriority));
 }
 
 }}} // Scaleform::GFx::Video

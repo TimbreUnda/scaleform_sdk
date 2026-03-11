@@ -24,6 +24,8 @@ static const TextureFormat::Mapping TextureFormatMapping[] =
     { Image_R8G8B8,     VK_FORMAT_R8G8B8A8_UNORM,          4, &Image_CopyScanline24_Extend_RGB_RGBA,   &Image_CopyScanline32_Retract_RGBA_RGB },
     { Image_B8G8R8,     VK_FORMAT_B8G8R8A8_UNORM,          4, &Image_CopyScanline24_Extend_RGB_RGBA,   &Image_CopyScanline32_Retract_RGBA_RGB },
     { Image_A8,         VK_FORMAT_R8_UNORM,                 1, &Image::CopyScanlineDefault,             &Image::CopyScanlineDefault },
+    { Image_Y8_U2_V2,  VK_FORMAT_R8_UNORM,                 1, &Image::CopyScanlineDefault,             &Image::CopyScanlineDefault },
+    { Image_Y8_U2_V2_A8,VK_FORMAT_R8_UNORM,                1, &Image::CopyScanlineDefault,             &Image::CopyScanlineDefault },
     { Image_DXT1,       VK_FORMAT_BC1_RGBA_UNORM_BLOCK,     0, &Image::CopyScanlineDefault,             &Image::CopyScanlineDefault },
     { Image_DXT3,       VK_FORMAT_BC2_UNORM_BLOCK,          0, &Image::CopyScanlineDefault,             &Image::CopyScanlineDefault },
     { Image_DXT5,       VK_FORMAT_BC3_UNORM_BLOCK,          0, &Image::CopyScanlineDefault,             &Image::CopyScanlineDefault },
@@ -508,6 +510,14 @@ bool MappedTexture::Map(Render::Texture* ptexture, unsigned mipLevel, unsigned l
     StartMipLevel = mipLevel;
     LevelCount    = levelCount;
 
+    // Initialize Data once before the loop, using pre-allocated Planes array
+    // (matches D3D11 pattern). Calling Initialize inside the loop would Clear()
+    // previously set planes on each iteration, corrupting multi-plane textures (YUV).
+    if (levelCount <= PlaneReserveSize)
+        Data.Initialize(vktex->GetImageFormat(), levelCount, Planes, texPlaneCount * levelCount, true);
+    else if (!Data.Initialize(vktex->GetImageFormat(), levelCount, true))
+        return false;
+
     UByte* pdata = (UByte*)mapped;
     unsigned planeIdx = 0;
     for (unsigned itex = 0; itex < texPlaneCount; itex++)
@@ -520,7 +530,6 @@ bool MappedTexture::Map(Render::Texture* ptexture, unsigned mipLevel, unsigned l
             UPInt pitch = (UPInt)mipW * mapping->BytesPerPixel;
             UPInt planeSize = pitch * mipH;
 
-            Data.Initialize(vktex->GetImageFormat(), level);
             Data.SetPlane(planeIdx, ImageSize(mipW, mipH), pitch, planeSize, pdata);
             pdata += planeSize;
             planeIdx++;

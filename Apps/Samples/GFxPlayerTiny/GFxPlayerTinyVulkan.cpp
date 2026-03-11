@@ -27,6 +27,12 @@ Authors     :   Scaleform Vulkan Backend
 #include "GFx_Renderer_Vulkan.h"
 #include "Render/Renderer2D.h"
 
+#ifdef GFX_ENABLE_VIDEO
+#include "Video/Video_Video.h"
+#include "Video/Video_VideoPC.h"
+#include "Video/Video_VideoSoundSystemDX8.h"
+#endif
+
 using namespace Scaleform;
 using namespace Scaleform::Render;
 using namespace Scaleform::GFx;
@@ -136,12 +142,36 @@ public:
     }
 };
 
+// Single-threaded command queue: provides render interfaces (HAL, Renderer2D,
+// TextureManager) to the movie system so that video textures can be created.
+class VulkanThreadCommandQueue : public Render::ThreadCommandQueue
+{
+public:
+    virtual void GetRenderInterfaces(Render::Interfaces* p)
+    {
+        p->pHAL = pHAL;
+        p->pRenderer2D = pR2D;
+        p->pTextureManager = pHAL ? pHAL->GetTextureManager() : nullptr;
+        p->RenderThreadID = 0;
+    }
+    virtual void PushThreadCommand(ThreadCommand* command)
+    {
+        if (command) command->Execute();
+    }
+    Render::HAL*        pHAL;
+    Render::Renderer2D* pR2D;
+};
+
 // Scaleform objects
 static Ptr<Vulkan::HAL>        pHAL;
 static Ptr<Renderer2D>         pRenderer;
 static Loader*                 pLoader = nullptr;
 static Ptr<MovieDef>           pMovieDef;
 static Ptr<Movie>              pMovie;
+static VulkanThreadCommandQueue* pCommandQueue = nullptr;
+#ifdef GFX_ENABLE_VIDEO
+static Ptr<GFx::Video::Video>  pVideo;
+#endif
 
 // Forward declarations
 bool    InitVulkan();
@@ -1031,9 +1061,19 @@ static int AppMain(LPSTR lpCmdLine)
     Ptr<ASSupport> pAS3Support = *new GFx::AS3Support();
     pLoader->SetAS3Support(pAS3Support);
 
+    // Set up the single-threaded command queue so the movie system can access
+    // the TextureManager (required for video texture creation and BitmapData).
+    pCommandQueue = new VulkanThreadCommandQueue();
+    pCommandQueue->pHAL = pHAL.GetPtr();
+    pCommandQueue->pR2D = pRenderer.GetPtr();
+
     // Provide the GPU TextureManager so embedded SWF bitmaps are uploaded as GPU textures.
     Ptr<GFx::ImageCreator> pImageCreator = *SF_NEW GFx::ImageCreator(pHAL->GetTextureManager());
     pLoader->SetImageCreator(pImageCreator);
+
+    // FileOpener is required so GFx can open SWF-referenced files (video .usm, images, etc.)
+    Ptr<FileOpener> pFileOpener = *SF_NEW FileOpener;
+    pLoader->SetFileOpener(pFileOpener);
 
     // Route all GFx/AS3 messages to the log file
     Ptr<GFxFileLog> pGFxLog = *SF_NEW GFxFileLog();
@@ -1042,6 +1082,17 @@ static int AppMain(LPSTR lpCmdLine)
     Ptr<GFx::ActionControl> pActionCtrl = *SF_NEW GFx::ActionControl(
         GFx::ActionControl::Action_Verbose | GFx::ActionControl::Action_LogAllFilenames);
     pLoader->SetActionControl(pActionCtrl);
+
+#ifdef GFX_ENABLE_VIDEO
+    // Video playback (CRI Sofdec2)
+    pVideo = *new GFx::Video::VideoPC(GFx::Video::VideoVMSupportAll(),
+        Thread::NormalPriority, 3, NULL);
+    pVideo->SetSoundSystem(
+        Ptr<GFx::Video::VideoSoundSystem>(*new GFx::Video::VideoSoundSystemDX8(0)));
+    pVideo->SetTextureManager(pHAL->GetTextureManager());
+    pLoader->SetVideo(pVideo);
+    if (vkLogFile) { fprintf(vkLogFile, "Video support initialized (CRI Movie + DirectSound)\n"); fflush(vkLogFile); }
+#endif
 
     if (vkLogFile) { fprintf(vkLogFile, "Loader created (AS2+AS3 support, verbose logging ON), loading SWF: %s\n", swfPath); fflush(vkLogFile); }
     pMovieDef = *pLoader->CreateMovie(swfPath, Loader::LoadAll);
@@ -1052,7 +1103,7 @@ static int AppMain(LPSTR lpCmdLine)
     else
     {
         if (vkLogFile) { fprintf(vkLogFile, "MovieDef loaded OK: %s\n", swfPath); fflush(vkLogFile); }
-        pMovie = *pMovieDef->CreateInstance();
+        pMovie = *pMovieDef->CreateInstance(false, 0, NULL, pCommandQueue);
         if (pMovie)
         {
             if (vkLogFile) { fprintf(vkLogFile, "Movie instance created, setting viewport %ux%u\n", WindowWidth, WindowHeight); fflush(vkLogFile); }
@@ -1238,8 +1289,13 @@ static int AppMain(LPSTR lpCmdLine)
     if (vkDevice) vkDeviceWaitIdle(vkDevice);
     pMovie.Clear();
     pMovieDef.Clear();
+#ifdef GFX_ENABLE_VIDEO
+    pVideo.Clear();
+#endif
     delete pLoader;
     pLoader = nullptr;
+    delete pCommandQueue;
+    pCommandQueue = nullptr;
     pRenderer.Clear();
     if (pHAL) { pHAL->ShutdownHAL(); pHAL.Clear(); }
     CleanupVulkan();

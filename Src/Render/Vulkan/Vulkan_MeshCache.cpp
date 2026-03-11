@@ -370,12 +370,10 @@ void MeshCache::BeginFrame()
     // guaranteed to no longer be referenced by any submitted command buffer.
     DestroyFrameCount++;
     destroyReadyPendingBuffers();
-    RSync.BeginFrame();
 }
 
 void MeshCache::EndFrame()
 {
-    RSync.EndFrame();
     CacheList.EndFrame();
     // Buffer destruction is now deferred to BeginFrame (after GPU fence wait).
     // Do NOT call destroyAllPendingBuffers() here.

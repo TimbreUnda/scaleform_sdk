@@ -15,6 +15,7 @@ option(SF_BUILD_SAMPLES    "Build sample applications"      ON)
 option(SF_BUILD_KITS       "Build kit demo applications"    OFF)
 option(SF_BUILD_TESTS      "Build test applications"        OFF)
 option(SF_USE_SCU          "Use single compilation units"   OFF)
+option(SF_ENABLE_VIDEO     "Build video playback (CRI SDK)" OFF)
 
 # ---------------------------------------------------------------------------
 # Global compile settings

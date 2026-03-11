@@ -1,7 +1,7 @@
 /**************************************************************************
 
 Filename    :   Video_CriHeap.h
-Content     :   Video custom heap
+Content     :   Video memory allocator for CRI Mana
 Created     :   June 4, 2008
 Authors     :   Maxim Didenko, Vladislav Merker
 
@@ -19,29 +19,17 @@ otherwise accompanies this software in either electronic or hard copy form.
 #include "GFxConfig.h"
 #ifdef GFX_ENABLE_VIDEO
 
-#include "Kernel/SF_Memory.h"
-#if defined(SF_BUILD_DEFINE_NEW) && defined(SF_DEFINE_NEW)
-#undef new
-#endif
-#include <cri_heap.h>
-#if defined(SF_BUILD_DEFINE_NEW) && defined(SF_DEFINE_NEW)
-#define new SF_DEFINE_NEW
-#endif
-
 #include "Kernel/SF_MemoryHeap.h"
 
 namespace Scaleform { namespace GFx { namespace Video {
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+// Register Scaleform memory heap as the allocator for CRI Mana library.
+// Must be called before criMana_Initialize.
+void criManaHeap_Register(MemoryHeap* pHeap);
 
-CriHeap criSmpCustomHeap_Create (MemoryHeap* pHeap);
-void    criSmpCustomHeap_Destroy(CriHeap heap);
-
-#ifdef __cplusplus
-}
-#endif
+// Unregister the Scaleform memory allocator from CRI Mana.
+// Call after criMana_Finalize.
+void criManaHeap_Unregister();
 
 }}} // Scaleform::GFx::Video
 

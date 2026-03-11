@@ -619,17 +619,13 @@ protected:
 
     static unsigned         Initialized;
 
-    // GFx supports playing multiple videos at the same time. However, there is a limitation
-    // of the maximum number of video handles that are available at a time. In general, each
-    // video will use one handle and there is an upper limit (VIDEO_HANDLE_MAX) by default.
-    // Note: alpha video playback uses two handles.
+    // Maximum number of video handles available simultaneously.
+    // Alpha video playback uses two handles.
 #ifndef SF_OS_WII
     static const UInt32     VIDEO_HANDLE_MAX = 8;
 #else
     static const UInt32     VIDEO_HANDLE_MAX = 4;
 #endif
-    static void*            pHandleWorkBuf;
-    static UInt32           HandleWorkSize;
 
     Ptr<MemoryHeap>         pHeap;
     Ptr<Render::TextureManager> pTextureManager;

@@ -1,7 +1,7 @@
 /**************************************************************************
 
 Filename    :   Video_VideoImage.cpp
-Content     :   
+Content     :   Video image texture update (CRI Mana 2019)
 Created     :   Feb, 2011
 Authors     :   Vladislav Merker
 
@@ -23,13 +23,6 @@ otherwise accompanies this software in either electronic or hard copy form.
 namespace Scaleform { namespace GFx { namespace Video {
 
 	unsigned char GClearYUV[3] = { 0x10, 0x80, 0x80 }; // black
-
-// When CRI skips or we get too far behind in a frame, then CRI resets the frame time
-// Scaleform can try to decode the video image multiple times and take a frame meant
-// for later. So we try to keep the renderer and decoder in sync to avoid that as much
-// as possible.
-Uint64 GDecodeTick;
-Uint64 GRenderTick;
 
 using namespace Render;
 
@@ -69,62 +62,67 @@ bool VideoImage::Decode(ImageData* pdest, CopyScanlineFunc func, void* parg) con
         return true;
     }
 
-	if ( GDecodeTick >= GRenderTick )
-	{
-		return false;
-	}
-	++GDecodeTick;
+    CriManaPlayerHn player = pVideoPlayer->GetManaPlayer();
+    CriManaFrameInfo frameInfo;
+    Alg::MemUtil::Set(&frameInfo, 0, sizeof(frameInfo));
 
-    if (pVideoPlayer->GetCriPlayer()->IsNextFrameOnTime())
+    if (criManaPlayer_ReferFrame(player, &frameInfo) == CRI_TRUE &&
+        criManaPlayer_IsFrameOnTime(player, &frameInfo) == CRI_TRUE)
     {
         if (pdest->GetPlaneCount() >= 3)
         {
             ImagePlane y, u, v, a;
-            CriMvYuvBuffers yuvBufs;
+            CriManaTextureBuffersYUV yuvBufs;
+            Alg::MemUtil::Set(&yuvBufs, 0, sizeof(yuvBufs));
 
             pdest->GetPlane(0, &y);
-            yuvBufs.y_imagebuf  = (CriUint8*)y.pData;
-            yuvBufs.y_pitch     = (CriUint32)y.Pitch;
-            yuvBufs.y_bufsize   = (CriUint32)y.DataSize;
+            yuvBufs.y_plane.imagebuf  = (CriUint8*)y.pData;
+            yuvBufs.y_plane.pitch     = (CriUint32)y.Pitch;
+            yuvBufs.y_plane.bufsize   = (CriUint32)y.DataSize;
             pdest->GetPlane(1, &u);
-            yuvBufs.u_imagebuf  = (CriUint8*)u.pData;
-            yuvBufs.u_pitch     = (CriUint32)u.Pitch;
-            yuvBufs.u_bufsize   = (CriUint32)u.DataSize;
+            yuvBufs.u_plane.imagebuf  = (CriUint8*)u.pData;
+            yuvBufs.u_plane.pitch     = (CriUint32)u.Pitch;
+            yuvBufs.u_plane.bufsize   = (CriUint32)u.DataSize;
             pdest->GetPlane(2, &v);
-            yuvBufs.v_imagebuf  = (CriUint8*)v.pData;
-            yuvBufs.v_pitch     = (CriUint32)v.Pitch;
-            yuvBufs.v_bufsize   = (CriUint32)v.DataSize;
+            yuvBufs.v_plane.imagebuf  = (CriUint8*)v.pData;
+            yuvBufs.v_plane.pitch     = (CriUint32)v.Pitch;
+            yuvBufs.v_plane.bufsize   = (CriUint32)v.DataSize;
 
-            if (pdest->GetPlaneCount() >= 4)
+            if (pdest->GetPlaneCount() >= 4 && pVideoPlayer->IsAlphaVideo())
             {
                 pdest->GetPlane(3, &a);
-                if (pVideoPlayer->IsAlphaVideo())
-                {
-                    yuvBufs.a_imagebuf  = (CriUint8*)a.pData;
-                    yuvBufs.a_pitch     = (CriUint32)a.Pitch;
-                    yuvBufs.a_bufsize   = (CriUint32)a.DataSize;
-                }
+                yuvBufs.a_plane.imagebuf  = (CriUint8*)a.pData;
+                yuvBufs.a_plane.pitch     = (CriUint32)a.Pitch;
+                yuvBufs.a_plane.bufsize   = (CriUint32)a.DataSize;
             }
-            pVideoPlayer->GetCriPlayer()->GetFrameOnTimeAsYUVBuffers(
-                &yuvBufs, pVideoPlayer->FrameInfo);
-            checkAndRequestSkipDecoding();
+
+            criManaPlayer_CopyFrameToBuffersYUV(player, &frameInfo, &yuvBufs);
         }
         else
         {
             ImagePlane argb;
             pdest->GetPlane(0, &argb);
 
-            pVideoPlayer->GetCriPlayer()->GetFrameOnTimeAs32bitARGB(
-                (CriUint8*)argb.pData, (CriUint32)argb.Pitch, (CriUint32)argb.DataSize,
-                pVideoPlayer->FrameInfo);
-            checkAndRequestSkipDecoding();
+            CriManaTextureBuffer argbBuf;
+            argbBuf.imagebuf = (CriUint8*)argb.pData;
+            argbBuf.pitch    = (CriUint32)argb.Pitch;
+            argbBuf.bufsize  = (CriUint32)argb.DataSize;
+
+            criManaPlayer_CopyFrameToBufferARGB32(player, &frameInfo, &argbBuf);
         }
+
+        // Store frame info in player for position tracking
+        pVideoPlayer->FrameInfo = frameInfo;
+
+        // Release the frame back to the decoder
+        criManaPlayer_DiscardFrame(player, &frameInfo);
+
         pVideoPlayer->FrameOnTime = true;
 
         if (pVideoPlayer->PausedStartup)
         {
-            pVideoPlayer->GetCriPlayer()->Pause(TRUE);
-            pVideoPlayer->Paused = TRUE;
+            criManaPlayer_Pause(player, CRI_TRUE);
+            pVideoPlayer->Paused = CRI_TRUE;
             pVideoPlayer->PausedStartup = false;
         }
         return true;
@@ -158,40 +156,6 @@ void VideoImage::clearImageData(ImageData* pdest) const
         ImagePlane argb;
         pdest->GetPlane(0, &argb);
         Alg::MemUtil::Set(argb.pData, 0, argb.Pitch * argb.Height);
-    }
-}
-
-void VideoImage::checkAndRequestSkipDecoding() const
-{
-    if (!pVideoPlayer)
-        return;
-
-    CriMvEasyPlayer *mvp = pVideoPlayer->GetCriPlayer();
-    CriMvFrameInfo &info = pVideoPlayer->FrameInfo;
-
-    CriUint64 count, unit;
-    mvp->GetTime(count, unit);
-    CriFloat32 timePlayback = (CriFloat32)count / unit * 1000;
-
-    CriFloat32 timeFrame = (CriFloat32)info.time / info.tunit * 1000;
-    CriFloat32 frameInterval = 1000.0f / ((CriFloat32)info.framerate / 1000);
-
-	// Empirically gives the best results with v-sync.
-	// Skip too early and we keep skipping, don't skip and we start getting decode
-	// time outs.
-	frameInterval *= 2.f;
-
-    // When the movie frame is delayed, request to skip decoding
-	if ((timePlayback - timeFrame) > frameInterval )
-    {
-		// This almost *always* leads to more stuttering
-		// and it resets the frame time to the current time
-        criMvPly_SkipFrame(mvp->mvply);
-
-#ifdef GFX_VIDEO_DIAGS
-        pVideoPlayer->pLog->LogMessage("[Video] Decode: Skipped frame: %d\n",
-            info.frame_id);
-#endif
     }
 }
 

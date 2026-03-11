@@ -43,9 +43,11 @@ if(SF_RENDERER_VULKAN)
     target_link_libraries(GFxPlayerTinyVulkan PRIVATE
         sf_core
         gfxrender_vulkan
+        $<$<BOOL:${SF_ENABLE_VIDEO}>:gfxvideo>
     )
     target_link_options(GFxPlayerTinyVulkan PRIVATE
         /WHOLEARCHIVE:libgfxrender_vulkan
+        $<$<BOOL:${SF_ENABLE_VIDEO}>:/WHOLEARCHIVE:libgfxvideo>
     )
     set_target_properties(GFxPlayerTinyVulkan PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/Bin/$<IF:$<EQUAL:${CMAKE_SIZEOF_VOID_P},8>,x64,Win32>/Msvc10/GFxPlayerTinyVulkan"
@@ -56,13 +58,14 @@ endif()
 # PlayerTiny -- minimal player (D3D9/D3D10/D3D11/GL, each a separate target)
 # ---------------------------------------------------------------------------
 if(SF_RENDERER_D3D11)
-    add_executable(PlayerTiny_D3D11 WIN32
+    add_executable(PlayerTiny_D3D11
         ${CMAKE_SOURCE_DIR}/Apps/Samples/Common/FxSoundFMOD.cpp
         ${CMAKE_SOURCE_DIR}/Apps/Samples/GFxPlayerTiny/GFxPlayerTinyD3D1x.cpp
     )
     sf_apply_app_flags(PlayerTiny_D3D11)
     target_link_libraries(PlayerTiny_D3D11 PRIVATE
         sf_core gfxrender_d3d1x gfxsound_fmod dsound Msacm32
+        $<$<BOOL:${SF_ENABLE_VIDEO}>:gfxvideo>
     )
     set_target_properties(PlayerTiny_D3D11 PROPERTIES
         OUTPUT_NAME "PlayerTiny"

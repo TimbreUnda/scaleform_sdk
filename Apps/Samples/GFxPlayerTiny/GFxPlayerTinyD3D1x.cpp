@@ -22,6 +22,11 @@ otherwise accompanies this software in either electronic or hard copy form.
 #include "../Common/FxSoundFMOD.h"
 #endif
 
+#ifdef GFX_ENABLE_VIDEO
+#include "Video/Video_VideoPC.h"
+#include "Video/Video_VideoSoundSystemDX8.h"
+#endif
+
 #include "Render/ImageFiles/PNG_ImageFile.h"
 #include "Render/ImageFiles/DDS_ImageFile.h"
 
@@ -393,6 +398,14 @@ int FxPlayerTiny::Run()
 	Ptr<ASSupport> pAS2Support = *new GFx::AS2Support();
 	loader.SetAS2Support(pAS2Support);
 
+#ifdef GFX_ENABLE_VIDEO
+    UInt32 affinityMasks[] = { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF };
+    Ptr<Video::Video> pVideo = *new Video::VideoPC(Video::VideoVMSupportAll(),
+        Thread::NormalPriority, 3, affinityMasks);
+    pVideo->SetSoundSystem(Ptr<Video::VideoSoundSystem>(*new Video::VideoSoundSystemDX8(0)));
+    loader.SetVideo(pVideo);
+#endif
+
     FxPlayerThreadCommandQueue* queue = new FxPlayerThreadCommandQueue;
     pCommandQueue = queue;
     // Load the movie file and create its instance.
@@ -416,7 +429,7 @@ int FxPlayerTiny::Run()
 	hMovieDisplay = pMovie->GetDisplayHandle();
 
     // Create renderer.
-	pRenderHAL = *new Render::D3D1x::HAL();
+	pRenderHAL = *new Render::D3D1x::HAL(queue);
     if (!(pRenderer = *new Render::Renderer2D(pRenderHAL.GetPtr())))
         return 1;
 
@@ -428,6 +441,11 @@ int FxPlayerTiny::Run()
     // configured device settings.
     if (!pRenderHAL->InitHAL(D3D1x::HALInitParams(pDevice D3D11(, pDeviceContext))))
         return 1;
+
+#ifdef GFX_ENABLE_VIDEO
+    if (pVideo)
+        pVideo->SetTextureManager(pRenderHAL->GetTextureManager());
+#endif
 
     // Set renderer on loader so that it is also applied to all children.
     //pRenderConfig = *new RenderConfig(pRenderer, RenderConfig::RF_EdgeAA | RenderConfig::RF_StrokeNormal);

@@ -1,7 +1,7 @@
 /**************************************************************************
 
 Filename    :   Video_CriHeap.cpp
-Content     :   Video custom heap
+Content     :   Video memory allocator for CRI Mana
 Created     :   June 4, 2008
 Authors     :   Maxim Didenko, Vladislav Merker
 
@@ -20,64 +20,50 @@ otherwise accompanies this software in either electronic or hard copy form.
 #include "Kernel/SF_HeapNew.h"
 #include "Video/Video_CriHeap.h"
 
+#include "Kernel/SF_Memory.h"
+#if defined(SF_BUILD_DEFINE_NEW) && defined(SF_DEFINE_NEW)
+#undef new
+#endif
+#include <cri_mana.h>
+#include <cri_atom_ex.h>
+#if defined(SF_BUILD_DEFINE_NEW) && defined(SF_DEFINE_NEW)
+#define new SF_DEFINE_NEW
+#endif
+
 namespace Scaleform { namespace GFx { namespace Video {
 
 //////////////////////////////////////////////////////////////////////////
 //
 
-static void  *customHeap_Alloc(CriHeap heap, Sint32 size, const Char8 *name, Sint32 align);
-static Sint32 customHeap_Free (CriHeap heap, void *ptr);
+static MemoryHeap* s_pManaHeap = NULL;
 
-// Function Table for CRI heap
-criHeapVirtualFunctionTable custom_heap_vtbl =
+static void* CRIAPI manaAllocFunc(void* obj, CriUint32 size)
 {
-    customHeap_Alloc,   // criHeap_AllocFix();
-    customHeap_Alloc,   // criHeap_AllocTemporary();
-    customHeap_Alloc,   // criHeap_AllocDynamic();
-    customHeap_Free     // criHeap_Free();
-};
-
-// CRI heap object
-struct CRICustomHeap {
-    SF_MEMORY_REDEFINE_NEW(CRICustomHeap, Stat_Video_Mem)
-    struct _criheap_vfunctiontable *vtbl;
-    MemoryHeap                     *pHeap;
-};
-
-static void *customHeap_Alloc(CriHeap heap, Sint32 size, const Char8 *name, Sint32 align)
-{
-    SF_UNUSED(name);
-
-    CRICustomHeap* h = (CRICustomHeap*)heap;
-    void* ptr = SF_HEAP_MEMALIGN(h->pHeap, size, align, Stat_Video_Mem);
-    SF_ASSERT(ptr);
-
+    SF_UNUSED(obj);
+    SF_ASSERT(s_pManaHeap);
+    void* ptr = SF_HEAP_MEMALIGN(s_pManaHeap, size, 16, Stat_Video_Mem);
     return ptr;
 }
 
-static Sint32 customHeap_Free(CriHeap, void *ptr)
+static void CRIAPI manaFreeFunc(void* obj, void* mem)
 {
-    SF_FREE_ALIGN(ptr);
-    return 0;
+    SF_UNUSED(obj);
+    if (mem)
+        SF_FREE_ALIGN(mem);
 }
 
-//////////////////////////////////////////////////////////////////////////
-//
-
-CriHeap criSmpCustomHeap_Create(MemoryHeap* pheap)
+void criManaHeap_Register(MemoryHeap* pHeap)
 {
-    MemoryHeap* pHeap = pheap->CreateHeap("_Cri_Video_Heap", 0, 64, 128*1024, 0);
-    CRICustomHeap* h = SF_HEAP_NEW(pHeap) CRICustomHeap;
-    h->vtbl = &custom_heap_vtbl;
-    h->pHeap = pHeap;
-    pHeap->ReleaseOnFree(h);
-    return (CriHeap)h;
+    s_pManaHeap = pHeap;
+    criAtomEx_SetUserAllocator(manaAllocFunc, manaFreeFunc, NULL);
+    criMana_SetUserAllocator(manaAllocFunc, manaFreeFunc, NULL);
 }
 
-void criSmpCustomHeap_Destroy(CriHeap heap)
+void criManaHeap_Unregister()
 {
-    CRICustomHeap* h = (CRICustomHeap*)heap;
-    delete h;
+    criMana_SetUserAllocator(NULL, NULL, NULL);
+    criAtomEx_SetUserAllocator(NULL, NULL, NULL);
+    s_pManaHeap = NULL;
 }
 
 }}} // Scaleform::GFx::Video
