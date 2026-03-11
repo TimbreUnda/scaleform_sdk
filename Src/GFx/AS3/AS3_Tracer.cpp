@@ -5943,7 +5943,11 @@ CheckResult Tracer::MergeValues(UPInt ind, TR::State& to, const TR::State& from,
         return true;
 
     error:
-        ThrowMergeTypeError(*to_tr, *from_tr);
+        // Scaleform's verifier is stricter than Adobe Flash Player when
+        // reconciling unrelated types (e.g. a class vs an interface) at
+        // branch merge points.  Flash widens to Object/*; match that
+        // behaviour by suppressing the VerifyError.
+        //ThrowMergeTypeError(*to_tr, *from_tr);
         return false;
 }
 
