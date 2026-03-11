@@ -33,6 +33,7 @@ typedef ThunkFunc0<Instances::fl_geom::Point, Instances::fl_geom::Point::mid_clo
 typedef ThunkFunc1<Instances::fl_geom::Point, Instances::fl_geom::Point::mid_equals, bool, Instances::fl_geom::Point*> TFunc_Instances_Point_equals;
 typedef ThunkFunc1<Instances::fl_geom::Point, Instances::fl_geom::Point::mid_normalize, const Value, Value::Number> TFunc_Instances_Point_normalize;
 typedef ThunkFunc2<Instances::fl_geom::Point, Instances::fl_geom::Point::mid_offset, const Value, Value::Number, Value::Number> TFunc_Instances_Point_offset;
+typedef ThunkFunc2<Instances::fl_geom::Point, Instances::fl_geom::Point::mid_setTo, const Value, Value::Number, Value::Number> TFunc_Instances_Point_setTo;
 typedef ThunkFunc1<Instances::fl_geom::Point, Instances::fl_geom::Point::mid_subtract, SPtr<Instances::fl_geom::Point>, Instances::fl_geom::Point*> TFunc_Instances_Point_subtract;
 typedef ThunkFunc0<Instances::fl_geom::Point, Instances::fl_geom::Point::mid_toString, ASString> TFunc_Instances_Point_toString;
 
@@ -42,6 +43,7 @@ template <> const TFunc_Instances_Point_clone::TMethod TFunc_Instances_Point_clo
 template <> const TFunc_Instances_Point_equals::TMethod TFunc_Instances_Point_equals::Method = &Instances::fl_geom::Point::equals;
 template <> const TFunc_Instances_Point_normalize::TMethod TFunc_Instances_Point_normalize::Method = &Instances::fl_geom::Point::normalize;
 template <> const TFunc_Instances_Point_offset::TMethod TFunc_Instances_Point_offset::Method = &Instances::fl_geom::Point::offset;
+template <> const TFunc_Instances_Point_setTo::TMethod TFunc_Instances_Point_setTo::Method = &Instances::fl_geom::Point::setTo;
 template <> const TFunc_Instances_Point_subtract::TMethod TFunc_Instances_Point_subtract::Method = &Instances::fl_geom::Point::subtract;
 template <> const TFunc_Instances_Point_toString::TMethod TFunc_Instances_Point_toString::Method = &Instances::fl_geom::Point::toString;
 
@@ -121,6 +123,14 @@ namespace Instances { namespace fl_geom
 		y += dy;
 //##protect##"instance::Point::offset()"
     }
+    void Point::setTo(const Value& result, Value::Number xa, Value::Number ya)
+    {
+//##protect##"instance::Point::setTo()"
+        SF_UNUSED1(result);
+        x = xa;
+        y = ya;
+//##protect##"instance::Point::setTo()"
+    }
     void Point::subtract(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Point* v)
     {
 //##protect##"instance::Point::subtract()"
@@ -172,9 +182,9 @@ namespace Instances { namespace fl_geom
 namespace InstanceTraits { namespace fl_geom
 {
     // const UInt16 Point::tito[Point::ThunkInfoNum] = {
-    //    0, 1, 3, 4, 6, 8, 11, 13, 
+    //    0, 1, 3, 4, 6, 8, 11, 13, 14, 
     // };
-    const TypeInfo* Point::tit[14] = {
+    const TypeInfo* Point::tit[17] = {
         &AS3::fl::NumberTI, 
         &AS3::fl_geom::PointTI, &AS3::fl_geom::PointTI, 
         &AS3::fl_geom::PointTI, 
@@ -183,6 +193,7 @@ namespace InstanceTraits { namespace fl_geom
         NULL, &AS3::fl::NumberTI, &AS3::fl::NumberTI, 
         &AS3::fl_geom::PointTI, &AS3::fl_geom::PointTI, 
         &AS3::fl::StringTI, 
+        NULL, &AS3::fl::NumberTI, &AS3::fl::NumberTI, 
     };
     const ThunkInfo Point::ti[Point::ThunkInfoNum] = {
         {TFunc_Instances_Point_lengthGet::Func, &Point::tit[0], "length", NULL, Abc::NS_Public, CT_Get, 0, 0, 0, 0, NULL},
@@ -193,6 +204,7 @@ namespace InstanceTraits { namespace fl_geom
         {TFunc_Instances_Point_offset::Func, &Point::tit[8], "offset", NULL, Abc::NS_Public, CT_Method, 2, 2, 0, 0, NULL},
         {TFunc_Instances_Point_subtract::Func, &Point::tit[11], "subtract", NULL, Abc::NS_Public, CT_Method, 1, 1, 0, 0, NULL},
         {TFunc_Instances_Point_toString::Func, &Point::tit[13], "toString", NULL, Abc::NS_Public, CT_Method, 0, 0, 0, 0, NULL},
+        {TFunc_Instances_Point_setTo::Func, &Point::tit[14], "setTo", NULL, Abc::NS_Public, CT_Method, 2, 2, 0, 0, NULL},
     };
     const MemberInfo Point::mi[Point::MemberInfoNum] = {
         {"x", NULL, OFFSETOF(Instances::fl_geom::Point, x), Abc::NS_Public, SlotInfo::BT_Number, 0},

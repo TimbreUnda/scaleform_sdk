@@ -100,6 +100,7 @@ namespace Instances { namespace fl_geom
             mid_offset, 
             mid_subtract, 
             mid_toString, 
+            mid_setTo,
         };
         void lengthGet(Value::Number& result);
         void add(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Point* v);
@@ -109,6 +110,7 @@ namespace Instances { namespace fl_geom
         void offset(const Value& result, Value::Number dx, Value::Number dy);
         void subtract(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Point* v);
         void toString(ASString& result);
+        void setTo(const Value& result, Value::Number dx, Value::Number dy);
 
         // C++ friendly wrappers for AS3 methods.
         Value::Number lengthGet()
@@ -200,10 +202,10 @@ namespace InstanceTraits { namespace fl_geom
 
         enum { MemberInfoNum = 2 };
         static const MemberInfo mi[MemberInfoNum];
-        enum { ThunkInfoNum = 8 };
+        enum { ThunkInfoNum = 9 };
         static const ThunkInfo ti[ThunkInfoNum];
         // static const UInt16 tito[ThunkInfoNum];
-        static const TypeInfo* tit[14];
+        static const TypeInfo* tit[17];
 //##protect##"instance_traits$methods"
 //##protect##"instance_traits$methods"
 
