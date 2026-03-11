@@ -766,7 +766,7 @@ inline void ShaderHAL<ShaderManagerType, ShaderInterfaceType>::DrawProcessedPrim
             ShaderData.BeginPrimitive();
 
             const typename ShaderManagerType::Shader& pShader =
-                SManager.SetPrimitiveFill(pprimitive->pFill, fillFlags, pbatch->Type, pbatch->pFormat, 
+                SManager.SetPrimitiveFill(pprimitive->pFill, fillFlags, pbatch->Type, pbatch->pFormat,
                 batchMeshCount, Matrices, &pprimitive->Meshes[meshIndex], &ShaderData);
 
             Profiler.SetBatch(this, pprimitive, bidx);
