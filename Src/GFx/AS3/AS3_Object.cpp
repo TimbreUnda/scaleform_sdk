@@ -682,7 +682,7 @@ void FindScopeProperty(
     )
 {
     // [2.3.6]
-    // Typically, the order of the search for resolving multinames is the object’s declared traits, 
+    // Typically, the order of the search for resolving multinames is the objectï¿½s declared traits, 
     // its dynamic properties, and finally the prototype chain.
     // The dynamic properties and prototype chain search will only happen if the
     // multiname contains the public namespace (dynamic properties are always in the public namespace in
@@ -1106,7 +1106,8 @@ void FindObjProperty(PropRef& result, VM& vm, const Value& scope, const Multinam
     case Value::kFunction:  // = 6
     case Value::kObject:    // = 8
     case Value::kClass:     // = 9
-        // null should be handled outside of this function. 
+        if (scope.GetObject() == NULL)
+            break;
         SF_ASSERT(scope.GetObject() != NULL);
         is_object = true;
         break;
