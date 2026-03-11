@@ -302,8 +302,10 @@ namespace Instances { namespace fl_display
     void Stage::fullScreenHeightGet(UInt32& result)
     {
 //##protect##"instance::Stage::fullScreenHeightGet()"
-        SF_UNUSED1(result);
-        WARN_NOT_IMPLEMENTED("Stage::fullScreenHeightGet()");
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        GFx::Viewport vp;
+        asvm.GetMovieImpl()->GetViewport(&vp);
+        result = vp.BufferHeight;
 //##protect##"instance::Stage::fullScreenHeightGet()"
     }
     void Stage::fullScreenSourceRectGet(SPtr<Instances::fl_geom::Rectangle>& result)
@@ -323,8 +325,10 @@ namespace Instances { namespace fl_display
     void Stage::fullScreenWidthGet(UInt32& result)
     {
 //##protect##"instance::Stage::fullScreenWidthGet()"
-        SF_UNUSED1(result);
-        WARN_NOT_IMPLEMENTED("Stage::fullScreenWidthGet()");
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        GFx::Viewport vp;
+        asvm.GetMovieImpl()->GetViewport(&vp);
+        result = vp.BufferWidth;
 //##protect##"instance::Stage::fullScreenWidthGet()"
     }
     void Stage::heightGet(Value::Number& result)
