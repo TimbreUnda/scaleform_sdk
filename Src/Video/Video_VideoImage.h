@@ -50,7 +50,6 @@ public:
 
 protected:
     void clearImageData(ImageData* pdest) const;
-    void checkAndRequestSkipDecoding() const;
 
     VideoPlayerImpl* pVideoPlayer;
 };
