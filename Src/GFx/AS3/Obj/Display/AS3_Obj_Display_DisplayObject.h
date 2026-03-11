@@ -230,6 +230,10 @@ namespace Instances { namespace fl_display
             mid_hitTestPoint, 
             mid_localToGlobal, 
             mid_local3DToGlobal, 
+            mid_backgroundAlphaGet, 
+            mid_backgroundAlphaSet, 
+            mid_mouseEnableGet, 
+            mid_mouseEnableSet, 
         };
         void accessibilityPropertiesGet(SPtr<Instances::fl_accessibility::AccessibilityProperties>& result);
         void accessibilityPropertiesSet(const Value& result, Instances::fl_accessibility::AccessibilityProperties* value);
@@ -293,6 +297,10 @@ namespace Instances { namespace fl_display
         void hitTestPoint(bool& result, Value::Number x, Value::Number y, bool shapeFlag = false);
         void localToGlobal(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Point* point);
         void local3DToGlobal(SPtr<Instances::fl_geom::Point>& result, Instances::fl_geom::Vector3D* point);
+        void backgroundAlphaGet(Value::Number& result);
+        void backgroundAlphaSet(const Value& result, Value::Number value);
+        void mouseEnableGet(bool& result);
+        void mouseEnableSet(const Value& result, bool value);
 
         // C++ friendly wrappers for AS3 methods.
         SPtr<Instances::fl_accessibility::AccessibilityProperties> accessibilityPropertiesGet();
@@ -586,10 +594,10 @@ namespace InstanceTraits { namespace fl_display
 
         virtual void MakeObject(Value& result, Traits& t);
 
-        enum { ThunkInfoNum = 62 };
+        enum { ThunkInfoNum = 66 };
         static const ThunkInfo ti[ThunkInfoNum];
         // static const UInt16 tito[ThunkInfoNum];
-        static const TypeInfo* tit[96];
+        static const TypeInfo* tit[102];
 //##protect##"instance_traits$methods"
 //##protect##"instance_traits$methods"
 

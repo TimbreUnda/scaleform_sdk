@@ -112,6 +112,10 @@ typedef ThunkFunc1<Instances::fl_display::DisplayObject, Instances::fl_display::
 typedef ThunkFunc3<Instances::fl_display::DisplayObject, Instances::fl_display::DisplayObject::mid_hitTestPoint, bool, Value::Number, Value::Number, bool> TFunc_Instances_DisplayObject_hitTestPoint;
 typedef ThunkFunc1<Instances::fl_display::DisplayObject, Instances::fl_display::DisplayObject::mid_localToGlobal, SPtr<Instances::fl_geom::Point>, Instances::fl_geom::Point*> TFunc_Instances_DisplayObject_localToGlobal;
 typedef ThunkFunc1<Instances::fl_display::DisplayObject, Instances::fl_display::DisplayObject::mid_local3DToGlobal, SPtr<Instances::fl_geom::Point>, Instances::fl_geom::Vector3D*> TFunc_Instances_DisplayObject_local3DToGlobal;
+typedef ThunkFunc0<Instances::fl_display::DisplayObject, Instances::fl_display::DisplayObject::mid_backgroundAlphaGet, Value::Number> TFunc_Instances_DisplayObject_backgroundAlphaGet;
+typedef ThunkFunc1<Instances::fl_display::DisplayObject, Instances::fl_display::DisplayObject::mid_backgroundAlphaSet, const Value, Value::Number> TFunc_Instances_DisplayObject_backgroundAlphaSet;
+typedef ThunkFunc0<Instances::fl_display::DisplayObject, Instances::fl_display::DisplayObject::mid_mouseEnableGet, bool> TFunc_Instances_DisplayObject_mouseEnableGet;
+typedef ThunkFunc1<Instances::fl_display::DisplayObject, Instances::fl_display::DisplayObject::mid_mouseEnableSet, const Value, bool> TFunc_Instances_DisplayObject_mouseEnableSet;
 
 template <> const TFunc_Instances_DisplayObject_accessibilityPropertiesGet::TMethod TFunc_Instances_DisplayObject_accessibilityPropertiesGet::Method = &Instances::fl_display::DisplayObject::accessibilityPropertiesGet;
 template <> const TFunc_Instances_DisplayObject_accessibilityPropertiesSet::TMethod TFunc_Instances_DisplayObject_accessibilityPropertiesSet::Method = &Instances::fl_display::DisplayObject::accessibilityPropertiesSet;
@@ -175,6 +179,10 @@ template <> const TFunc_Instances_DisplayObject_hitTestObject::TMethod TFunc_Ins
 template <> const TFunc_Instances_DisplayObject_hitTestPoint::TMethod TFunc_Instances_DisplayObject_hitTestPoint::Method = &Instances::fl_display::DisplayObject::hitTestPoint;
 template <> const TFunc_Instances_DisplayObject_localToGlobal::TMethod TFunc_Instances_DisplayObject_localToGlobal::Method = &Instances::fl_display::DisplayObject::localToGlobal;
 template <> const TFunc_Instances_DisplayObject_local3DToGlobal::TMethod TFunc_Instances_DisplayObject_local3DToGlobal::Method = &Instances::fl_display::DisplayObject::local3DToGlobal;
+template <> const TFunc_Instances_DisplayObject_backgroundAlphaGet::TMethod TFunc_Instances_DisplayObject_backgroundAlphaGet::Method = &Instances::fl_display::DisplayObject::backgroundAlphaGet;
+template <> const TFunc_Instances_DisplayObject_backgroundAlphaSet::TMethod TFunc_Instances_DisplayObject_backgroundAlphaSet::Method = &Instances::fl_display::DisplayObject::backgroundAlphaSet;
+template <> const TFunc_Instances_DisplayObject_mouseEnableGet::TMethod TFunc_Instances_DisplayObject_mouseEnableGet::Method = &Instances::fl_display::DisplayObject::mouseEnableGet;
+template <> const TFunc_Instances_DisplayObject_mouseEnableSet::TMethod TFunc_Instances_DisplayObject_mouseEnableSet::Method = &Instances::fl_display::DisplayObject::mouseEnableSet;
 
 namespace Instances { namespace fl_display
 {
@@ -1100,6 +1108,24 @@ namespace Instances { namespace fl_display
 //##protect##"instance::DisplayObject::local3DToGlobal()"
     }
 
+    void DisplayObject::backgroundAlphaSet(const Value& result, Value::Number value)
+    {
+        SF_UNUSED2(result, value);
+    }
+    void DisplayObject::backgroundAlphaGet(Value::Number& result)
+    {
+        result = 1.0;
+    }
+
+    void DisplayObject::mouseEnableSet(const Value& result, bool value)
+    {
+        SF_UNUSED2(result, value);
+    }
+    void DisplayObject::mouseEnableGet(bool& result)
+    {
+        result = true;
+    }
+
     SPtr<Instances::fl_accessibility::AccessibilityProperties> DisplayObject::accessibilityPropertiesGet()
     {
         SPtr<Instances::fl_accessibility::AccessibilityProperties> result;
@@ -1271,7 +1297,7 @@ namespace InstanceTraits { namespace fl_display
     // const UInt16 DisplayObject::tito[DisplayObject::ThunkInfoNum] = {
     //    0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16, 18, 19, 20, 22, 23, 24, 25, 27, 28, 30, 31, 32, 33, 35, 36, 38, 39, 41, 42, 44, 45, 47, 48, 50, 51, 53, 54, 56, 57, 59, 60, 61, 63, 64, 66, 67, 69, 70, 72, 73, 75, 76, 78, 80, 82, 84, 86, 88, 92, 94, 
     // };
-    const TypeInfo* DisplayObject::tit[96] = {
+    const TypeInfo* DisplayObject::tit[102] = {
         &AS3::fl_accessibility::AccessibilityPropertiesTI, 
         NULL, &AS3::fl_accessibility::AccessibilityPropertiesTI, 
         &AS3::fl::NumberTI, 
@@ -1334,6 +1360,10 @@ namespace InstanceTraits { namespace fl_display
         &AS3::fl::BooleanTI, &AS3::fl::NumberTI, &AS3::fl::NumberTI, &AS3::fl::BooleanTI, 
         &AS3::fl_geom::PointTI, &AS3::fl_geom::PointTI, 
         &AS3::fl_geom::PointTI, &AS3::fl_geom::Vector3DTI, 
+        &AS3::fl::NumberTI, 
+        NULL, &AS3::fl::NumberTI, 
+        &AS3::fl::BooleanTI, 
+        NULL, &AS3::fl::BooleanTI, 
     };
     const ThunkInfo DisplayObject::ti[DisplayObject::ThunkInfoNum] = {
         {TFunc_Instances_DisplayObject_accessibilityPropertiesGet::Func, &DisplayObject::tit[0], "accessibilityProperties", NULL, Abc::NS_Public, CT_Get, 0, 0, 0, 0, NULL},
@@ -1398,6 +1428,10 @@ namespace InstanceTraits { namespace fl_display
         {TFunc_Instances_DisplayObject_hitTestPoint::Func, &DisplayObject::tit[88], "hitTestPoint", NULL, Abc::NS_Public, CT_Method, 2, 3, 0, 0, NULL},
         {TFunc_Instances_DisplayObject_localToGlobal::Func, &DisplayObject::tit[92], "localToGlobal", NULL, Abc::NS_Public, CT_Method, 1, 1, 0, 0, NULL},
         {TFunc_Instances_DisplayObject_local3DToGlobal::Func, &DisplayObject::tit[94], "local3DToGlobal", NULL, Abc::NS_Public, CT_Method, 1, 1, 0, 0, NULL},
+        {TFunc_Instances_DisplayObject_backgroundAlphaGet::Func, &DisplayObject::tit[96], "backgroundAlpha", NULL, Abc::NS_Public, CT_Get, 0, 0, 0, 0, NULL},
+        {TFunc_Instances_DisplayObject_backgroundAlphaSet::Func, &DisplayObject::tit[97], "backgroundAlpha", NULL, Abc::NS_Public, CT_Set, 1, 1, 0, 0, NULL},
+        {TFunc_Instances_DisplayObject_mouseEnableGet::Func, &DisplayObject::tit[99], "mouseEnable", NULL, Abc::NS_Public, CT_Get, 0, 0, 0, 0, NULL},
+        {TFunc_Instances_DisplayObject_mouseEnableSet::Func, &DisplayObject::tit[100], "mouseEnable", NULL, Abc::NS_Public, CT_Set, 1, 1, 0, 0, NULL},
     };
 
     DisplayObject::DisplayObject(VM& vm, const ClassInfo& ci)
