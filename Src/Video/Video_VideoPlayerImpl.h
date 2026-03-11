@@ -1,7 +1,7 @@
 /**************************************************************************
 
 Filename    :   Video_VideoPlayerImpl.h
-Content     :   GFx video player implementation
+Content     :   GFx video player implementation (CRI Mana 2019)
 Created     :   October 2008
 Authors     :   Maxim Didenko, Vladislav Merker
 
@@ -19,12 +19,15 @@ otherwise accompanies this software in either electronic or hard copy form.
 #include "GFxConfig.h"
 #ifdef GFX_ENABLE_VIDEO
 
-#include "Video/Video_CriHeap.h"
-#include "Video/Video_CriMvSystemTimer.h"
-#include "Video/Video_CriMvFileReader.h"
-#include "Video/Video_CriMvSoundGateway.h"
-
 #include "Kernel/SF_Memory.h"
+#if defined(SF_BUILD_DEFINE_NEW) && defined(SF_DEFINE_NEW)
+#undef new
+#endif
+#include <cri_mana.h>
+#if defined(SF_BUILD_DEFINE_NEW) && defined(SF_DEFINE_NEW)
+#define new SF_DEFINE_NEW
+#endif
+
 #include "Kernel/SF_MemoryHeap.h"
 #include "Kernel/SF_Threads.h"
 #include "Kernel/SF_Hash.h"
@@ -109,7 +112,7 @@ protected:
 public:
     VideoPlayerImpl(MemoryHeap* pheap);
 
-    bool              Init(Video* pvideo, TaskManager* ptaskManager, 
+    bool              Init(Video* pvideo, TaskManager* ptaskManager,
                            FileOpenerBase* pfileOpener, Log* plog);
 
     virtual void      Open(const char* url);
@@ -146,7 +149,7 @@ public:
 
     virtual void      SetDecodeHeaderTimeout(float timeout);
 
-    CriMvEasyPlayer*  GetCriPlayer() { return pCriPlayer; }
+    CriManaPlayerHn   GetManaPlayer() { return pManaPlayer; }
 
     void              AddCurrentCuePoint(const CuePoint& cp);
     void              ClearCurrentCuePoints();
@@ -161,15 +164,11 @@ public:
 #endif
 
 private:
-    CriMvEasyPlayer*          pCriPlayer;
+    CriManaPlayerHn           pManaPlayer;
     volatile Status           Stat;
-    Ptr<CriMvSystemTimer>     pTimer;
-    Ptr<VideoReader>          pReader;
-    Ptr<CriMvSound>           pSound;
-    Ptr<CriMvSound>           pSubSound;
 
-    CriMvStreamingParameters  StreamParams;
-    CriMvFrameInfo            FrameInfo;
+    CriManaMovieInfo          MovieInfo;
+    CriManaFrameInfo          FrameInfo;
 
     Array<CuePoint>           CurrentCuePoints;
 
@@ -190,21 +189,14 @@ private:
     int            CurrSubtitleChannel;
     UInt64         StartOpenTicks;
     UInt64         DecodeHeaderTimeout;
-    bool           UseAudioTimer;
 
-#ifdef GFX_VIDEO_DIAGS
-    CriMvLastFrameResult      LastFrameResult;
-    CriMvPlaybackInfo         PlaybackInfo;
-    UInt64         LastDecodeTicks;
-    UInt64         LastUpdateTextureTicks;
-#endif
+    Ptr<SyncObject> pSyncObj;
 
     void WaitForFinish();
     void CheckHeaderDecoding();
 
     Ptr<VideoDecoder>         pDecoder;
     MemoryHeap*               pGFxHeap;
-    CriHeap                   Heap;
     Ptr<Log>                  pLog;
 };
 

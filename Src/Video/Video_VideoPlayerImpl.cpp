@@ -1,7 +1,7 @@
 /**************************************************************************
 
 Filename    :   Video_VideoPlayerImpl.cpp
-Content     :   GFx video player implementation
+Content     :   GFx video player implementation (CRI Mana 2019)
 Created     :   October 2008
 Authors     :   Maxim Didenko, Vladislav Merker
 
@@ -16,22 +16,13 @@ otherwise accompanies this software in either electronic or hard copy form.
 #include "Video/Video_VideoPlayerImpl.h"
 #ifdef GFX_ENABLE_VIDEO
 
-#if defined(SF_BUILD_DEFINE_NEW) && defined(SF_DEFINE_NEW)
-#undef new
-#endif
-#include <cri_xpt.h>
-#include <cri_error.h>
-#include <cri_movie.h>
-#if defined(SF_BUILD_DEFINE_NEW) && defined(SF_DEFINE_NEW)
-#define new SF_DEFINE_NEW
-#endif
-
 #include "Kernel/SF_Memory.h"
 #include "Kernel/SF_MemoryHeap.h"
 #include "Kernel/SF_HeapNew.h"
 #include "Kernel/SF_Alg.h"
 
 #include "GFx/GFx_Log.h"
+#include "Kernel/SF_SysFile.h"
 
 #define THREAD_STACK_SIZE   65536
 
@@ -44,20 +35,15 @@ namespace Scaleform { namespace GFx { namespace Video {
 
 static void DefaultInitVideoDecoderThrd( ScePthread pid, int requestedPriority )
 {
-	// Hack, SF thread fails to use SCE_PTHREAD_EXPLICIT_SCHED, so it fails to properly set anything
-	// it just gets the calling thread scheduling and priority
-
 	const SceKernelSchedParam schedParam = { requestedPriority };
 	{
 		ScePthreadAttr attr;
 		scePthreadAttrInit( &attr );
 		scePthreadAttrGet( pid, &attr );
 		scePthreadAttrSetinheritsched( &attr, SCE_PTHREAD_EXPLICIT_SCHED );
-		scePthreadSetschedparam( pid, SCE_KERNEL_SCHED_FIFO, &schedParam ); // CriDelegate uses FIFO scheduling (seen in target manager dump), so we use the same here.
+		scePthreadSetschedparam( pid, SCE_KERNEL_SCHED_FIFO, &schedParam );
 		scePthreadAttrDestroy( &attr );
 	}
-
-	// Use CRI worker thread affinity mask
 	scePthreadSetaffinity( pid, (1U<<0)|(1U<<1) );
 }
 
@@ -99,7 +85,6 @@ void VideoDecoderThrd::StartDecoding(VideoPlayer* pp)
         if ( pDecodeThread->Start() && pDecodeThread )
 		{
             pDecodeThread->SetThreadName("Scaleform Video Decoder");
-
 #if defined( SF_OS_ORBIS )
 			InitVideoDecoderThrd( pDecodeThread->GetOSHandle(), Thread::GetOSPriority(Priority) );
 #endif
@@ -113,7 +98,7 @@ void VideoDecoderThrd::StopDecoding(VideoPlayer* pp)
     VideoPlayerImpl* pplayer = (VideoPlayerImpl*)pp;
     Lock::Locker lock(&DecodeLock);
     if (FindPlayer(DecodingQueue, pplayer) != -1)
-        pplayer->GetCriPlayer()->Stop();
+        criManaPlayer_Stop(pplayer->GetManaPlayer());
 }
 
 bool VideoDecoderThrd::IsDecodingStopped(VideoPlayer* pp)
@@ -122,6 +107,14 @@ bool VideoDecoderThrd::IsDecodingStopped(VideoPlayer* pp)
     VideoPlayerImpl* pplayer = (VideoPlayerImpl*)pp;
     Lock::Locker lock(&DecodeLock);
     return FindPlayer(DecodingQueue, pplayer) == -1;
+}
+
+static bool IsManaPlayerActive(CriManaPlayerHn player)
+{
+    CriManaPlayerStatus status = criManaPlayer_GetStatus(player);
+    return status != CRIMANAPLAYER_STATUS_STOP &&
+           status != CRIMANAPLAYER_STATUS_PLAYEND &&
+           status != CRIMANAPLAYER_STATUS_ERROR;
 }
 
 int VideoDecoderThrd::DecodeFunc(Thread* pthread, void* obj)
@@ -135,7 +128,9 @@ int VideoDecoderThrd::DecodeFunc(Thread* pthread, void* obj)
         {
             VideoPlayerImpl* pplayer = pdecoder->DecodingQueue[0];
             pdecoder->DecodeLock.Unlock();
-            if (!pplayer->GetCriPlayer()->ExecuteDecode())
+
+            criManaPlayer_ExecuteMain(pplayer->GetManaPlayer());
+            if (!IsManaPlayerActive(pplayer->GetManaPlayer()))
             {
                 Lock::Locker lock(&pdecoder->DecodeLock);
                 pdecoder->DecodingQueue.RemoveAt(0);
@@ -153,7 +148,8 @@ int VideoDecoderThrd::DecodeFunc(Thread* pthread, void* obj)
             Array<UPInt> remove_indexes;
             for (UPInt i = 0; i < copy_array.GetSize(); ++i)
             {
-                if (!copy_array[i]->GetCriPlayer()->ExecuteDecode())
+                criManaPlayer_ExecuteMain(copy_array[i]->GetManaPlayer());
+                if (!IsManaPlayerActive(copy_array[i]->GetManaPlayer()))
                     remove_indexes.PushBack(i);
             }
             if (remove_indexes.GetSize() > 0)
@@ -209,7 +205,7 @@ void VideoDecoderSmp::StopDecoding(VideoPlayer* pp)
     VideoPlayerImpl* pplayer = (VideoPlayerImpl*)pp;
     if (FindPlayer(DecodingQueue, pplayer) != -1)
     {
-        pplayer->GetCriPlayer()->Stop();
+        criManaPlayer_Stop(pplayer->GetManaPlayer());
         ExecuteDecode(pp);
     }
 }
@@ -227,7 +223,9 @@ bool VideoDecoderSmp::ExecuteDecode(VideoPlayer* pp)
     int idx = FindPlayer(DecodingQueue, pplayer);
     if (idx == -1)
         return false;
-    if (!pplayer->GetCriPlayer()->ExecuteDecode())
+
+    criManaPlayer_ExecuteMain(pplayer->GetManaPlayer());
+    if (!IsManaPlayerActive(pplayer->GetManaPlayer()))
     {
         DecodingQueue.RemoveAt(idx);
         return false;
@@ -289,12 +287,12 @@ void VideoDecoderSmp::PauseDecoding(bool pause)
 //////////////////////////////////////////////////////////////////////////
 //
 
-static VideoPlayer::CuePoint convertCuepoint(const CriMvEventPoint& eventPoint)
+static VideoPlayer::CuePoint convertCuepoint(const CriManaEventPoint& eventPoint)
 {
     VideoPlayer::CuePoint cp;
     cp.Name = eventPoint.cue_name;
     cp.Type = eventPoint.type == 0 ? VideoPlayer::NavigationCuePoint : VideoPlayer::EventCuePoint;
-    cp.Time = (UInt32)eventPoint.time;
+    cp.Time = (UInt32)(eventPoint.time / (eventPoint.tunit > 0 ? eventPoint.tunit : 1));
     if (eventPoint.param_string)
     {
         char* p1 = eventPoint.param_string;
@@ -330,9 +328,9 @@ static VideoPlayer::CuePoint convertCuepoint(const CriMvEventPoint& eventPoint)
     return cp;
 }
 
-static void callbackCuePoint(CriMvEasyPlayer *mveasy, CriMvEventPoint *eventInfo, void *usrObj)
+static void CRIAPI callbackCuePoint(void *usrObj, CriManaPlayerHn player, CriManaEventPoint *eventInfo)
 {
-    SF_UNUSED(mveasy);
+    SF_UNUSED(player);
     VideoPlayerImpl* pplayer = (VideoPlayerImpl*)usrObj;
     if (pplayer)
     {
@@ -345,104 +343,60 @@ static void callbackCuePoint(CriMvEasyPlayer *mveasy, CriMvEventPoint *eventInfo
 //
 
 VideoPlayerImpl::VideoPlayerImpl(MemoryHeap* pheap) :
-    pCriPlayer(NULL), Stat(NotInitialized), VideoWidth((unsigned)-1), VideoHeight((unsigned)-1),
-    VideoAlpha(false), LastFrame(0), StartPos(0), StatusAfterStop(Finished), Paused(FALSE), LoopFlag(FALSE),
+    pManaPlayer(NULL), Stat(NotInitialized), VideoWidth((unsigned)-1), VideoHeight((unsigned)-1),
+    VideoAlpha(false), LastFrame(0), StartPos(0), StatusAfterStop(Finished), Paused(CRI_FALSE), LoopFlag(CRI_FALSE),
     UpdateTextureCalled(false), FrameOnTime(false), FrameNotInitialized(true), PausedStartup(false),
-    CurrSubtitleChannel(CRIMV_SUBTITLE_CHANNEL_OFF), DecodeHeaderTimeout(0), UseAudioTimer(true),
+    CurrSubtitleChannel(CRIMANA_SUBTITLE_CHANNEL_OFF), DecodeHeaderTimeout(0),
     pGFxHeap(pheap)
 {
-    Heap = criSmpCustomHeap_Create(pheap);
+    Alg::MemUtil::Set(&MovieInfo, 0, sizeof(MovieInfo));
+    Alg::MemUtil::Set(&FrameInfo, 0, sizeof(FrameInfo));
 }
 
 VideoPlayerImpl::~VideoPlayerImpl()
 {
     WaitForFinish();
 
-    if (pSubSound)
-        pCriPlayer->DetachSubAudioInterface();
-
-    if (pCriPlayer)
-        pCriPlayer->Destroy();
-    pCriPlayer = NULL;
-
-    pTimer = NULL;
-    pSound = NULL;
-    pSubSound = NULL;
-    pReader = NULL;
-
-    criSmpCustomHeap_Destroy(Heap);
+    if (pManaPlayer)
+        criManaPlayer_Destroy(pManaPlayer);
+    pManaPlayer = NULL;
 }
 
 #ifdef GFX_VIDEO_DIAGS
-static const char* StatusToString(CriMvEasyPlayer::Status stat)
+static const char* ManaStatusToString(CriManaPlayerStatus stat)
 {
     switch(stat)
     {
-    case CriMvEasyPlayer::MVEASY_STATUS_STOP:      return "STOP";
-    case CriMvEasyPlayer::MVEASY_STATUS_DECHDR:    return "DECHDR";
-    case CriMvEasyPlayer::MVEASY_STATUS_WAIT_PREP: return "WAIT_PREP";
-    case CriMvEasyPlayer::MVEASY_STATUS_PREP:      return "PREP";
-    case CriMvEasyPlayer::MVEASY_STATUS_READY:     return "READY";
-    case CriMvEasyPlayer::MVEASY_STATUS_PLAYING:   return "PLAYING";
-    case CriMvEasyPlayer::MVEASY_STATUS_PLAYEND:   return "PLAYEND";
-    case CriMvEasyPlayer::MVEASY_STATUS_ERROR:     return "ERROR";
-    default:
-        return "Unknown";
-    }
-}
-
-static const char* FrameResultToString(CriMvLastFrameResult result)
-{
-    switch(result)
-    {
-    case CRIMV_LASTFRAME_OK:           return "OK";
-    case CRIMV_LASTFRAME_TIME_EARLY:   return "EARLY";
-    case CRIMV_LASTFRAME_DECODE_DELAY: return "DECODE_DELAY";
-    case CRIMV_LASTFRAME_DISCARDED:    return "DISCARDED";
+    case CRIMANAPLAYER_STATUS_STOP:      return "STOP";
+    case CRIMANAPLAYER_STATUS_DECHDR:    return "DECHDR";
+    case CRIMANAPLAYER_STATUS_WAIT_PREP: return "WAIT_PREP";
+    case CRIMANAPLAYER_STATUS_PREP:      return "PREP";
+    case CRIMANAPLAYER_STATUS_READY:     return "READY";
+    case CRIMANAPLAYER_STATUS_PLAYING:   return "PLAYING";
+    case CRIMANAPLAYER_STATUS_PLAYEND:   return "PLAYEND";
+    case CRIMANAPLAYER_STATUS_ERROR:     return "ERROR";
     default:
         return "Unknown";
     }
 }
 #endif
 
-bool VideoPlayerImpl::Init(Video* pvideo, TaskManager* ptaskManager, 
+bool VideoPlayerImpl::Init(Video* pvideo, TaskManager* ptaskManager,
                            FileOpenerBase* pfileOpener, Log* plog)
 {
-    SF_UNUSED(ptaskManager);
+    SF_UNUSED2(ptaskManager, pfileOpener);
     pLog = plog;
-    VideoSoundSystem* psndsystem = pvideo? pvideo->GetSoundSystem() : NULL;
-    if (psndsystem)
-    {
-        Ptr<VideoSound> pinterface    = *psndsystem->Create();
-        Ptr<VideoSound> psubinterface = *psndsystem->Create();
-        pSound    = *SF_HEAP_NEW(pGFxHeap) CriMvSound(pGFxHeap, pinterface);
-        pSubSound = *SF_HEAP_NEW(pGFxHeap) CriMvSound(pGFxHeap, psubinterface);
-    }
+
     pDecoder = pvideo && pvideo->GetDecoder() ? pvideo->GetDecoder() : NULL;
-    if (!pDecoder) 
+    if (!pDecoder)
         pDecoder = *SF_HEAP_NEW(pGFxHeap) VideoDecoderSmp;
     SF_ASSERT(pDecoder);
 
-    if (pvideo)
-        pReader = *pvideo->GetReaderConfig()->CreateReader();
-    else
-    {   // LoadInfo() special case
-        SF_ASSERT(pfileOpener);
-        Ptr<VideoReaderConfig> preaderConfig = *SF_HEAP_NEW(pGFxHeap) VideoReaderConfigSmp(pGFxHeap, pfileOpener);
-        pReader = *SF_HEAP_NEW(pGFxHeap) VideoReader(preaderConfig);
-    }
+    pManaPlayer = criManaPlayer_Create(NULL, 0);
+    SF_ASSERT(pManaPlayer);
 
-    Ptr<SyncObject> psyncObj = *SF_HEAP_NEW(pGFxHeap) SystemTimerSyncObject;
-    pTimer = *SF_HEAP_NEW(pGFxHeap) CriMvSystemTimer(psyncObj);
-
-    pCriPlayer = CriMvEasyPlayer::Create(Heap, 
-        (CriMvFileReaderInterface*)pReader, (CriMvSystemTimerInterface*)pTimer, (CriMvSoundInterface*)pSound);
-    SF_ASSERT(pCriPlayer);
-
-    if (pSound && UseAudioTimer)
-        pCriPlayer->SetMasterTimer(CriMvEasyPlayer::MVEASY_TIMER_AUDIO);
-    else
-        pCriPlayer->SetMasterTimer(CriMvEasyPlayer::MVEASY_TIMER_SYSTEM);
+    // Default to audio timer sync (falls back to system timer if no audio)
+    criManaPlayer_SetMasterTimerType(pManaPlayer, CRIMANAPLAYER_TIMER_AUDIO);
 
     Stat = Stopped;
     return true;
@@ -450,36 +404,43 @@ bool VideoPlayerImpl::Init(Video* pvideo, TaskManager* ptaskManager,
 
 void VideoPlayerImpl::Open(const char* url)
 {
-    SF_ASSERT(pCriPlayer);
+    SF_ASSERT(pManaPlayer);
 
     WaitForFinish();
 
-    pCriPlayer->SetCuePointCallback(NULL, NULL);
+    criManaPlayer_SetCuePointCallback(pManaPlayer, NULL, NULL);
     ClearCurrentCuePoints();
 
     LastFrame = StartPos = 0;
     Stat = Opening;
     StatusAfterStop = Finished;
-    Paused = FALSE;
+    Paused = CRI_FALSE;
     UpdateTextureCalled = false;
-    CurrSubtitleChannel = CRIMV_SUBTITLE_CHANNEL_OFF;
+    CurrSubtitleChannel = CRIMANA_SUBTITLE_CHANNEL_OFF;
 
-    Alg::MemUtil::Set(&StreamParams, 0, sizeof(StreamParams));
+    Alg::MemUtil::Set(&MovieInfo, 0, sizeof(MovieInfo));
     Alg::MemUtil::Set(&FrameInfo, 0, sizeof(FrameInfo));
 
-    pCriPlayer->SetFile((Char8*)url);
-    pCriPlayer->DecodeHeader();
+    // Validate the file exists before passing to CRI Mana.
+    // CRI's internal decode thread can crash if the file is missing.
+    {
+        SysFile file(url);
+        if (!file.IsValid())
+        {
+            if (pLog)
+                pLog->LogError("Video file not found: %s\n", url);
+            Stat = FileNotFound;
+            return;
+        }
+    }
+
+    criManaPlayer_SetFile(pManaPlayer, NULL, url);
+    criManaPlayer_DecodeHeader(pManaPlayer);
     pDecoder->StartDecoding(this);
 
-    if (pSubSound)
-        pCriPlayer->AttachSubAudioInterface(pSubSound);
-
 #ifdef GFX_VIDEO_DIAGS
-    CriMvEasyPlayer::Status playerStatus = pCriPlayer->GetStatus();
-    pLog->LogMessage("[Video] Open: %s %s\n", (Char8*)url, StatusToString(playerStatus));
-
-    LastDecodeTicks = 0;
-    LastUpdateTextureTicks = 0;
+    CriManaPlayerStatus playerStatus = criManaPlayer_GetStatus(pManaPlayer);
+    pLog->LogMessage("[Video] Open: %s %s\n", url, ManaStatusToString(playerStatus));
 #endif
 
     StartOpenTicks = Timer::GetTicks();
@@ -497,11 +458,6 @@ void VideoPlayerImpl::WaitForFinish()
         Decode();
         Thread::MSleep(1);
     }
-
-#ifdef GFX_VIDEO_DIAGS
-    CriMvEasyPlayer::Status playerStatus = pCriPlayer->GetStatus();
-    pLog->LogMessage("[Video] WaitForFinish: %s\n", StatusToString(playerStatus));
-#endif
 }
 
 void VideoPlayerImpl::GetVideoInfo(VideoInfo* pinfo)
@@ -510,48 +466,25 @@ void VideoPlayerImpl::GetVideoInfo(VideoInfo* pinfo)
 
     if (Stat == Ready || Stat == Starting || Stat == Playing || Stat == Seeking)
     {
-#ifdef GFX_VIDEO_DIAGS
-        if (StreamParams.num_audio > 0 && pLog)
-        {
-            float videoTime = StreamParams.video_prm[0].total_frames /
-                (StreamParams.video_prm[0].framerate/1000.0f);
-            for (unsigned int i = 0; i < StreamParams.num_audio; ++i)
-            {
-                if (StreamParams.audio_prm[i].num_channel != 0)
-                {
-                    SF_ASSERT(StreamParams.audio_prm[i].sampling_rate > 0); // Division by zero
-                    float audioTime =
-                        StreamParams.audio_prm[i].total_samples * 1.0f /
-                        StreamParams.audio_prm[i].sampling_rate;
-                    if (Alg::Abs(videoTime - audioTime) > 0.01)
-                    {
-                        pLog->LogMessage("[Video] GetVideoInfo: "
-                            "Duration of the video (%.2f sec) and audio track %d (%.2f sec) is different. "
-                            "This may cause a video playback problem.\n", videoTime, i, audioTime);
-                    }
-                }
-            }
-        }
-#endif
-        pinfo->Width         = StreamParams.video_prm[0].max_width;
-        pinfo->Height        = StreamParams.video_prm[0].max_height;
-        pinfo->FrameRate     = StreamParams.video_prm[0].framerate;
-        pinfo->AudioDataRate = StreamParams.num_audio > 0 ? StreamParams.audio_prm[0].sampling_rate : 0;
-        pinfo->TotalFrames   = StreamParams.video_prm[0].total_frames;
-        pinfo->SubtitleChannelsNumber = StreamParams.num_subtitle;
-        pinfo->MaxSubtitleLen         = StreamParams.max_subtitle_size;
+        pinfo->Width         = MovieInfo.video_prm[0].width;
+        pinfo->Height        = MovieInfo.video_prm[0].height;
+        pinfo->FrameRate     = MovieInfo.video_prm[0].framerate;
+        pinfo->AudioDataRate = MovieInfo.num_audio_streams > 0 ? MovieInfo.audio_prm[0].sampling_rate : 0;
+        pinfo->TotalFrames   = MovieInfo.video_prm[0].total_frames;
+        pinfo->SubtitleChannelsNumber = MovieInfo.num_subtitle_channels;
+        pinfo->MaxSubtitleLen         = MovieInfo.max_subtitle_size;
 
         if (pinfo->AudioTracks.GetSize() == 0)
         {
-            for(int i = 0; i < CRIMV_MAX_AUDIO_NUM; ++i)
+            for(int i = 0; i < CRIMANA_MAX_AUDIO_NUM; ++i)
             {
-                if (StreamParams.audio_prm[i].num_channel != 0)
+                if (MovieInfo.audio_prm[i].num_channels != 0)
                 {
                     AudioTrackInfo info;
                     info.Index = i;
-                    info.ChannelsNumber = StreamParams.audio_prm[i].num_channel;
-                    info.SampleRate     = StreamParams.audio_prm[i].sampling_rate;
-                    info.TotalSamples   = StreamParams.audio_prm[i].total_samples;
+                    info.ChannelsNumber = MovieInfo.audio_prm[i].num_channels;
+                    info.SampleRate     = MovieInfo.audio_prm[i].sampling_rate;
+                    info.TotalSamples   = MovieInfo.audio_prm[i].total_samples;
                     pinfo->AudioTracks.PushBack(info);
                 }
             }
@@ -559,13 +492,13 @@ void VideoPlayerImpl::GetVideoInfo(VideoInfo* pinfo)
 
         if (pinfo->CuePoints.GetSize() == 0)
         {
-            CriMvCuePointInfo *pcuepoint_info = pCriPlayer->GetCuePointInfo();
-            if (pcuepoint_info != NULL) 
+            CriManaCuePointInfo *pcuepoint_info = criManaPlayer_GetCuePointInfo(pManaPlayer);
+            if (pcuepoint_info != NULL)
             {
-                for (Uint32 i = 0; i < pcuepoint_info->num_eventpoint; i++) 
+                for (CriUint32 i = 0; i < pcuepoint_info->num_eventpoint; i++)
                     pinfo->CuePoints.PushBack(convertCuepoint(pcuepoint_info->eventtable[i]));
 
-                pCriPlayer->SetCuePointCallback(callbackCuePoint, this);
+                criManaPlayer_SetCuePointCallback(pManaPlayer, callbackCuePoint, this);
             }
         }
     }
@@ -575,10 +508,10 @@ void VideoPlayerImpl::Play()
 {
     if (Stat == Ready)
     {
-        pCriPlayer->SetSeekPosition(StartPos);
-        pCriPlayer->SetSubtitleChannel(CurrSubtitleChannel);
-        pCriPlayer->SetLoopFlag(LoopFlag);
-        pCriPlayer->Start();
+        criManaPlayer_SetSeekPosition(pManaPlayer, StartPos);
+        criManaPlayer_SetSubtitleChannel(pManaPlayer, CurrSubtitleChannel);
+        criManaPlayer_Loop(pManaPlayer, LoopFlag);
+        criManaPlayer_Start(pManaPlayer);
         Stat = Starting;
     }
 }
@@ -589,7 +522,7 @@ void VideoPlayerImpl::Stop()
     {
         Stat = Stopping;
         StatusAfterStop = Stopped;
-        pCriPlayer->Stop();
+        criManaPlayer_Stop(pManaPlayer);
     }
 }
 
@@ -603,8 +536,8 @@ void VideoPlayerImpl::Pause(bool on_off)
 
     if (Stat == Ready || Stat == Starting || Stat == Playing || Stat == Seeking)
     {
-        Paused = (CriBool)on_off;
-        pCriPlayer->Pause(Paused);
+        Paused = on_off ? CRI_TRUE : CRI_FALSE;
+        criManaPlayer_Pause(pManaPlayer, Paused);
     }
 }
 
@@ -612,16 +545,16 @@ void VideoPlayerImpl::Seek(UInt32 pos)
 {
     if (Stat == Ready || Stat == Starting || Stat == Playing)
     {
-        StartPos = pos % StreamParams.video_prm[0].total_frames;
+        StartPos = pos % MovieInfo.video_prm[0].total_frames;
         Stat = Seeking;
-        pCriPlayer->Stop();
-    } 
+        criManaPlayer_Stop(pManaPlayer);
+    }
     else if (Stat == Finished)
     {
-        StartPos = pos % StreamParams.video_prm[0].total_frames;
+        StartPos = pos % MovieInfo.video_prm[0].total_frames;
         pDecoder->StartDecoding(this);
         Stat = Ready;
-        Play();       
+        Play();
     }
 }
 
@@ -630,32 +563,32 @@ UInt32 VideoPlayerImpl::GetPosition()
     if (Stat == Finished || Stat == Stopped)
         return 0;
     else
-        return StreamParams.num_video > 0 ? 
-            LastFrame % StreamParams.video_prm[0].total_frames : 0;
+        return MovieInfo.num_video_streams > 0 ?
+            LastFrame % MovieInfo.video_prm[0].total_frames : 0;
 }
 
 void VideoPlayerImpl::SetSubtitleChannel(int channel)
 {
     if (Stat == Ready || Stat == Starting || Stat == Playing)
     {
-        if ((int)(StreamParams.num_subtitle) > channel && CurrSubtitleChannel != channel)
+        if ((int)(MovieInfo.num_subtitle_channels) > channel && CurrSubtitleChannel != channel)
         {
             if (channel < 0)
             {
-                if (CurrSubtitleChannel == CRIMV_SUBTITLE_CHANNEL_OFF)
+                if (CurrSubtitleChannel == CRIMANA_SUBTITLE_CHANNEL_OFF)
                     return;
                 else
-                    channel = CRIMV_SUBTITLE_CHANNEL_OFF;
+                    channel = CRIMANA_SUBTITLE_CHANNEL_OFF;
             }
             CurrSubtitleChannel = channel;
-            pCriPlayer->SetSubtitleChannel(CurrSubtitleChannel);
+            criManaPlayer_SetSubtitleChannel(pManaPlayer, CurrSubtitleChannel);
         }
     }
 }
 
 int VideoPlayerImpl::GetSubtitleChannel()
 {
-    return CurrSubtitleChannel == CRIMV_SUBTITLE_CHANNEL_OFF ? -1 : CurrSubtitleChannel;
+    return CurrSubtitleChannel == CRIMANA_SUBTITLE_CHANNEL_OFF ? -1 : CurrSubtitleChannel;
 }
 
 
@@ -666,25 +599,26 @@ void VideoPlayerImpl::CheckHeaderDecoding()
 {
     SF_ASSERT(Stat == Opening);
 
-    pCriPlayer->Update();
+    criMana_ExecuteMain();
+    criManaPlayer_ExecuteMain(pManaPlayer);
     pDecoder->ExecuteDecode(this);
 
-    if (pCriPlayer->GetMovieInfo(StreamParams))
+    if (criManaPlayer_GetMovieInfo(pManaPlayer, &MovieInfo))
     {
-        if (StreamParams.is_playable && StreamParams.num_video > 0)
+        if (MovieInfo.is_playable && MovieInfo.num_video_streams > 0)
         {
-            VideoWidth  = StreamParams.video_prm[0].max_width;
-            VideoHeight = StreamParams.video_prm[0].max_height;
-            VideoAlpha = (StreamParams.num_alpha > 0);
+            VideoWidth  = MovieInfo.video_prm[0].width;
+            VideoHeight = MovieInfo.video_prm[0].height;
+            VideoAlpha = (MovieInfo.num_alpha_streams > 0);
             Stat = Ready;
-        } 
-        else 
+        }
+        else
         {
             Stat = Stopping;
             StatusAfterStop = FileNotFound;
             pDecoder->StopDecoding(this);
-        }  
-    } 
+        }
+    }
     else
     {
         if(DecodeHeaderTimeout > 0)
@@ -700,8 +634,8 @@ void VideoPlayerImpl::CheckHeaderDecoding()
                 return;
             }
         }
-        
-        if (pCriPlayer->GetStatus() == CriMvEasyPlayer::MVEASY_STATUS_ERROR)
+
+        if (criManaPlayer_GetStatus(pManaPlayer) == CRIMANAPLAYER_STATUS_ERROR)
         {
             Stat = Stopping;
             StatusAfterStop = FileNotFound;
@@ -727,24 +661,27 @@ void VideoPlayerImpl::Decode()
         return;
     }
 
-    pCriPlayer->SyncMasterTimer();
-    pCriPlayer->Update();
+    // Global Mana server tick — drives CRI File System I/O and internal state.
+    // Must be called periodically from the main thread (not thread-safe).
+    criMana_ExecuteMain();
+    criManaPlayer_SyncMasterTimer(pManaPlayer);
+    criManaPlayer_ExecuteMain(pManaPlayer);
 
-    CriMvEasyPlayer::Status movieStatus = pCriPlayer->GetStatus();
-    if (movieStatus == CriMvEasyPlayer::MVEASY_STATUS_PLAYEND ||
-        movieStatus == CriMvEasyPlayer::MVEASY_STATUS_STOP)
+    CriManaPlayerStatus movieStatus = criManaPlayer_GetStatus(pManaPlayer);
+    if (movieStatus == CRIMANAPLAYER_STATUS_PLAYEND ||
+        movieStatus == CRIMANAPLAYER_STATUS_STOP)
     {
         if (pDecoder->IsDecodingStopped(this))
         {
             if (Stat == Stopping)
                 Stat = StatusAfterStop;
-            else if (Stat == Seeking && StartPos < StreamParams.video_prm[0].total_frames)
+            else if (Stat == Seeking && StartPos < MovieInfo.video_prm[0].total_frames)
             {
-                pCriPlayer->Pause(FALSE);
-                pCriPlayer->SetSeekPosition(StartPos);
-                pCriPlayer->SetLoopFlag(LoopFlag);
-                pCriPlayer->SetSubtitleChannel(CurrSubtitleChannel);
-                pCriPlayer->Start();
+                criManaPlayer_Pause(pManaPlayer, CRI_FALSE);
+                criManaPlayer_SetSeekPosition(pManaPlayer, StartPos);
+                criManaPlayer_Loop(pManaPlayer, LoopFlag);
+                criManaPlayer_SetSubtitleChannel(pManaPlayer, CurrSubtitleChannel);
+                criManaPlayer_Start(pManaPlayer);
                 pDecoder->StartDecoding(this);
                 Stat = Starting;
             }
@@ -753,7 +690,7 @@ void VideoPlayerImpl::Decode()
         }
         return;
     }
-    if (movieStatus == CriMvEasyPlayer::MVEASY_STATUS_ERROR) 
+    if (movieStatus == CRIMANAPLAYER_STATUS_ERROR)
     {
         if (StatusAfterStop != FileNotFound)
             StatusAfterStop = InternalError;
@@ -771,27 +708,17 @@ void VideoPlayerImpl::Decode()
         if (Stat == Starting)
         {
             LastFrame = StartPos;
-            pCriPlayer->Pause(Paused);
+            criManaPlayer_Pause(pManaPlayer, Paused);
             Stat = Playing;
-            SyncObject* psyncObj = pTimer->GetSyncObject();
-            if (psyncObj)
-                psyncObj->SetStartFrame(StartPos);
+            if (pSyncObj)
+                pSyncObj->SetStartFrame(StartPos);
         }
-        if (FrameInfo.frame_id >= 0)
-            LastFrame = FrameInfo.frame_id;
+        if (FrameInfo.frame_no >= 0)
+            LastFrame = FrameInfo.frame_no;
     }
 
-// NOTE: ExecuteDecode only does anything here if using the VideoDecoderSmp class.
-//     if (UpdateTextureCalled)
-//     {
-//         pDecoder->ExecuteDecode(this);
-//         UpdateTextureCalled = false;
-//     }
-
 #ifdef GFX_VIDEO_DIAGS
-    pLog->LogMessage("[Video] Decode: %u %s %.2f\n", FrameInfo.frame_id, StatusToString(movieStatus),
-        (LastDecodeTicks ? Float32(Timer::GetProfileTicks() - LastDecodeTicks) / 1000 : 0));
-    LastDecodeTicks = Timer::GetProfileTicks();
+    pLog->LogMessage("[Video] Decode: %d %s\n", FrameInfo.frame_no, ManaStatusToString(movieStatus));
 #endif
 }
 
@@ -808,14 +735,7 @@ VideoImage* VideoPlayerImpl::CreateTexture(Render::TextureManager* ptexman)
 
     FrameNotInitialized = true;
 
-#if defined(SF_OS_WII)
-    // Special case: Wii uses RGBA image format
-    ImageFormat format = Image_Wii_R8G8B8A8;
-#else
-    // Using YUV textures by default. Switching to Image_B8G8R8A8 requires YUV to RGBA
-    // conversion to be enabled. See Video::Initialize() for details.    
     ImageFormat format = IsAlphaVideo() ? Image_Y8_U2_V2_A8 : Image_Y8_U2_V2;
-#endif
     ImageSize imageSize(VideoWidth, VideoHeight);
     VideoImage* pimage = SF_HEAP_NEW(pGFxHeap) VideoImage(format, imageSize, ptexman, this);
     SF_ASSERT(pimage);
@@ -830,103 +750,30 @@ void VideoPlayerImpl::UpdateTexture(VideoImage* pimage, char* subtitle, int subt
     if (!pimage)
         return;
 
-
     FrameOnTime = false;
 
-	// Don't queue up a bunch of update requests to be handled in a single render tick... we'll die from drying to map the discard-texture
 	if ( !UpdateTextureCalled )
 	{
 		UpdateTextureCalled = true;
 		pimage->Update();
 	}
 
-    if (subtitle && subtitleLength > 0 && StreamParams.num_subtitle > 0 &&
-        CurrSubtitleChannel != CRIMV_SUBTITLE_CHANNEL_OFF)
+    if (subtitle && subtitleLength > 0 && MovieInfo.num_subtitle_channels > 0 &&
+        CurrSubtitleChannel != CRIMANA_SUBTITLE_CHANNEL_OFF)
     {
         if ((Stat == Playing && !IsPaused()) || Stat == Seeking)
-            pCriPlayer->GetSubtitleOnTime((Uint8*)subtitle, subtitleLength);
+            criManaPlayer_GetSubtitleOnTime(pManaPlayer, (CriUint8*)subtitle, subtitleLength);
     }
-
-#ifdef GFX_VIDEO_DIAGS
-    // Result of the last video frame retrieval
-    LastFrameResult = pCriPlayer->GetLastFrameResult();
-    pLog->LogMessage("[Video] UpdateTexture: %u %s %.2f\n", FrameInfo.frame_id, FrameResultToString(LastFrameResult),
-        (LastUpdateTextureTicks ? Float32(Timer::GetProfileTicks() - LastUpdateTextureTicks) / 1000 : 0));
-
-    // Get playback information
-    pCriPlayer->GetPlaybackInfo(PlaybackInfo);
-    pLog->LogMessage(
-        "[Video] countAppLoop=     %lld\n"
-        "[Video] countTimeEarly=   %lld\n"
-        "[Video] countDecodeDelay= %lld\n"
-        "[Video] timeMaxDelay=     %.2f\n\n",
-        PlaybackInfo.cnt_app_loop,     // Loop count of application. Number of calls of Update()
-        PlaybackInfo.cnt_time_early,   // How many times IsNextFrameOnTime() returns FALSE due to CRIMV_LASTFRAME_TIME_EARLY
-        PlaybackInfo.cnt_decode_delay, // How many times IsNextFrameOnTime() returns FALSE due to CRIMV_LASTFRAME_DECODE_DELAY
-        PlaybackInfo.time_max_delay    // Maximum delay time [msec]
-    );
-
-    LastUpdateTextureTicks = Timer::GetProfileTicks();
-#endif
 }
 
-void VideoPlayerImpl::SetSyncObject(VideoPlayer::SyncObject* psyncObj)
+void VideoPlayerImpl::SetSyncObject(VideoPlayer::SyncObject* psync)
 {
-    if (Stat != Opening && Stat != Ready && Stat != Starting && Stat != Playing &&
-        Stat != Seeking && Stat != Stopping)
-    {
-        if (!psyncObj && !pTimer->pSyncObj)
-        {
-            Ptr<SyncObject> ps = *SF_HEAP_NEW(pGFxHeap) SystemTimerSyncObject;
-            pTimer->SetSyncObject(ps);
-            if (pSound && UseAudioTimer)
-                pCriPlayer->SetMasterTimer(CriMvEasyPlayer::MVEASY_TIMER_AUDIO);
-            else
-                pCriPlayer->SetMasterTimer(CriMvEasyPlayer::MVEASY_TIMER_SYSTEM);
-        }
-        else if (psyncObj && pTimer->pSyncObj != psyncObj)
-        {
-            pTimer->SetSyncObject(psyncObj);
-            pCriPlayer->SetMasterTimer(CriMvEasyPlayer::MVEASY_TIMER_SYSTEM);
-        }
-    }
+    pSyncObj = psync;
+
+    if (psync)
+        criManaPlayer_SetMasterTimerType(pManaPlayer, CRIMANAPLAYER_TIMER_SYSTEM);
     else
-    {
-        WaitForFinish();
-
-        pCriPlayer->SetCuePointCallback(NULL, NULL);
-        ClearCurrentCuePoints();
-
-        LastFrame = StartPos = 0;
-        Stat = Opening;
-        StatusAfterStop = Finished;
-        Paused = FALSE;
-        UpdateTextureCalled = false;
-        CurrSubtitleChannel = CRIMV_SUBTITLE_CHANNEL_OFF;
-
-        Alg::MemUtil::Set(&StreamParams, 0, sizeof(StreamParams));
-        Alg::MemUtil::Set(&FrameInfo, 0, sizeof(FrameInfo));
-
-        if (!psyncObj)
-        {
-            Ptr<SyncObject> ps = *SF_HEAP_NEW(pGFxHeap) SystemTimerSyncObject;
-            pTimer->SetSyncObject(ps);
-            if (pSound && UseAudioTimer)
-                pCriPlayer->SetMasterTimer(CriMvEasyPlayer::MVEASY_TIMER_AUDIO);
-            else
-                pCriPlayer->SetMasterTimer(CriMvEasyPlayer::MVEASY_TIMER_SYSTEM);
-        }
-        else
-        {
-            pTimer->SetSyncObject(psyncObj);
-            pCriPlayer->SetMasterTimer(CriMvEasyPlayer::MVEASY_TIMER_SYSTEM);
-        }
-
-        pCriPlayer->DecodeHeader();
-        pDecoder->StartDecoding(this);
-
-        StartOpenTicks = Timer::GetTicks();
-    }
+        criManaPlayer_SetMasterTimerType(pManaPlayer, CRIMANAPLAYER_TIMER_AUDIO);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -959,26 +806,27 @@ void VideoPlayerImpl::SetAudioTrack(int track_index)
 {
     if (Stat == Ready || Stat == Starting || Stat == Playing)
     {
-        pCriPlayer->SetAudioTrack(track_index);
-        StartPos = LastFrame % StreamParams.video_prm[0].total_frames;
+        criManaPlayer_SetAudioTrack(pManaPlayer, track_index);
+        StartPos = LastFrame % MovieInfo.video_prm[0].total_frames;
         if (Stat != Ready)
         {
             Stat = Seeking;
-            pCriPlayer->Stop();
+            criManaPlayer_Stop(pManaPlayer);
         }
     }
 }
 
 void VideoPlayerImpl::SetSubAudioTrack(int track_index)
 {
-    if (Stat == Ready && pSubSound)
-        pCriPlayer->SetSubAudioTrack(track_index);
+    SF_UNUSED(track_index);
+    // CRI Mana 2019: sub-audio track is set via criManaPlayer_SetSubAudioTrack
+    // which requires extra work config. Not currently supported in this integration.
 }
 
 void VideoPlayerImpl::ReplaceCenterVoice(int track_index)
 {
-    if (Stat == Ready)
-        pCriPlayer->ReplaceCenterVoice(track_index);
+    SF_UNUSED(track_index);
+    // CRI Mana 2019 does not have a direct equivalent for center voice replacement.
 }
 
 
@@ -987,39 +835,40 @@ void VideoPlayerImpl::ReplaceCenterVoice(int track_index)
 
 void VideoPlayerImpl::SetLoopFlag(bool flag)
 {
-    LoopFlag = flag;
+    LoopFlag = flag ? CRI_TRUE : CRI_FALSE;
     if (Stat == Ready || Stat == Starting || Stat == Playing)
-        pCriPlayer->SetLoopFlag(LoopFlag);
+        criManaPlayer_Loop(pManaPlayer, LoopFlag);
 }
 
 void VideoPlayerImpl::SetBufferTime(float time)
 {
-    if (pCriPlayer)
-        pCriPlayer->SetBufferingTime(time);
+    if (pManaPlayer)
+        criManaPlayer_SetBufferingTime(pManaPlayer, time);
 }
 
 void VideoPlayerImpl::SetNumberOfFramePools(unsigned pools)
 {
-    if (pCriPlayer)
-        pCriPlayer->SetNumberOfFramePools(pools);
+    if (pManaPlayer)
+        criManaPlayer_SetNumberOfFramePools(pManaPlayer, pools);
 }
 
 void VideoPlayerImpl::SetReloadThresholdTime(float time)
 {
-    if (pCriPlayer)
-        pCriPlayer->SetReloadThresholdTime(time);
+    SF_UNUSED(time);
+    // CRI Mana 2019 does not have a direct reload threshold API.
+    // Buffering is controlled via criManaPlayer_SetBufferingTime.
 }
 
 void VideoPlayerImpl::GetReadBufferInfo(ReadBufferInfo* info)
 {
     SF_ASSERT(info);
-    if (pCriPlayer)
+    if (pManaPlayer)
     {
-        CriMvInputBufferInfo cri_buf_info;
-        pCriPlayer->GetInputBufferInfo(cri_buf_info);
-        info->BufferSize      = cri_buf_info.buffer_size;
-        info->DataSize        = cri_buf_info.data_size;
-        info->ReloadThreshold = cri_buf_info.reload_threshold;
+        CriSint32 bufSize = criManaPlayer_GetInputBufferSize(pManaPlayer);
+        CriSint32 remainSize = criManaPlayer_GetInputBufferRemainSize(pManaPlayer);
+        info->BufferSize      = (UInt32)(bufSize > 0 ? bufSize : 0);
+        info->DataSize        = (UInt32)(remainSize > 0 ? remainSize : 0);
+        info->ReloadThreshold = info->BufferSize / 4;
     }
 }
 
@@ -1030,26 +879,61 @@ void VideoPlayerImpl::GetReadBufferInfo(ReadBufferInfo* info)
 bool VideoPlayer::LoadVideoInfo(const char* pfilename, VideoPlayer::VideoInfo* pinfo,
                                 FileOpenerBase* popener)
 {
+    SF_UNUSED(popener);
+
     bool ret = false;
-    MemoryHeap* pheap = Memory::GetGlobalHeap()->CreateHeap(
-        "_VideoInfo_Heap", 0, 16, 16*1024, 16*1024, ~UPInt(0), 0, HeapId_Video);
 
-    VideoPlayerImpl* pvideo = SF_HEAP_NEW(pheap) VideoPlayerImpl(pheap);
-    pvideo->Init(NULL, NULL, popener, NULL);
-    pvideo->Open(pfilename);
-    while (pvideo->GetStatus() == VideoPlayer::Opening)
+    CriManaPlayerHn player = criManaPlayer_Create(NULL, 0);
+    if (!player)
+        return false;
+
+    criManaPlayer_SetFile(player, NULL, pfilename);
+    criManaPlayer_DecodeHeader(player);
+
+    // Poll until header is decoded
+    for (int i = 0; i < 1000; ++i)
     {
-        pvideo->Decode();
+        criMana_ExecuteMain();
+        CriManaPlayerStatus status = criManaPlayer_GetStatus(player);
+        if (status == CRIMANAPLAYER_STATUS_WAIT_PREP)
+        {
+            CriManaMovieInfo movieInfo;
+            if (criManaPlayer_GetMovieInfo(player, &movieInfo) && movieInfo.is_playable)
+            {
+                pinfo->Width         = movieInfo.video_prm[0].width;
+                pinfo->Height        = movieInfo.video_prm[0].height;
+                pinfo->FrameRate     = movieInfo.video_prm[0].framerate;
+                pinfo->TotalFrames   = movieInfo.video_prm[0].total_frames;
+                pinfo->AudioDataRate = movieInfo.num_audio_streams > 0 ? movieInfo.audio_prm[0].sampling_rate : 0;
+                pinfo->SubtitleChannelsNumber = movieInfo.num_subtitle_channels;
+                pinfo->MaxSubtitleLen         = movieInfo.max_subtitle_size;
+
+                for(int a = 0; a < CRIMANA_MAX_AUDIO_NUM; ++a)
+                {
+                    if (movieInfo.audio_prm[a].num_channels != 0)
+                    {
+                        AudioTrackInfo ainfo;
+                        ainfo.Index = a;
+                        ainfo.ChannelsNumber = movieInfo.audio_prm[a].num_channels;
+                        ainfo.SampleRate     = movieInfo.audio_prm[a].sampling_rate;
+                        ainfo.TotalSamples   = movieInfo.audio_prm[a].total_samples;
+                        pinfo->AudioTracks.PushBack(ainfo);
+                    }
+                }
+                ret = true;
+            }
+            break;
+        }
+        else if (status == CRIMANAPLAYER_STATUS_ERROR ||
+                 status == CRIMANAPLAYER_STATUS_STOP)
+        {
+            break;
+        }
+        Thread::MSleep(1);
     }
 
-    if (pvideo->GetStatus() == VideoPlayer::Ready)
-    {
-        ret = true;
-        pvideo->GetVideoInfo(pinfo);
-    }
-
-    pvideo->Destroy();
-    pheap->Release();
+    criManaPlayer_StopAndWaitCompletion(player);
+    criManaPlayer_Destroy(player);
 
     return ret;
 }
@@ -1062,25 +946,15 @@ bool VideoPlayer::LoadVideoInfo(const char* pfilename, VideoPlayer::VideoInfo* p
 
 Sound::SoundChannel* VideoPlayerImpl::GetSoundChannel(SoundTrack track)
 {
-    if (track == VideoPlayer::MainTrack && pSound)
-        return pSound->GetSoundChannel();
-    if (track == VideoPlayer::SubAudio && pSubSound)
-        return pSubSound->GetSoundChannel();
+    SF_UNUSED(track);
+    // CRI Mana 2019 manages audio internally via CriAtomEx.
+    // Scaleform sound channel bridging is not supported with the new API.
     return NULL;
 }
 
 void VideoPlayerImpl::SetSoundSpatialInfo(Array<Sound::SoundChannel::Vector> spatinfo[])
 {
-    if (pSound) {
-        Sound::SoundChannel* pmainchan = pSound->GetSoundChannel();
-        if (pmainchan)
-            pmainchan->SetSpatialInfo(spatinfo);
-    }
-    if (pSubSound) {
-        Sound::SoundChannel* psubchan = pSubSound->GetSoundChannel();
-        if (psubchan)
-            psubchan->SetSpatialInfo(spatinfo);
-    }
+    SF_UNUSED(spatinfo);
 }
 
 #endif // GFX_ENABLE_SOUND

@@ -19,6 +19,7 @@ otherwise accompanies this software in either electronic or hard copy form.
 #include "Video/Video_Video.h"
 #include "Video/Video_VideoPlayerImpl.h"
 #include "Video/Video_VideoCharacter.h"
+#include "Video/Video_CriHeap.h"
 
 #include "Kernel/SF_Memory.h"
 #include "Kernel/SF_MemoryHeap.h"
@@ -29,6 +30,18 @@ otherwise accompanies this software in either electronic or hard copy form.
 #include "GFx/GFx_Log.h"
 
 #include "Sound/Sound_SoundRenderer.h"
+
+#if defined(SF_BUILD_DEFINE_NEW) && defined(SF_DEFINE_NEW)
+#undef new
+#endif
+#include <cri_mana.h>
+#include <cri_mana_pc.h>
+#include <cri_atom_ex.h>
+#include <cri_atom_wasapi.h>
+#include <cri_error.h>
+#if defined(SF_BUILD_DEFINE_NEW) && defined(SF_DEFINE_NEW)
+#define new SF_DEFINE_NEW
+#endif
 
 namespace Scaleform { namespace GFx { namespace Video {
 
@@ -47,8 +60,10 @@ void GFxVideo_ValidateEvaluation() {}
 void GFxVideo_SetEvalKey(const char* key) {SF_UNUSED(key);}
 #endif
 
+#include <stdio.h>
+
 #ifdef SF_BUILD_DEBUG
-void criErrorFunc(const Char8 *errid, Uint32 p1, Uint32 p2, Uint32 *parray)
+static void criErrorFunc(const CriChar8 *errid, CriUint32 p1, CriUint32 p2, CriUint32 *parray)
 {
     SF_UNUSED4(parray, p1, p2, parray);
     fprintf(stderr, "CRI-MW ERROR: %s\n", errid);
@@ -96,19 +111,20 @@ void Video::Initialize(bool argbInit)
         criErr_SetCallback(criErrorFunc);
         criErr_SetErrorNotificationLevel(CRIERR_NOTIFY_ALL);
 #endif
-        criHeap_Initialize();
+        // Register Scaleform heap allocator with CRI Atom and Mana
+        criManaHeap_Register(Memory::GetGlobalHeap());
 
-        HandleWorkSize = CriMv::CalcMovieHandleWork(VIDEO_HANDLE_MAX);
-        pHandleWorkBuf = SF_ALLOC(HandleWorkSize, Stat_Video_Mem);
-        CriMv::SetupMovieHandleWork(VIDEO_HANDLE_MAX, pHandleWorkBuf, HandleWorkSize);
+        // CRI Atom must be initialized before Mana (provides audio + file system)
+        criAtomEx_Initialize_WASAPI(NULL, NULL, 0);
 
-#ifdef SF_OS_WII
-        // Special case: Wii uses R8G8B8A8 image format
-        argbInit = true;
-#endif
-        CriMv::Initialize();
+        // Initialize Mana library (NULL/0 = use registered allocator)
+        CriManaLibConfig_PC config;
+        criMana_SetDefaultLibConfig_PC(&config);
+        config.mana.max_decoder_handles = VIDEO_HANDLE_MAX;
+        criMana_Initialize_PC(&config, NULL, 0);
+
         if (argbInit)
-            CriMv::InitializeFrame32bitARGB();
+            criMana_InitializeFrameARGB32();
     }
 }
 
@@ -116,10 +132,9 @@ void Video::Finalize()
 {
     if (1 == Initialized--)
     {
-        CriMv::Finalize();
-        if (pHandleWorkBuf)
-            SF_FREE(pHandleWorkBuf);
-        criHeap_Finalize();
+        criMana_Finalize_PC();
+        criAtomEx_Finalize_WASAPI();
+        criManaHeap_Unregister();
     }
 }
 
@@ -133,8 +148,6 @@ void Video::ReadDefineVideoStreamTag(LoadProcess* p, const TagInfo& tagInfo)
 }
 
 unsigned Video::Initialized;
-void*    Video::pHandleWorkBuf;
-UInt32   Video::HandleWorkSize;
 
 }} // GFx::Video
 
@@ -530,16 +543,10 @@ VideoPlayer* Video::CreateVideoPlayer(MemoryHeap* pheap, TaskManager* ptaskManag
     if (!pDecoder)
     {
         pDecoder = *SF_HEAP_NEW(pHeap) VideoDecoderThrd(pHeap, DecodeThreadPriority);
-//      pDecoder = *SF_HEAP_NEW(pHeap) VideoDecoderSmp();
         ApplySystemSettings(pDecoder);
     }
-    if (!pReaderConfig)
-    {
-        pReaderConfig = *SF_HEAP_NEW(pHeap) VideoReaderConfigThrd(pHeap, pfileOpener);
-//      pReaderConfig = *SF_HEAP_NEW(pHeap) VideoReaderConfigSmp(pHeap, pfileOpener);
-        ApplySystemSettings(pReaderConfig);
-        pReaderConfig->SetReadCallback(pReadCallback);
-    }
+
+    // Mana handles file I/O internally; pReaderConfig is no longer created.
 
     VideoPlayerImpl* pplayer = SF_HEAP_NEW(pHeap) VideoPlayerImpl(pHeap);
     if (pplayer->Init(this, ptaskManager, pfileOpener, plog))
