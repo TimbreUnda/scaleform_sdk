@@ -22,6 +22,7 @@ otherwise accompanies this software in either electronic or hard copy form.
 #include "AS3_Obj_Net_IDynamicPropertyWriter.cpp"
 #include "AS3_Obj_Net_LocalConnection.cpp"
 #include "AS3_Obj_Net_NetConnection.cpp"
+#include "AS3_Obj_Net_NetStream.cpp"
 #include "AS3_Obj_Net_ObjectEncoding.cpp"
 #include "AS3_Obj_Net_Responder.cpp"
 #include "AS3_Obj_Net_SharedObject.cpp"

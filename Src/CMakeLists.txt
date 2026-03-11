@@ -472,6 +472,7 @@ add_library(gfx_as3 STATIC
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Media/AS3_Obj_Media_SoundLoaderContext.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Media/AS3_Obj_Media_SoundMixer.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Media/AS3_Obj_Media_SoundTransform.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Media/AS3_Obj_Media_Video.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_FileFilter.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_FileReference.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_FileReferenceList.cpp
@@ -479,6 +480,7 @@ add_library(gfx_as3 STATIC
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_IDynamicPropertyWriter.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_LocalConnection.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_NetConnection.cpp
+    ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_NetStream.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_ObjectEncoding.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_Responder.cpp
     ${CMAKE_SOURCE_DIR}/Src/GFx/AS3/Obj/Net/AS3_Obj_Net_SharedObject.cpp

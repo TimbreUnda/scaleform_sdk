@@ -23,3 +23,4 @@ otherwise accompanies this software in either electronic or hard copy form.
 #include "AS3_Obj_Media_SoundLoaderContext.cpp"
 #include "AS3_Obj_Media_SoundMixer.cpp"
 #include "AS3_Obj_Media_SoundTransform.cpp"
+#include "AS3_Obj_Media_Video.cpp"
