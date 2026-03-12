@@ -111,6 +111,7 @@ bool VideoDecoderThrd::IsDecodingStopped(VideoPlayer* pp)
 
 static bool IsManaPlayerActive(CriManaPlayerHn player)
 {
+    // criManaPlayer_GetStatus is documented as thread-safe.
     CriManaPlayerStatus status = criManaPlayer_GetStatus(player);
     return status != CRIMANAPLAYER_STATUS_STOP &&
            status != CRIMANAPLAYER_STATUS_PLAYEND &&
@@ -121,47 +122,36 @@ int VideoDecoderThrd::DecodeFunc(Thread* pthread, void* obj)
 {
     SF_UNUSED(pthread);
     VideoDecoderThrd* pdecoder = (VideoDecoderThrd*)obj;
+
+    // CRI Mana 2019 with CRIMANA_THREAD_MODEL_MULTI handles video decoding
+    // on its own internal thread (criMana_ExecuteVideoProcess).  Per-player
+    // state is driven by criMana_ExecuteMain() called from the main thread
+    // in VideoPlayerImpl::Decode(), which internally calls
+    // criManaPlayer_ExecuteMain for every handle.
+    //
+    // This thread therefore must NOT call criManaPlayer_ExecuteMain — doing
+    // so races with CRI's internal thread and the main thread, corrupting
+    // player state ("Can't exec PutInputChunk before AllocateWorkBuffer").
+    //
+    // The only job of this thread is to poll player status (thread-safe)
+    // and remove inactive players from the decoding queue.
+
     while (1)
     {
-        pdecoder->DecodeLock.DoLock();
-        if (pdecoder->DecodingQueue.GetSize() == 1)
         {
-            VideoPlayerImpl* pplayer = pdecoder->DecodingQueue[0];
-            pdecoder->DecodeLock.Unlock();
-
-            criManaPlayer_ExecuteMain(pplayer->GetManaPlayer());
-            if (!IsManaPlayerActive(pplayer->GetManaPlayer()))
-            {
-                Lock::Locker lock(&pdecoder->DecodeLock);
-                pdecoder->DecodingQueue.RemoveAt(0);
-                if (pdecoder->DecodingQueue.GetSize() == 0)
-                {
-                    pdecoder->pDecodeThread = 0;
-                    break;
-                }
-            }
-        }
-        else
-        {
-            Array<VideoPlayerImpl*> copy_array(pdecoder->DecodingQueue);
-            pdecoder->DecodeLock.Unlock();
+            Lock::Locker lock(&pdecoder->DecodeLock);
             Array<UPInt> remove_indexes;
-            for (UPInt i = 0; i < copy_array.GetSize(); ++i)
+            for (UPInt i = 0; i < pdecoder->DecodingQueue.GetSize(); ++i)
             {
-                criManaPlayer_ExecuteMain(copy_array[i]->GetManaPlayer());
-                if (!IsManaPlayerActive(copy_array[i]->GetManaPlayer()))
+                if (!IsManaPlayerActive(pdecoder->DecodingQueue[i]->GetManaPlayer()))
                     remove_indexes.PushBack(i);
             }
-            if (remove_indexes.GetSize() > 0)
+            for (UPInt j = 0; j < remove_indexes.GetSize(); ++j)
+                pdecoder->DecodingQueue.RemoveAt(remove_indexes[j] - j);
+            if (pdecoder->DecodingQueue.GetSize() == 0)
             {
-                Lock::Locker lock(&pdecoder->DecodeLock);
-                for (UPInt j = 0; j < remove_indexes.GetSize(); ++j)
-                    pdecoder->DecodingQueue.RemoveAt(remove_indexes[j]-j);
-                if (pdecoder->DecodingQueue.GetSize() == 0)
-                {
-                    pdecoder->pDecodeThread = 0;
-                    break;
-                }
+                pdecoder->pDecodeThread = 0;
+                break;
             }
         }
         Thread::MSleep(1);
@@ -358,7 +348,14 @@ VideoPlayerImpl::~VideoPlayerImpl()
     WaitForFinish();
 
     if (pManaPlayer)
+    {
+        // StopAndWaitCompletion blocks until CRI's internal decode thread
+        // has finished processing this player. Without this, Destroy can
+        // free structures that criMana_ExecuteDecode is still reading,
+        // causing a random crash on the CRI decode thread.
+        criManaPlayer_StopAndWaitCompletion(pManaPlayer);
         criManaPlayer_Destroy(pManaPlayer);
+    }
     pManaPlayer = NULL;
 }
 
@@ -381,6 +378,20 @@ static const char* ManaStatusToString(CriManaPlayerStatus stat)
 }
 #endif
 
+static void* CRIAPI metaAllocFunc(void* obj, CriUint32 size)
+{
+    MemoryHeap* pheap = (MemoryHeap*)obj;
+    SF_ASSERT(pheap);
+    return SF_HEAP_MEMALIGN(pheap, size, 16, Stat_Video_Mem);
+}
+
+static void CRIAPI metaFreeFunc(void* obj, void* mem)
+{
+    SF_UNUSED(obj);
+    if (mem)
+        SF_FREE_ALIGN(mem);
+}
+
 bool VideoPlayerImpl::Init(Video* pvideo, TaskManager* ptaskManager,
                            FileOpenerBase* pfileOpener, Log* plog)
 {
@@ -394,6 +405,14 @@ bool VideoPlayerImpl::Init(Video* pvideo, TaskManager* ptaskManager,
 
     pManaPlayer = criManaPlayer_Create(NULL, 0);
     SF_ASSERT(pManaPlayer);
+
+    // Register metadata work allocator so that seek and cue point features
+    // can allocate their internal work buffers.  Without this, CRI reports
+    // "Meta data work allocator is not set" and subsequent calls to
+    // criManaPlayer_SetSeekPosition / GetCuePointInfo cause a
+    // "Can't exec PutInputChunk before AllocateWorkBuffer" error.
+    criManaPlayer_SetMetaDataWorkAllocator(
+        pManaPlayer, metaAllocFunc, metaFreeFunc, pGFxHeap, CRIMANA_META_FLAG_ALL);
 
     // Default to audio timer sync (falls back to system timer if no audio)
     criManaPlayer_SetMasterTimerType(pManaPlayer, CRIMANAPLAYER_TIMER_AUDIO);
@@ -600,7 +619,11 @@ void VideoPlayerImpl::CheckHeaderDecoding()
     SF_ASSERT(Stat == Opening);
 
     criMana_ExecuteMain();
-    criManaPlayer_ExecuteMain(pManaPlayer);
+    // Per-player state is driven by pDecoder->ExecuteDecode:
+    //   VideoDecoderSmp  – calls criManaPlayer_ExecuteMain inline
+    //   VideoDecoderThrd – no-op; its background thread drives the player
+    // Calling criManaPlayer_ExecuteMain directly here would race with the
+    // threaded decoder and corrupt CRI internal state.
     pDecoder->ExecuteDecode(this);
 
     if (criManaPlayer_GetMovieInfo(pManaPlayer, &MovieInfo))
@@ -665,7 +688,13 @@ void VideoPlayerImpl::Decode()
     // Must be called periodically from the main thread (not thread-safe).
     criMana_ExecuteMain();
     criManaPlayer_SyncMasterTimer(pManaPlayer);
-    criManaPlayer_ExecuteMain(pManaPlayer);
+    // Per-player decode is driven through the decoder abstraction:
+    //   VideoDecoderSmp  – calls criManaPlayer_ExecuteMain here on the main thread
+    //   VideoDecoderThrd – no-op; its background thread already drives the player
+    // Calling criManaPlayer_ExecuteMain directly would race with the threaded
+    // decoder's DecodeFunc and corrupt CRI internal state, crashing
+    // criMana_ExecuteDecode on the CRI decode thread.
+    pDecoder->ExecuteDecode(this);
 
     CriManaPlayerStatus movieStatus = criManaPlayer_GetStatus(pManaPlayer);
     if (movieStatus == CRIMANAPLAYER_STATUS_PLAYEND ||
