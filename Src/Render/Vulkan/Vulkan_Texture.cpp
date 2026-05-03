@@ -16,6 +16,37 @@ Authors     :   Scaleform Vulkan Backend
 
 namespace Scaleform { namespace Render { namespace Vulkan {
 
+// Upload-layout helpers for the staging buffer in MappedTexture::Map/Unmap.
+//
+// The mapping table's BytesPerPixel is the *destination* (Vulkan) bytes per
+// pixel. For uncompressed formats with width/format conversion (e.g.
+// Image_R8G8B8 -> VK_FORMAT_R8G8B8A8_UNORM, which uses
+// Image_CopyScanline24_Extend_RGB_RGBA), the staging buffer holds 4 bpp,
+// not the source's 3 bpp -- so width * BytesPerPixel is correct here and
+// ImageData::GetFormatPitch (which returns source-format pitch) would
+// undersize the buffer.
+//
+// For block-compressed formats (DXT/BC/ATC) BytesPerPixel is 0; the source
+// and destination layouts are identical (no conversion happens, scanlines
+// are copied verbatim), so we fall back to ImageData's format-aware
+// helpers, which handle the 4x4 block math correctly.
+static inline UPInt VkUploadPitch(const TextureFormat::Mapping* mapping,
+                                  ImageFormat fmt, unsigned mipW,
+                                  unsigned plane)
+{
+    if (mapping && mapping->BytesPerPixel != 0)
+        return (UPInt)mipW * mapping->BytesPerPixel;
+    return ImageData::GetFormatPitch(fmt, mipW, plane);
+}
+static inline UPInt VkUploadLevelSize(const TextureFormat::Mapping* mapping,
+                                      ImageFormat fmt, unsigned mipW,
+                                      unsigned mipH, unsigned plane)
+{
+    if (mapping && mapping->BytesPerPixel != 0)
+        return (UPInt)mipW * mipH * mapping->BytesPerPixel;
+    return ImageData::GetMipLevelSize(fmt, ImageSize(mipW, mipH), plane);
+}
+
 // *** Format mapping table
 static const TextureFormat::Mapping TextureFormatMapping[] =
 {
@@ -449,8 +480,9 @@ bool MappedTexture::Map(Render::Texture* ptexture, unsigned mipLevel, unsigned l
         levelCount = 1;
 
     const TextureFormat::Mapping* mapping = vktex->GetTextureFormatMapping();
-    if (!mapping || mapping->BytesPerPixel == 0)
+    if (!mapping)
         return false;
+    const ImageFormat fmt = vktex->GetImageFormat();
 
     unsigned texPlaneCount = vktex->TextureCount;
     if (texPlaneCount > PlaneReserveSize)
@@ -464,9 +496,11 @@ bool MappedTexture::Map(Render::Texture* ptexture, unsigned mipLevel, unsigned l
         {
             unsigned mipW = Alg::Max<unsigned>(1u, sz.Width >> level);
             unsigned mipH = Alg::Max<unsigned>(1u, sz.Height >> level);
-            totalSize += (UPInt)mipW * mipH * mapping->BytesPerPixel;
+            totalSize += VkUploadLevelSize(mapping, fmt, mipW, mipH, itex);
         }
     }
+    if (totalSize == 0)
+        return false;
 
     VkBufferCreateInfo bufCI = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
     bufCI.size = totalSize;
@@ -527,8 +561,8 @@ bool MappedTexture::Map(Render::Texture* ptexture, unsigned mipLevel, unsigned l
         {
             unsigned mipW = Alg::Max<unsigned>(1u, sz.Width >> level);
             unsigned mipH = Alg::Max<unsigned>(1u, sz.Height >> level);
-            UPInt pitch = (UPInt)mipW * mapping->BytesPerPixel;
-            UPInt planeSize = pitch * mipH;
+            UPInt pitch     = VkUploadPitch(mapping, fmt, mipW, itex);
+            UPInt planeSize = VkUploadLevelSize(mapping, fmt, mipW, mipH, itex);
 
             Data.SetPlane(planeIdx, ImageSize(mipW, mipH), pitch, planeSize, pdata);
             pdata += planeSize;
@@ -554,6 +588,7 @@ void MappedTexture::Unmap(bool applyUpdate)
     if (applyUpdate)
     {
         const TextureFormat::Mapping* mapping = vktex->GetTextureFormatMapping();
+        const ImageFormat fmt = vktex->GetImageFormat();
         UPInt totalSize = 0;
         for (unsigned itex = 0; itex < vktex->TextureCount; itex++)
         {
@@ -562,7 +597,7 @@ void MappedTexture::Unmap(bool applyUpdate)
             {
                 unsigned mipW = Alg::Max<unsigned>(1u, sz.Width >> level);
                 unsigned mipH = Alg::Max<unsigned>(1u, sz.Height >> level);
-                totalSize += (UPInt)mipW * mipH * mapping->BytesPerPixel;
+                totalSize += VkUploadLevelSize(mapping, fmt, mipW, mipH, itex);
             }
         }
 
@@ -585,6 +620,7 @@ void MappedTexture::Unmap(bool applyUpdate)
     if (applyUpdate)
     {
         const TextureFormat::Mapping* mapping = vktex->GetTextureFormatMapping();
+        const ImageFormat fmt = vktex->GetImageFormat();
 
         VkCommandBufferAllocateInfo cbAI = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
         cbAI.commandPool = cmdPool;
@@ -622,7 +658,8 @@ void MappedTexture::Unmap(bool applyUpdate)
                 vkCmdCopyBufferToImage(cmd, pStagingBuffer, image,
                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-                bufferOffset += (VkDeviceSize)mipW * mipH * mapping->BytesPerPixel;
+                bufferOffset += (VkDeviceSize)VkUploadLevelSize(
+                    mapping, fmt, mipW, mipH, itex);
             }
 
             pmgr->TransitionImageLayout(cmd, image,
