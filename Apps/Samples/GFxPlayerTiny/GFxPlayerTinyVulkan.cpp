@@ -1150,16 +1150,18 @@ static int AppMain(LPSTR lpCmdLine)
         if (NeedsResize && WindowWidth > 0 && WindowHeight > 0)
         {
             vkDeviceWaitIdle(vkDevice);
-            if (pHAL) pHAL->PrepareForReset();
+            // NOTE: do NOT call pHAL->PrepareForReset() / pHAL->RestoreAfterReset() here.
+            // On NVIDIA those leave the Vulkan HAL with stale internal state so subsequent
+            // filled-shape draws are dropped (only outline draws survive). Just recreating
+            // the swapchain + framebuffers and re-issuing SetMainRenderTarget per frame is
+            // sufficient — the HAL doesn't cache framebuffers itself.
             CleanupSwapchain();
             if (!CreateSwapchain() || !CreateDepthResources() || !CreateFramebuffers())
             {
                 OutputDebugStringA("Vulkan: Swapchain resize failed, retrying next frame\n");
-                if (pHAL) pHAL->RestoreAfterReset();
                 NeedsResize = true;
                 continue;
             }
-            if (pHAL) pHAL->RestoreAfterReset();
             if (pMovie) pMovie->SetViewport(WindowWidth, WindowHeight, 0, 0, WindowWidth, WindowHeight);
             NeedsResize = false;
         }
